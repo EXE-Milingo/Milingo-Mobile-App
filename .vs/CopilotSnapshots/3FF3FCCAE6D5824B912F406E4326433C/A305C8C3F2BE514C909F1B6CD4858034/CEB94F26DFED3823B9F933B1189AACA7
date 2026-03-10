@@ -1,0 +1,71 @@
+﻿import 'dart:io';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+
+/// Utility class for image processing operations
+class ImageUtils {
+  static final ImagePicker _picker = ImagePicker();
+
+  /// Pick an image from camera
+  /// Returns the image file or null if cancelled
+  static Future<File?> pickFromCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        return File(image.path);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to capture image from camera: $e');
+    }
+  }
+
+  /// Pick an image from gallery
+  /// Returns the image file or null if cancelled
+  static Future<File?> pickFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        return File(image.path);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to pick image from gallery: $e');
+    }
+  }
+
+  /// Convert File to Uint8List for API upload
+  static Future<Uint8List> fileToBytes(File file) async {
+    return await file.readAsBytes();
+  }
+
+  /// Validate image file size
+  /// Returns true if file size is within limits
+  static Future<bool> validateFileSize(File file, int maxSizeBytes) async {
+    final fileSize = await file.length();
+    return fileSize <= maxSizeBytes;
+  }
+
+  /// Get image file extension
+  static String getFileExtension(File file) {
+    return file.path.split('.').last.toLowerCase();
+  }
+
+  /// Check if file is a valid image format
+  static bool isValidImageFormat(File file) {
+    final extension = getFileExtension(file);
+    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(extension);
+  }
+}

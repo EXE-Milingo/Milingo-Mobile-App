@@ -1,0 +1,152 @@
+﻿import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
+
+/// Utility class for image processing operations
+class ImageUtils {
+  static final ImagePicker _picker = ImagePicker();
+
+  /// Pick an image from camera
+  /// Returns the image file or null if cancelled
+  static Future<File?> pickFromCamera() async {
+    try {
+      // Check if running on web
+      if (kIsWeb) {
+        print('❌ [ImageUtils] Camera is not supported on Web platform');
+        throw Exception('Camera is not supported on Web. Please use "Pick from Gallery" instead.');
+      }
+      
+      print('📷 [ImageUtils] Starting pickFromCamera...');
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        print('✅ [ImageUtils] Image captured: ${image.path}');
+        final file = File(image.path);
+        
+        // Verify file exists
+        if (await file.exists()) {
+          print('✅ [ImageUtils] File exists and is accessible');
+          return file;
+        } else {
+          print('❌ [ImageUtils] File does not exist at path: ${image.path}');
+          throw Exception('Captured image file does not exist');
+        }
+      }
+      print('ℹ️ [ImageUtils] No image captured by user');
+      return null;
+    } catch (e, stackTrace) {
+      print('❌ [ImageUtils] Error in pickFromCamera: $e');
+      print('Stack trace: $stackTrace');
+      throw Exception('Failed to capture image from camera: $e');
+    }
+  }
+
+  /// Pick an image from gallery
+  /// Returns the image file or null if cancelled
+  static Future<File?> pickFromGallery() async {
+    try {
+      print('🖼️ [ImageUtils] Starting pickFromGallery...');
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        print('✅ [ImageUtils] Image picked: ${image.path}');
+        
+        // On web, we need to handle differently
+        if (kIsWeb) {
+          print('ℹ️ [ImageUtils] Running on Web platform');
+          // For web, create a temporary file from bytes
+          final bytes = await image.readAsBytes();
+          print('✅ [ImageUtils] Image bytes loaded: ${bytes.length} bytes');
+          // Return a mock File object for web (will be handled differently in the controller)
+          return File(image.path);
+        }
+        
+        final file = File(image.path);
+        
+        // Verify file exists (only for non-web platforms)
+        if (await file.exists()) {
+          print('✅ [ImageUtils] File exists and is accessible');
+          return file;
+        } else {
+          print('❌ [ImageUtils] File does not exist at path: ${image.path}');
+          throw Exception('Selected image file does not exist');
+        }
+      }
+      print('ℹ️ [ImageUtils] No image selected by user');
+      return null;
+    } catch (e, stackTrace) {
+      print('❌ [ImageUtils] Error in pickFromGallery: $e');
+      print('Stack trace: $stackTrace');
+      throw Exception('Failed to pick image from gallery: $e');
+    }
+  }
+
+  /// Pick an image from gallery and return XFile (works better on web)
+  /// Returns the XFile or null if cancelled
+  static Future<XFile?> pickImageAsXFile() async {
+    try {
+      print('🖼️ [ImageUtils] Starting pickImageAsXFile...');
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        print('✅ [ImageUtils] Image picked: ${image.path}');
+        print('✅ [ImageUtils] Image name: ${image.name}');
+        return image;
+      }
+      print('ℹ️ [ImageUtils] No image selected by user');
+      return null;
+    } catch (e, stackTrace) {
+      print('❌ [ImageUtils] Error in pickImageAsXFile: $e');
+      print('Stack trace: $stackTrace');
+      throw Exception('Failed to pick image: $e');
+    }
+  }
+
+  /// Convert File to Uint8List for API upload
+  static Future<Uint8List> fileToBytes(File file) async {
+    if (kIsWeb) {
+      // On web, we can't use file.readAsBytes() directly
+      throw Exception('Use xFileToBytes for web platform');
+    }
+    return await file.readAsBytes();
+  }
+
+  /// Convert XFile to Uint8List (works on all platforms including web)
+  static Future<Uint8List> xFileToBytes(XFile file) async {
+    return await file.readAsBytes();
+  }
+
+  /// Validate image file size
+  /// Returns true if file size is within limits
+  static Future<bool> validateFileSize(File file, int maxSizeBytes) async {
+    final fileSize = await file.length();
+    return fileSize <= maxSizeBytes;
+  }
+
+  /// Get image file extension
+  static String getFileExtension(File file) {
+    return file.path.split('.').last.toLowerCase();
+  }
+
+  /// Check if file is a valid image format
+  static bool isValidImageFormat(File file) {
+    final extension = getFileExtension(file);
+    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(extension);
+  }
+}

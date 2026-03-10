@@ -1,0 +1,212 @@
+﻿import 'dart:io';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milingo/core/network/gemini_api_service.dart';
+import 'package:milingo/shared/utils/image_utils.dart';
+import 'package:milingo/core/constants/app_constants.dart';
+
+/// State for Snap & Learn feature
+class SnapState {
+  const SnapState({
+    this.isLoading = false,
+    this.result,
+    this.error,
+    this.capturedImage,
+  });
+  final bool isLoading;
+  final VocabularyResponse? result;
+  final String? error;
+  final File? capturedImage;
+
+  SnapState copyWith({
+    bool? isLoading,
+    VocabularyResponse? result,
+    String? error,
+    File? capturedImage,
+  }) {
+    return SnapState(
+      isLoading: isLoading ?? this.isLoading,
+      result: result ?? this.result,
+      error: error,
+      capturedImage: capturedImage ?? this.capturedImage,
+    );
+  }
+}
+
+/// Controller for Snap & Learn feature using StateNotifier
+class SnapController extends StateNotifier<SnapState> {
+  SnapController(this._geminiService) : super(const SnapState());
+  final GeminiApiService _geminiService;
+
+  /// Capture image from camera and analyze
+  Future<void> captureFromCamera(String targetLanguage) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      // Pick image from camera
+      final File? imageFile = await ImageUtils.pickFromCamera();
+
+      if (imageFile == null) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Không có ảnh nào được chụp',
+        );
+        return;
+      }
+
+      // Validate file size
+      final isValidSize = await ImageUtils.validateFileSize(
+        imageFile,
+        AppConstants.maxImageSizeBytes,
+      );
+
+      if (!isValidSize) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB',
+        );
+        return;
+      }
+
+      // Update state with captured image
+      state = state.copyWith(capturedImage: imageFile);
+
+      // Analyze image
+      await _analyzeImage(imageFile, targetLanguage);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Lỗi khi chụp ảnh: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Pick image from gallery and analyze
+  Future<void> pickFromGallery(String targetLanguage) async {
+    print('🖼️ [SnapController] Starting pickFromGallery with language: $targetLanguage');
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      // Pick image from gallery
+      print('📁 [SnapController] Opening image picker...');
+      final File? imageFile = await ImageUtils.pickFromGallery();
+
+      if (imageFile == null) {
+        print('❌ [SnapController] No image selected');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Không có ảnh nào được chọn',
+        );
+        return;
+      }
+
+      print('✅ [SnapController] Image selected: ${imageFile.path}');
+
+      // Validate file size
+      final isValidSize = await ImageUtils.validateFileSize(
+        imageFile,
+        AppConstants.maxImageSizeBytes,
+      );
+
+      if (!isValidSize) {
+        print('❌ [SnapController] Image too large');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB',
+        );
+        return;
+      }
+
+      // Validate image format
+      if (!ImageUtils.isValidImageFormat(imageFile)) {
+        print('❌ [SnapController] Invalid image format');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Định dạng ảnh không hợp lệ',
+        );
+        return;
+      }
+
+      print('✅ [SnapController] Image validation passed');
+
+      // Update state with captured image
+      state = state.copyWith(capturedImage: imageFile);
+
+      // Analyze image
+      print('🤖 [SnapController] Starting AI analysis...');
+      await _analyzeImage(imageFile, targetLanguage);
+    } catch (e, stackTrace) {
+      print('❌ [SnapController] Error in pickFromGallery: $e');
+      print('Stack trace: $stackTrace');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Lỗi khi chọn ảnh: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Analyze image with Gemini AI
+  Future<void> _analyzeImage(File imageFile, String targetLanguage) async {
+    try {
+      print('🔄 [SnapController] Converting image to bytes...');
+      // Convert file to bytes
+      final imageBytes = await ImageUtils.fileToBytes(imageFile);
+      print('✅ [SnapController] Image converted: ${imageBytes.length} bytes');
+
+      // Validate image is suitable for learning
+      print('🔍 [SnapController] Validating image with AI...');
+      final isValid = await _geminiService.validateImage(imageBytes);
+      print('📊 [SnapController] Image validation result: $isValid');
+
+      if (!isValid) {
+        print('❌ [SnapController] Image not suitable for learning');
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Ảnh không phù hợp để học từ vựng. Vui lòng chọn ảnh khác.',
+        );
+        return;
+      }
+
+      // Analyze image with Gemini
+      print('🤖 [SnapController] Analyzing image with Gemini...');
+      final result = await _geminiService.analyzeImage(
+        imageBytes: imageBytes,
+        targetLanguage: targetLanguage,
+      );
+
+      print('✅ [SnapController] Analysis complete!');
+      print('   Keyword: ${result.keyword}');
+      print('   Translation: ${result.translation}');
+
+      // Update state with result
+      state = state.copyWith(
+        isLoading: false,
+        result: result,
+        error: null,
+      );
+      print('🎉 [SnapController] State updated with result!');
+    } catch (e, stackTrace) {
+      print('❌ [SnapController] Error in _analyzeImage: $e');
+      print('Stack trace: $stackTrace');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Lỗi khi phân tích ảnh: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Reset state
+  void reset() {
+    state = const SnapState();
+  }
+
+  /// Clear error
+  void clearError() {
+    state = state.copyWith(error: null);
+  }
+}
+
+/// Provider for SnapController
+final snapControllerProvider = StateNotifierProvider<SnapController, SnapState>((ref) {
+  final geminiService = ref.watch(geminiApiServiceProvider);
+  return SnapController(geminiService);
+});
