@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
+import 'package:milingo/features/splash/screens/splash_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -86,64 +87,7 @@ GoRouter appRouter(AppRouterRef ref) {
   );
 }
 
-// Placeholder screens (to be implemented in their respective feature folders)
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Auto navigate to home after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
-      if (context.mounted) {
-        context.go(AppConstants.homeRoute);
-      }
-    });
-
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF6C63FF),
-              Color(0xFFFF6584),
-            ],
-          ),
-        ),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.language,
-                size: 100,
-                color: Colors.white,
-              ),
-              SizedBox(height: 24),
-              Text(
-                'MiLingo',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Học ngôn ngữ thông minh với AI',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+// SplashScreen is now imported from features/splash folder
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});

@@ -1,3 +1,5 @@
+﻿import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 /// Core application constants for MiLingo
 class AppConstants {
   // App Info
@@ -5,12 +7,14 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // API Keys (Store in environment variables or Firebase Remote Config in production)
-  static const String geminiApiKey = 'AIzaSyBZtnLdJbq7eo2nx8SLytB2LpSVYUvyoPE';
-  
+  static String get geminiApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+
   // PayOS Configuration
   static const String payOSBaseUrl = 'https://api-merchant.payos.vn';
-  static const String payOSClientId = 'YOUR_PAYOS_CLIENT_ID';
-  static const String payOSApiKey = 'YOUR_PAYOS_API_KEY';
+  static String get payOSClientId =>
+      dotenv.env['PAYOS_CLIENT_ID'] ?? 'YOUR_PAYOS_CLIENT_ID';
+  static String get payOSApiKey =>
+      dotenv.env['PAYOS_API_KEY'] ?? 'YOUR_PAYOS_API_KEY';
 
   // Supported Languages
   static const List<String> supportedLanguages = [

@@ -10,7 +10,7 @@ Tính năng **Snap & Learn** (Chụp & Học) đã được implement hoàn ch�
 
 **Tính năng:**
 
-- ✅ API Key Gemini đã được cấu hình: `AIzaSyDo4gunWGpbwFEMzwtCZpRa8Hy7X-n_Vaw`
+- ✅ API Key Gemini đã được cấu hình: `GEMINI_API_KEY (stored in .env)`
 - ✅ Phân tích ảnh và trả về từ vựng (keyword, translation, pronunciation, example)
 - ✅ JSON parsing thực sự (không còn placeholder)
 - ✅ Validate ảnh có phù hợp để học không
@@ -311,7 +311,7 @@ if (snapState.result != null) {
 
 **Giải pháp:**
 
-- Kiểm tra API key trong `app_constants.dart`
+- Kiểm tra API key trong `.env`
 - Kiểm tra kết nối internet
 - Chọn ảnh nhỏ hơn
 
