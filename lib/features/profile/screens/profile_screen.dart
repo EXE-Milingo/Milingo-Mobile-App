@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
@@ -219,13 +220,15 @@ class _ProfileTab extends StatelessWidget {
           const SizedBox(height: 16),
           _ProficiencyCard(),
           const SizedBox(height: 20),
-          _UpgradePremiumButton(
+          Center(
+            child: _UpgradePremiumButton(
             onTap: () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
               builder: (_) => const _UpgradeModal(),
             ),
+          ),
           ),
         ],
       ),
@@ -714,8 +717,7 @@ class _UpgradePremiumButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
         decoration: BoxDecoration(
           color: const Color(0xFF2C1A0C),
           borderRadius: BorderRadius.circular(16),
@@ -729,10 +731,14 @@ class _UpgradePremiumButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            _GoldMedalIcon(),
-            SizedBox(width: 12),
-            Text(
+          children: [
+            SvgPicture.asset(
+              'assets/svg/premium-icon.svg',
+              width: 22,
+              height: 22,
+            ),
+            const SizedBox(width: 10),
+            const Text(
               'Nâng cấp Premium',
               style: TextStyle(
                 color: Colors.white,
@@ -743,50 +749,6 @@ class _UpgradePremiumButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _GoldMedalIcon extends StatelessWidget {
-  const _GoldMedalIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 26,
-      height: 26,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Pin stem
-          Positioned(
-            bottom: 0,
-            child: Container(
-              width: 8,
-              height: 10,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFC107),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          // Circle badge
-          Positioned(
-            top: 0,
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFC107),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Icon(Icons.star_rounded, size: 12, color: Color(0xFF2C1A0C)),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
