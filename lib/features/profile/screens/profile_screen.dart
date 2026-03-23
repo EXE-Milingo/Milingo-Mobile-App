@@ -159,9 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             case 1:
               context.push(AppConstants.snapAndLearnRoute);
             case 2:
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Flashcards – Coming soon!')),
-              );
+              context.go(AppConstants.flashcardsRoute);
             case 3:
               break;
           }

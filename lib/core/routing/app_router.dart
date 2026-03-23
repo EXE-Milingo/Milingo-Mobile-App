@@ -8,6 +8,8 @@ import 'package:milingo/features/splash/screens/splash_screen.dart';
 import 'package:milingo/features/auth/screens/login_screen.dart';
 import 'package:milingo/features/auth/screens/register_screen.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
+import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
+import 'package:milingo/features/flashcards/screens/deck_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -61,6 +63,23 @@ GoRouter appRouter(AppRouterRef ref) {
         builder: (context, state) => const FlashcardsScreen(),
       ),
 
+      // Individual Deck
+      GoRoute(
+        path: AppConstants.deckRoute,
+        name: 'deck',
+        builder: (context, state) {
+          final arg = state.extra;
+          if (arg is DeckArg) {
+            return DeckScreen(deck: arg);
+          }
+          // Fallback if navigated without extra
+          return DeckScreen(deck: const DeckArg(
+            id: 'nouns', name: 'Nouns', nameVi: 'Danh từ',
+            total: 150, learned: 15, emoji: '📦',
+          ));
+        },
+      ),
+
       // Profile Route
       GoRoute(
         path: AppConstants.profileRoute,
@@ -103,16 +122,7 @@ GoRouter appRouter(AppRouterRef ref) {
 
 // SnapAndLearnScreen is now imported from features folder
 
-class FlashcardsScreen extends StatelessWidget {
-  const FlashcardsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Flashcards Screen - TODO')),
-    );
-  }
-}
+// FlashcardsScreen + DeckScreen imported from features/flashcards folder
 
 // ProfileScreen is now imported from features/profile folder
 

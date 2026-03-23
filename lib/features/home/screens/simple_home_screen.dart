@@ -21,9 +21,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 1:
         context.push(AppConstants.snapAndLearnRoute);
       case 2:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Flashcards – Coming soon!')),
-        );
+        context.go(AppConstants.flashcardsRoute);
       case 3:
         context.go(AppConstants.profileRoute);
     }
@@ -55,19 +53,15 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ),
             ),
             SliverToBoxAdapter(
-              child: _FeatureCard(
+              child:             _FeatureCard(
                 emoji: '🃏',
                 emojiBackground: const Color(0xFFFFEDE8),
                 title: 'Flashcards',
                 subtitle: 'Ôn tập từ vựng theo cách hiệu quả nhất',
                 buttonLabel: 'Ôn tập',
                 buttonColor: AppTheme.secondaryColor,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Flashcards – Coming soon!')),
-                ),
-                onButtonTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Flashcards – Coming soon!')),
-                ),
+                onTap: () => context.go(AppConstants.flashcardsRoute),
+                onButtonTap: () => context.go(AppConstants.flashcardsRoute),
               ),
             ),
             SliverToBoxAdapter(
