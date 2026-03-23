@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Auto navigate to home after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        context.go(AppConstants.homeRoute);
+        context.go(AppConstants.authRoute);
       }
     });
   }
@@ -152,7 +152,7 @@ class _SplashScreenState extends State<SplashScreen>
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: SvgPicture.asset(
-            'assets/images/milingo-logo.svg',
+            'assets/svg/milingo-logo.svg',
             fit: BoxFit.contain,
           ),
         ),
@@ -172,7 +172,7 @@ class _SplashScreenState extends State<SplashScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: index == 0
-                ? const Color(0xFFE86830) // Active dot - orange
+                ? const Color(0xFFF25F36) // Active dot - brand orange
                 : const Color(0xFFE0D0CA), // Inactive dots - light beige
           ),
         );

@@ -5,6 +5,8 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/splash/screens/splash_screen.dart';
+import 'package:milingo/features/auth/screens/login_screen.dart';
+import 'package:milingo/features/auth/screens/register_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -27,7 +29,14 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: AppConstants.authRoute,
         name: 'auth',
-        builder: (context, state) => const AuthScreen(),
+        builder: (context, state) => const LoginScreen(),
+      ),
+
+      // Register Route
+      GoRoute(
+        path: AppConstants.registerRoute,
+        name: 'register',
+        builder: (context, state) => const RegisterScreen(),
       ),
 
       // Home Route (Main Dashboard)
@@ -88,18 +97,7 @@ GoRouter appRouter(AppRouterRef ref) {
 }
 
 // SplashScreen is now imported from features/splash folder
-
-class AuthScreen extends StatelessWidget {
-  const AuthScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Auth Screen - TODO')),
-    );
-  }
-}
-
+// LoginScreen is now imported from features/auth folder
 // SimpleHomeScreen is now imported from features folder
 
 // SnapAndLearnScreen is now imported from features folder

@@ -3,7 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/routing/app_router.dart';
 import 'package:milingo/core/theme/app_theme.dart';
-
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 /// MiLingo - AI-Powered Language Learning App
 ///
 /// Architecture: Feature-First with Clean Architecture principles

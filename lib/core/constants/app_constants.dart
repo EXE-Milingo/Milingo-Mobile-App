@@ -1,4 +1,4 @@
-﻿import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Core application constants for MiLingo
 class AppConstants {
@@ -40,6 +40,7 @@ class AppConstants {
   // Routes (will be defined in routing)
   static const String splashRoute = '/';
   static const String authRoute = '/auth';
+  static const String registerRoute = '/register';
   static const String homeRoute = '/home';
   static const String snapAndLearnRoute = '/snap-and-learn';
   static const String flashcardsRoute = '/flashcards';

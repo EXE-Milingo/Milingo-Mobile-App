@@ -11,7 +11,7 @@ import 'package:milingo/core/network/gemini_api_service.dart';
 // Design Tokens (warm orange accent like mockup)
 // ─────────────────────────────────────────────────────────
 
-const _kAccent = Color(0xFFE8734A);
+const _kAccent = Color(0xFFF25F36);
 const _kAccentLight = Color(0xFFFFF0EB);
 const _kBg = Color(0xFFFAF8F5);
 

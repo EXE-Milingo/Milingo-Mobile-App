@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// MiLingo app theme configuration
 class AppTheme {
   // Brand Colors
-  static const Color primaryColor = Color(0xFF6C63FF);
+  static const Color primaryColor = Color(0xFFF25F36);
   static const Color secondaryColor = Color(0xFFFF6584);
   static const Color accentColor = Color(0xFF4CAF50);
   

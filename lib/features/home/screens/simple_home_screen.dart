@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
@@ -11,7 +12,11 @@ class SimpleHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MiLingo'),
+        title: SvgPicture.asset(
+          'assets/svg/milingo-logo.svg',
+          height: 36,
+          width: 36,
+        ),
         centerTitle: true,
       ),
       body: Container(
