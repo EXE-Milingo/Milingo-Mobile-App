@@ -7,6 +7,7 @@ import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/splash/screens/splash_screen.dart';
 import 'package:milingo/features/auth/screens/login_screen.dart';
 import 'package:milingo/features/auth/screens/register_screen.dart';
+import 'package:milingo/features/profile/screens/profile_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -113,16 +114,7 @@ class FlashcardsScreen extends StatelessWidget {
   }
 }
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Profile Screen - TODO')),
-    );
-  }
-}
+// ProfileScreen is now imported from features/profile folder
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});

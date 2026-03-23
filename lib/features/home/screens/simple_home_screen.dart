@@ -25,9 +25,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           const SnackBar(content: Text('Flashcards – Coming soon!')),
         );
       case 3:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Progress – Coming soon!')),
-        );
+        context.go(AppConstants.profileRoute);
     }
   }
 
@@ -301,9 +299,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             label: 'Flashcards',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_outlined),
-            activeIcon: Icon(Icons.bar_chart_rounded),
-            label: 'Tiến độ',
+            icon: Icon(Icons.person_outline_rounded),
+            activeIcon: Icon(Icons.person_rounded),
+            label: 'Hồ sơ',
           ),
         ],
       ),
