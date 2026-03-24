@@ -53,15 +53,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: isSmall ? 24 : 36),
 
                     // ── Welcome text ──
-                    const Text(
-                      'Chào mừng trở lại!',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
-                        height: 1.2,
-                      ),
-                    ),
+//                     const Text(
+//                     'Chào mừng trở lại!',
+//                       style: TextStyle(
+//                         fontSize: 28,
+//                         fontWeight: FontWeight.bold,
+//                         color: Color(0xFF1A1A1A),
+//                         height: 1.2,
+//                       ),
+//                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Vui lòng đăng nhập để tiếp tục',

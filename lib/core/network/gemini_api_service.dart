@@ -94,11 +94,10 @@ class GeminiApiService {
       model: 'gemini-3-flash-preview',
       apiKey: AppConstants.geminiApiKey,
       generationConfig: GenerationConfig(
-        responseMimeType: 'application/json',
-        temperature: 0.7,
-        topK: 40,
+        temperature: 0.4,
+        topK: 32,
         topP: 0.95,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
       ),
     );
   }
@@ -177,31 +176,89 @@ Lưu ý:
   }
 
   MilingoResult _parseResponse(String responseText) {
-    try {
-      var cleaned = responseText.trim();
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.substring(7);
-      }
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.substring(3);
-      }
-      if (cleaned.endsWith('```')) {
-        cleaned = cleaned.substring(0, cleaned.length - 3);
-      }
-      cleaned = cleaned.trim();
+    // ── Step 1: strip markdown fences ────────────────────
+    var cleaned = responseText.trim();
+    if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
+    if (cleaned.startsWith('```'))     cleaned = cleaned.substring(3);
+    if (cleaned.endsWith('```'))       cleaned = cleaned.substring(0, cleaned.length - 3);
+    cleaned = cleaned.trim();
 
-      final Map<String, dynamic> json = jsonDecode(cleaned);
-      return MilingoResult.fromJson(json);
-    } catch (e) {
-      // Fallback regex extraction
-      try {
-        final match = RegExp(r'\{[\s\S]*\}').firstMatch(responseText);
-        if (match != null) {
-          final Map<String, dynamic> json = jsonDecode(match.group(0)!);
-          return MilingoResult.fromJson(json);
+    // ── Step 2: try clean JSON decode ────────────────────
+    try {
+      return MilingoResult.fromJson(
+          jsonDecode(cleaned) as Map<String, dynamic>);
+    } catch (_) {}
+
+    // ── Step 3: try to repair truncated JSON ─────────────
+    // Find the first '{' and try to close any open brackets
+    try {
+      final start = cleaned.indexOf('{');
+      if (start != -1) {
+        var partial = cleaned.substring(start);
+        // Remove trailing incomplete field (last comma or incomplete key-value)
+        partial = partial.trimRight();
+        if (partial.endsWith(',')) {
+          partial = partial.substring(0, partial.length - 1);
         }
-      } catch (_) {}
-      throw Exception('Không thể parse phản hồi AI: $e');
+        // Count unclosed braces and brackets
+        int braces = 0, brackets = 0;
+        for (final ch in partial.runes) {
+          if (ch == '{'.codeUnitAt(0)) braces++;
+          else if (ch == '}'.codeUnitAt(0)) braces--;
+          else if (ch == '['.codeUnitAt(0)) brackets++;
+          else if (ch == ']'.codeUnitAt(0)) brackets--;
+        }
+        // Close open arrays then objects
+        final sb = StringBuffer(partial);
+        for (var i = 0; i < brackets; i++) sb.write(']');
+        for (var i = 0; i < braces; i++) sb.write('}');
+        final repaired = sb.toString();
+        try {
+          return MilingoResult.fromJson(
+              jsonDecode(repaired) as Map<String, dynamic>);
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    // ── Step 4: per-field regex extraction ───────────────
+    // Works even when JSON is completely malformed / truncated
+    String extract(String field) {
+      final match = RegExp(
+        '"$field"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"',
+      ).firstMatch(cleaned);
+      return match?.group(1) ?? '';
     }
+
+    // Extract relatedWords array as best-effort
+    final relatedWords = <RelatedWord>[];
+    final rwMatch =
+        RegExp(r'"relatedWords"\s*:\s*\[([\s\S]*?)\]').firstMatch(cleaned);
+    if (rwMatch != null) {
+      final items =
+          RegExp(r'\{[^}]+\}').allMatches(rwMatch.group(1) ?? '');
+      for (final item in items) {
+        try {
+          relatedWords.add(RelatedWord.fromJson(
+              jsonDecode(item.group(0)!) as Map<String, dynamic>));
+        } catch (_) {}
+      }
+    }
+
+    final keyword = extract('keyword');
+    if (keyword.isEmpty) {
+      throw Exception('Không thể parse phản hồi AI');
+    }
+
+    return MilingoResult(
+      keyword: keyword,
+      translation: extract('translation'),
+      pronunciation: extract('pronunciation'),
+      partOfSpeech: extract('partOfSpeech').isEmpty
+          ? 'Noun'
+          : extract('partOfSpeech'),
+      sentence: extract('sentence'),
+      sentenceTranslation: extract('sentenceTranslation'),
+      relatedWords: relatedWords,
+    );
   }
 }

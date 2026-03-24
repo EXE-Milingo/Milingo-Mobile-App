@@ -214,6 +214,8 @@ class _ProfileTab extends StatelessWidget {
         children: [
           _ProfileCard(),
           const SizedBox(height: 16),
+          _LanguageSettings(),
+          const SizedBox(height: 16),
           _StatsRow(),
           const SizedBox(height: 16),
           _ProficiencyCard(),
@@ -227,6 +229,260 @@ class _ProfileTab extends StatelessWidget {
               builder: (_) => const _UpgradeModal(),
             ),
           ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Language settings card ────────────────────────────────
+
+const _kLanguages = [
+  ('🇻🇳', 'Tiếng Việt'),
+  ('🇬🇧', 'English'),
+  ('🇯🇵', '日本語'),
+  ('🇰🇷', '한국어'),
+  ('🇨🇳', '中文'),
+  ('🇪🇸', 'Español'),
+  ('🇫🇷', 'Français'),
+  ('🇩🇪', 'Deutsch'),
+];
+
+class _LanguageSettings extends StatefulWidget {
+  @override
+  State<_LanguageSettings> createState() => _LanguageSettingsState();
+}
+
+class _LanguageSettingsState extends State<_LanguageSettings> {
+  int _nativeIndex = 0;   // Tiếng Việt
+  int _learningIndex = 1; // English
+
+  void _pickLanguage({
+    required String title,
+    required int selected,
+    required ValueChanged<int> onPicked,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _LanguagePickerSheet(
+        title: title,
+        selectedIndex: selected,
+        onPicked: (i) {
+          onPicked(i);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _LangRow(
+            label: 'Ngôn ngữ mặc định',
+            flag: _kLanguages[_nativeIndex].$1,
+            language: _kLanguages[_nativeIndex].$2,
+            isTop: true,
+            onTap: () => _pickLanguage(
+              title: 'Ngôn ngữ mặc định',
+              selected: _nativeIndex,
+              onPicked: (i) => setState(() => _nativeIndex = i),
+            ),
+          ),
+          Divider(height: 1, indent: 20, endIndent: 20, color: const Color(0xFFF0F0F0)),
+          _LangRow(
+            label: 'Ngôn ngữ bạn muốn học',
+            flag: _kLanguages[_learningIndex].$1,
+            language: _kLanguages[_learningIndex].$2,
+            isTop: false,
+            onTap: () => _pickLanguage(
+              title: 'Ngôn ngữ bạn muốn học',
+              selected: _learningIndex,
+              onPicked: (i) => setState(() => _learningIndex = i),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LangRow extends StatelessWidget {
+  const _LangRow({
+    required this.label,
+    required this.flag,
+    required this.language,
+    required this.isTop,
+    required this.onTap,
+  });
+  final String label;
+  final String flag;
+  final String language;
+  final bool isTop;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.vertical(
+        top: isTop ? const Radius.circular(20) : Radius.zero,
+        bottom: isTop ? Radius.zero : const Radius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Row(
+          children: [
+            // Language icon
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(flag, style: const TextStyle(fontSize: 22)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Labels
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9E9E9E),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    language,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppTheme.primaryColor,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Language picker bottom sheet ──────────────────────────
+
+class _LanguagePickerSheet extends StatelessWidget {
+  const _LanguagePickerSheet({
+    required this.title,
+    required this.selectedIndex,
+    required this.onPicked,
+  });
+  final String title;
+  final int selectedIndex;
+  final ValueChanged<int> onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E0E0),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _kLanguages.length,
+            separatorBuilder: (_, __) =>
+                const Divider(height: 1, color: Color(0xFFF5F5F5)),
+            itemBuilder: (_, i) {
+              final (flag, name) = _kLanguages[i];
+              final isSelected = i == selectedIndex;
+              return ListTile(
+                onTap: () => onPicked(i),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primaryColor.withOpacity(0.1)
+                        : const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child:
+                      Center(child: Text(flag, style: const TextStyle(fontSize: 22))),
+                ),
+                title: Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? AppTheme.primaryColor
+                        : const Color(0xFF1A1A1A),
+                  ),
+                ),
+                trailing: isSelected
+                    ? Icon(Icons.check_circle_rounded,
+                        color: AppTheme.primaryColor, size: 22)
+                    : null,
+              );
+            },
           ),
         ],
       ),
