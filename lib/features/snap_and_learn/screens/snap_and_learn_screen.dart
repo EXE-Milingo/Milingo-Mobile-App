@@ -72,6 +72,18 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     _markerPulseCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+
+    // Auto-open camera immediately when screen loads so the user
+    // never sees the empty placeholder step.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final snap = ref.read(snapControllerProvider);
+      // Only auto-launch if we don't already have an image/result
+      if (snap.capturedImage == null && snap.result == null && !snap.isLoading) {
+        ref.read(snapControllerProvider.notifier)
+            .captureFromCamera(snap.selectedLanguage);
+      }
+    });
   }
 
   Future<void> _initTts() async {
