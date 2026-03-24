@@ -11,6 +11,7 @@ import 'package:milingo/features/auth/screens/choose_language_screen.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
 import 'package:milingo/features/flashcards/screens/deck_screen.dart';
+import 'package:milingo/features/flashcards/screens/exam_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -69,6 +70,19 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.flashcardsRoute,
         name: 'flashcards',
         builder: (context, state) => const FlashcardsScreen(),
+      ),
+
+      // Exam Route
+      GoRoute(
+        path: AppConstants.examRoute,
+        name: 'exam',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, String>?;
+          return ExamScreen(
+            langCode: extra?['langCode'] ?? 'en',
+            langName: extra?['langName'] ?? 'English',
+          );
+        },
       ),
 
       // Individual Deck

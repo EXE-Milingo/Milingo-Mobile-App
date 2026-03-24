@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/flashcards/screens/exam_screen.dart' show ExamScreen;
 
 // ── Mock data ──────────────────────────────────────────────
 
@@ -75,7 +76,12 @@ class FlashcardsScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
+
+                  // ── Exam entry banner ──────────────────
+                  _ExamBanner(onTap: () => _openExam(context)),
+
+                  const SizedBox(height: 20),
 
                   Text(
                     'Danh mục',
@@ -108,6 +114,70 @@ class FlashcardsScreen extends StatelessWidget {
 
   void _openDeck(BuildContext context, _Deck deck) {
     context.push(AppConstants.deckRoute, extra: deck);
+  }
+
+  void _openExam(BuildContext context) {
+    _showLanguagePicker(context);
+  }
+
+  void _showLanguagePicker(BuildContext context) {
+    const langs = [
+      ('🇺🇸', 'Tiếng Anh',        'en'),
+      ('🇯🇵', 'Tiếng Nhật',        'ja'),
+      ('🇰🇷', 'Tiếng Hàn',         'ko'),
+      ('🇫🇷', 'Tiếng Pháp',        'fr'),
+      ('🇪🇸', 'Tiếng Tây Ban Nha', 'es'),
+      ('🇩🇪', 'Tiếng Đức',         'de'),
+      ('🇨🇳', 'Tiếng Trung',       'zh'),
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                  color: const Color(0xFFE0E0E0),
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 16),
+            const Text('Chọn ngôn ngữ kiểm tra',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ...langs.map((l) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+              leading: Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12)),
+                child: Center(child: Text(l.$1, style: const TextStyle(fontSize: 24))),
+              ),
+              title: Text(l.$2,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              trailing: Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: AppTheme.primaryColor),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(
+                  AppConstants.examRoute,
+                  extra: {'langCode': l.$3, 'langName': l.$2},
+                );
+              },
+            )),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Gradient header ────────────────────────────────────
@@ -394,6 +464,92 @@ class _DeckListItem extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Icon(Icons.more_vert_rounded, size: 18, color: Color(0xFFBDBDBD)),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Exam entry banner ─────────────────────────────────────
+
+class _ExamBanner extends StatelessWidget {
+  const _ExamBanner({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppTheme.primaryColor, const Color(0xFFD94E28)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: const Center(
+                  child: Text('📝', style: TextStyle(fontSize: 24))),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Bài kiểm tra',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Kiểm tra từ vựng với 10 câu hỏi',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Bắt đầu',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
             ),
           ],
         ),
