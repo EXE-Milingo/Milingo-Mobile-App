@@ -41,6 +41,7 @@ class AppConstants {
   static const String splashRoute = '/';
   static const String authRoute = '/auth';
   static const String registerRoute = '/register';
+  static const String chooseLanguageRoute = '/choose-language';
   static const String homeRoute = '/home';
   static const String snapAndLearnRoute = '/snap-and-learn';
   static const String flashcardsRoute = '/flashcards';

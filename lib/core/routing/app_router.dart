@@ -7,6 +7,7 @@ import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/splash/screens/splash_screen.dart';
 import 'package:milingo/features/auth/screens/login_screen.dart';
 import 'package:milingo/features/auth/screens/register_screen.dart';
+import 'package:milingo/features/auth/screens/choose_language_screen.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
 import 'package:milingo/features/flashcards/screens/deck_screen.dart';
@@ -40,6 +41,13 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.registerRoute,
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+
+      // Choose Language Route (post-registration)
+      GoRoute(
+        path: AppConstants.chooseLanguageRoute,
+        name: 'choose-language',
+        builder: (context, state) => const ChooseLanguageScreen(),
       ),
 
       // Home Route (Main Dashboard)

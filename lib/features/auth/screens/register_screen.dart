@@ -101,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     // ── Register button ──
                     _RegisterButton(
-                      onTap: () => context.go(AppConstants.homeRoute),
+                      onTap: () => context.push(AppConstants.chooseLanguageRoute),
                     ),
 
                     const SizedBox(height: 16),
