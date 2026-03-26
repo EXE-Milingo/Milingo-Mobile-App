@@ -55,8 +55,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   late final AnimationController _bubbleCtrl;
   // Scanning dots animation
   late final AnimationController _scanCtrl;
-  // Marker pulse animation
-  late final AnimationController _markerPulseCtrl;
 
   @override
   void initState() {
@@ -69,9 +67,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     _scanCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1500),
     );
-    _markerPulseCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
 
     // Auto-open camera immediately when screen loads so the user
     // never sees the empty placeholder step.
@@ -101,7 +96,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     _tts.stop();
     _bubbleCtrl.dispose();
     _scanCtrl.dispose();
-    _markerPulseCtrl.dispose();
     super.dispose();
   }
 
@@ -119,9 +113,12 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
       if (next.isLoading && !(prev?.isLoading ?? false)) {
         _scanCtrl.repeat();
       }
-      // When result arrives → stop scan, trigger marker pulse
+      // When result arrives → stop scan and immediately show vocabulary
       if (prev?.result == null && next.result != null) {
         _scanCtrl.stop();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(snapControllerProvider.notifier).showVocab();
+        });
       }
       // When vocabulary view opens → trigger bubble animation
       if (!(prev?.showVocabulary ?? false) && next.showVocabulary) {
@@ -318,15 +315,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             if (isAnalyzing)
               ..._buildScanningDots(),
 
-            // ── Hình 3: Object markers (after analysis, before vocab) ──
-            if (hasResult && !showVocab)
-              ..._buildObjectMarkers(snap.result!, ctrl),
-
-            // ── Hình 3: Glow effect on main object ──
-            if (hasResult && !showVocab)
-              _buildGlowOverlay(),
-
-            // ── Hình 4: Vocabulary bubbles (when user tapped marker) ──
+            // ── Hình 4: Vocabulary bubbles (shown automatically after analysis) ──
             if (showVocab && hasResult)
               ..._buildVocabBubbles(snap.result!, snap.selectedLanguage),
           ],
@@ -379,91 +368,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     }).toList();
   }
 
-  // ─── Hình 3: Object markers (small dots) ───────────────
-
-  List<Widget> _buildObjectMarkers(MilingoResult result, SnapController ctrl) {
-    // Place markers at interesting positions
-    const markerPositions = [
-      Alignment(0.0, 0.2),    // center-ish (main object)
-      Alignment(0.5, 0.7),     // bottom-right area
-    ];
-
-    final markers = <Widget>[];
-    for (var i = 0; i < markerPositions.length && i < result.relatedWords.length + 1; i++) {
-      markers.add(
-        AnimatedBuilder(
-          animation: _markerPulseCtrl,
-          builder: (_, __) {
-            final pulse = 1.0 + _markerPulseCtrl.value * 0.15;
-            return Align(
-              alignment: markerPositions[i],
-              child: GestureDetector(
-                onTap: () => ctrl.showVocab(),
-                child: Transform.scale(
-                  scale: pulse,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      border: Border.all(color: _kAccent, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _kAccent.withOpacity(0.3),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _kAccent,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      );
-    }
-    return markers;
-  }
-
-  // ─── Hình 3: Glow overlay on detected object ──────────
-
-  Widget _buildGlowOverlay() {
-    return Align(
-      alignment: const Alignment(0.0, 0.15),
-      child: Container(
-        width: 180,
-        height: 220,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.6),
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.25),
-              blurRadius: 20,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─── Hình 4: Vocabulary Bubbles ────────────────────────
+  // ─── Vocabulary Bubbles ────────────────────────────────
 
   List<Widget> _buildVocabBubbles(MilingoResult result, String langCode) {
     if (result.relatedWords.isEmpty) return [];
