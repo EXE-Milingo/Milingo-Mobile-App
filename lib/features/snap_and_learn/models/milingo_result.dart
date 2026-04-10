@@ -1,0 +1,71 @@
+/// A related vocabulary word returned by Gemini (shown as a floating bubble)
+class RelatedWord {
+  const RelatedWord({
+    required this.english,
+    required this.translation,
+    required this.pronunciation,
+  });
+
+  factory RelatedWord.fromJson(Map<String, dynamic> json) {
+    return RelatedWord(
+      english: (json['english'] ?? '').toString(),
+      translation: (json['translation'] ?? '').toString(),
+      pronunciation: (json['pronunciation'] ?? '').toString(),
+    );
+  }
+
+  final String english;
+  final String translation;
+  final String pronunciation;
+}
+
+/// Main analysis result from Gemini for Snap & Learn
+class MilingoResult {
+  MilingoResult({
+    required this.keyword,
+    required this.translation,
+    required this.pronunciation,
+    required this.partOfSpeech,
+    required this.sentence,
+    required this.sentenceTranslation,
+    this.relatedWords = const [],
+  });
+
+  factory MilingoResult.fromJson(Map<String, dynamic> json) {
+    final related = (json['relatedWords'] as List<dynamic>?)
+            ?.map((e) => RelatedWord.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [];
+
+    return MilingoResult(
+      keyword: (json['keyword'] ?? '').toString(),
+      translation: (json['translation'] ?? '').toString(),
+      pronunciation: (json['pronunciation'] ?? '').toString(),
+      partOfSpeech: (json['partOfSpeech'] ?? 'Noun').toString(),
+      sentence: (json['sentence'] ?? '').toString(),
+      sentenceTranslation: (json['sentenceTranslation'] ?? '').toString(),
+      relatedWords: related,
+    );
+  }
+
+  /// Main object name in English
+  final String keyword;
+
+  /// Translation in the target language
+  final String translation;
+
+  /// Romanized pronunciation
+  final String pronunciation;
+
+  /// Part of speech: Noun / Verb / Adjective...
+  final String partOfSpeech;
+
+  /// Example sentence in the target language
+  final String sentence;
+
+  /// Vietnamese translation of the example sentence
+  final String sentenceTranslation;
+
+  /// Related concepts shown as floating bubbles on the image
+  final List<RelatedWord> relatedWords;
+}

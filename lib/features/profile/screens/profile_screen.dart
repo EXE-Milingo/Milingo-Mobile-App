@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/shared/widgets/floating_nav_button.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,35 +32,44 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8F4),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 16),
-            _buildTabBar(),
-            const SizedBox(height: 4),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _ProfileTab(),
-                  _PlaceholderTab(
-                    icon: '🏅',
-                    title: 'Thành tích',
-                    subtitle: 'Hoàn thành các bài học để mở khóa thành tích.',
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 16),
+                _buildTabBar(),
+                const SizedBox(height: 4),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _ProfileTab(),
+                      _PlaceholderTab(
+                        icon: '🏅',
+                        title: 'Thành tích',
+                        subtitle: 'Hoàn thành các bài học để mở khóa thành tích.',
+                      ),
+                      _PlaceholderTab(
+                        icon: '📊',
+                        title: 'Bảng xếp hạng',
+                        subtitle: 'Thi đua với bạn bè và leo lên bảng xếp hạng!',
+                      ),
+                    ],
                   ),
-                  _PlaceholderTab(
-                    icon: '📊',
-                    title: 'Bảng xếp hạng',
-                    subtitle: 'Thi đua với bạn bè và leo lên bảng xếp hạng!',
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // ── Floating Navigation Button ──
+          Positioned(
+            bottom: MediaQuery.of(context).padding.bottom + 16,
+            right: 16,
+            child: const FloatingNavButton(),
+          ),
+        ],
       ),
-      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
@@ -137,68 +147,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Bottom nav ────────────────────────────────────────────
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: 3,
-        onTap: (i) {
-          switch (i) {
-            case 0:
-              context.go(AppConstants.homeRoute);
-            case 1:
-              context.push(AppConstants.snapAndLearnRoute);
-            case 2:
-              context.go(AppConstants.flashcardsRoute);
-            case 3:
-              break;
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: const Color(0xFFBDBDBD),
-        selectedLabelStyle: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home_rounded),
-            label: 'Trang chủ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt_outlined),
-            activeIcon: Icon(Icons.camera_alt_rounded),
-            label: 'Snap & Learn',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.style_outlined),
-            activeIcon: Icon(Icons.style_rounded),
-            label: 'Flashcards',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            activeIcon: Icon(Icons.person_rounded),
-            label: 'Hồ sơ',
-          ),
-        ],
-      ),
-    );
-  }
+  // ── Bottom nav (removed – using FloatingNavButton instead) ──
+  Widget _buildBottomNavStub(BuildContext context) => const SizedBox.shrink();
 }
 
 // ─────────────────────────────────────────────────────────

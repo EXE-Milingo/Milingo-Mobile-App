@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/auth/widgets/social_buttons.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -117,14 +118,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(height: isSmall ? 20 : 28),
 
                     // ── Social login buttons ──
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        _SocialButton(type: _SocialType.apple),
+                      children: [
+                        SocialButton(type: SocialType.apple),
                         SizedBox(width: 16),
-                        _SocialButton(type: _SocialType.google),
+                        SocialButton(type: SocialType.google),
                         SizedBox(width: 16),
-                        _SocialButton(type: _SocialType.facebook),
+                        SocialButton(type: SocialType.facebook),
                       ],
                     ),
 
@@ -387,101 +388,3 @@ class _OrDivider extends StatelessWidget {
   }
 }
 
-enum _SocialType { apple, google, facebook }
-
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({required this.type});
-  final _SocialType type;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.07),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Center(child: _buildIcon()),
-      ),
-    );
-  }
-
-  Widget _buildIcon() {
-    switch (type) {
-      case _SocialType.apple:
-        return const Icon(Icons.apple, size: 28, color: Color(0xFF1A1A1A));
-      case _SocialType.google:
-        return _GoogleIcon();
-      case _SocialType.facebook:
-        return const Icon(Icons.facebook, size: 28, color: Color(0xFF1877F2));
-    }
-  }
-}
-
-class _GoogleIcon extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: CustomPaint(painter: _GooglePainter()),
-    );
-  }
-}
-
-class _GooglePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = size.width / 2;
-
-    _drawArc(canvas, cx, cy, r, -0.1, 1.55, const Color(0xFF4285F4));
-    _drawArc(canvas, cx, cy, r, 1.45, 1.55, const Color(0xFFEA4335));
-    _drawArc(canvas, cx, cy, r, 2.99, 1.6, const Color(0xFFFBBC05));
-    _drawArc(canvas, cx, cy, r, 4.58, 0.93, const Color(0xFF34A853));
-
-    final whitePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(cx, cy), r * 0.62, whitePaint);
-
-    final barPaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..strokeWidth = r * 0.38
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(cx + r * 0.02, cy),
-      Offset(cx + r * 0.95, cy),
-      barPaint,
-    );
-  }
-
-  void _drawArc(Canvas canvas, double cx, double cy, double r,
-      double startAngle, double sweepAngle, Color color) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final path = Path()
-      ..moveTo(cx, cy)
-      ..arcTo(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r),
-        startAngle,
-        sweepAngle,
-        false,
-      )
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

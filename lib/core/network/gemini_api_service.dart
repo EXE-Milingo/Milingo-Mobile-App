@@ -3,82 +3,9 @@ import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/constants/app_constants.dart';
+import 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 
-// ─────────────────────────────────────────────────────────
-// Models
-// ─────────────────────────────────────────────────────────
-
-/// A related vocabulary word (shown as floating bubble on image)
-class RelatedWord {
-  const RelatedWord({
-    required this.english,
-    required this.translation,
-    required this.pronunciation,
-  });
-
-  factory RelatedWord.fromJson(Map<String, dynamic> json) {
-    return RelatedWord(
-      english: (json['english'] ?? '').toString(),
-      translation: (json['translation'] ?? '').toString(),
-      pronunciation: (json['pronunciation'] ?? '').toString(),
-    );
-  }
-
-  final String english;
-  final String translation;
-  final String pronunciation;
-}
-
-/// Main analysis result from Gemini
-class MilingoResult {
-  MilingoResult({
-    required this.keyword,
-    required this.translation,
-    required this.pronunciation,
-    required this.partOfSpeech,
-    required this.sentence,
-    required this.sentenceTranslation,
-    this.relatedWords = const [],
-  });
-
-  factory MilingoResult.fromJson(Map<String, dynamic> json) {
-    final related = (json['relatedWords'] as List<dynamic>?)
-            ?.map((e) => RelatedWord.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        [];
-
-    return MilingoResult(
-      keyword: (json['keyword'] ?? '').toString(),
-      translation: (json['translation'] ?? '').toString(),
-      pronunciation: (json['pronunciation'] ?? '').toString(),
-      partOfSpeech: (json['partOfSpeech'] ?? 'Noun').toString(),
-      sentence: (json['sentence'] ?? '').toString(),
-      sentenceTranslation: (json['sentenceTranslation'] ?? '').toString(),
-      relatedWords: related,
-    );
-  }
-
-  /// Tên đối tượng bằng English
-  final String keyword;
-
-  /// Dịch sang ngôn ngữ đích
-  final String translation;
-
-  /// Phiên âm romanized
-  final String pronunciation;
-
-  /// Loại từ: Noun, Verb, Adjective...
-  final String partOfSpeech;
-
-  /// Câu ví dụ bằng ngôn ngữ đích
-  final String sentence;
-
-  /// Dịch tiếng Việt câu ví dụ
-  final String sentenceTranslation;
-
-  /// Từ liên quan (hiển thị dưới dạng bubble)
-  final List<RelatedWord> relatedWords;
-}
+export 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 
 // ─────────────────────────────────────────────────────────
 // Gemini API Service

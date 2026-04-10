@@ -12,6 +12,8 @@ import 'package:milingo/features/profile/screens/profile_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
 import 'package:milingo/features/flashcards/screens/deck_screen.dart';
 import 'package:milingo/features/flashcards/screens/exam_screen.dart';
+import 'package:milingo/features/flashcards/models/deck_arg.dart';
+import 'package:milingo/features/leaderboard/screens/leaderboard_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -138,23 +140,3 @@ GoRouter appRouter(AppRouterRef ref) {
   );
 }
 
-// SplashScreen is now imported from features/splash folder
-// LoginScreen is now imported from features/auth folder
-// SimpleHomeScreen is now imported from features folder
-
-// SnapAndLearnScreen is now imported from features folder
-
-// FlashcardsScreen + DeckScreen imported from features/flashcards folder
-
-// ProfileScreen is now imported from features/profile folder
-
-class LeaderboardScreen extends StatelessWidget {
-  const LeaderboardScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Leaderboard Screen - TODO')),
-    );
-  }
-}

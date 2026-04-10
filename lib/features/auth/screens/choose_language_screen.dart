@@ -153,7 +153,7 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: canContinue
-                          ? () => context.go(AppConstants.homeRoute)
+                          ? () => context.go(AppConstants.snapAndLearnRoute)
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
