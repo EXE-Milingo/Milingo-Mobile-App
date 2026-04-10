@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:milingo/core/constants/app_constants.dart';
+import 'package:milingo/features/flashcards/models/deck_arg.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data model
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _Category {
+  final String id;
   final String nameVi;
   final int wordCount;
   final IconData icon;
@@ -13,6 +17,7 @@ class _Category {
   final String imageUrl;
 
   const _Category({
+    required this.id,
     required this.nameVi,
     required this.wordCount,
     required this.icon,
@@ -22,60 +27,70 @@ class _Category {
 
 const _kCategories = [
   _Category(
+    id: 'nha-bep',
     nameVi: 'Nhà bếp',
     wordCount: 42,
     icon: Icons.soup_kitchen_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80',
   ),
   _Category(
+    id: 'thien-nhien',
     nameVi: 'Thiên nhiên',
     wordCount: 128,
     icon: Icons.nature_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&q=80',
   ),
   _Category(
+    id: 'thanh-pho',
     nameVi: 'Thành phố',
     wordCount: 85,
     icon: Icons.location_city_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&q=80',
   ),
   _Category(
+    id: 'quan-ca-phe',
     nameVi: 'Quán cà phê',
     wordCount: 36,
     icon: Icons.coffee_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400&q=80',
   ),
   _Category(
+    id: 'van-phong',
     nameVi: 'Văn phòng',
     wordCount: 54,
     icon: Icons.business_center_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80',
   ),
   _Category(
+    id: 'phong-ngu',
     nameVi: 'Phòng ngủ',
     wordCount: 28,
     icon: Icons.bed_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400&q=80',
   ),
   _Category(
+    id: 'san-vuon',
     nameVi: 'Sân vườn',
     wordCount: 63,
     icon: Icons.yard_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=80',
   ),
   _Category(
+    id: 'duong-pho',
     nameVi: 'Đường phố',
     wordCount: 47,
     icon: Icons.directions_car_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&q=80',
   ),
   _Category(
+    id: 'truong-hoc',
     nameVi: 'Trường học',
     wordCount: 91,
     icon: Icons.school_rounded,
     imageUrl: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400&q=80',
   ),
   _Category(
+    id: 'du-lich',
     nameVi: 'Du lịch',
     wordCount: 76,
     icon: Icons.sailing_rounded,
@@ -214,7 +229,19 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        context.push(
+          AppConstants.deckRoute,
+          extra: DeckArg(
+            id: category.id,
+            name: category.nameVi,
+            nameVi: category.nameVi,
+            total: category.wordCount,
+            learned: 0,
+            emoji: '',
+          ),
+        );
+      },
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: Stack(
