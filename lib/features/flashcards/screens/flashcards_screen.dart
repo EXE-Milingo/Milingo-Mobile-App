@@ -500,67 +500,83 @@ class _FlashcardTile extends StatelessWidget {
   const _FlashcardTile({required this.card});
   final _RecentCard card;
 
+  // Map Vietnamese language labels to lang codes used by ExamScreen
+  static const _langMap = {
+    'NHẬT': ('ja', 'Tiếng Nhật'),
+    'ANH': ('en', 'English'),
+    'TRUNG': ('zh', 'Tiếng Trung'),
+  };
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Image + overlays
-            Expanded(
-              child: Stack(
-                children: [
-                  // Image
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: Image.asset(
-                      card.imagePath,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  // Top-left: speaker icon
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.volume_up_rounded, size: 18, color: _kAccent),
-                    ),
-                  ),
-                  // Top-right: favorite star
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.star_border_rounded, size: 18, color: _kGrey),
-                    ),
-                  ),
-                ],
+    return GestureDetector(
+      onTap: () {
+        final entry = _langMap[card.lang] ?? ('en', 'English');
+        context.push(
+          AppConstants.examRoute,
+          extra: {'langCode': entry.$1, 'langName': entry.$2},
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            children: [
+              // Image + overlays
+              Expanded(
+                child: Stack(
+                  children: [
+                    // Image
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      child: Image.asset(
+                        card.imagePath,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    // Top-left: speaker icon
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.85),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.volume_up_rounded, size: 18, color: _kAccent),
+                      ),
+                    ),
+                    // Top-right: favorite star
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.85),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.star_border_rounded, size: 18, color: _kGrey),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

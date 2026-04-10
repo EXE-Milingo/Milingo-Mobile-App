@@ -62,9 +62,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
-          // ── Floating Navigation Button ──
+          // ── Floating Navigation Button (top-right) ──
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 16,
+            top: MediaQuery.of(context).padding.top + 8,
             right: 16,
             child: const FloatingNavButton(),
           ),
