@@ -48,5 +48,6 @@ class AppConstants {
   static const String deckRoute = '/flashcards/deck';
   static const String examRoute = '/flashcards/exam';
   static const String profileRoute = '/profile';
+  static const String allCategoriesRoute = '/flashcards/all-categories';
   static const String leaderboardRoute = '/leaderboard';
 }

@@ -10,6 +10,7 @@ import 'package:milingo/features/auth/screens/register_screen.dart';
 import 'package:milingo/features/auth/screens/choose_language_screen.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
+import 'package:milingo/features/flashcards/screens/all_categories_screen.dart';
 import 'package:milingo/features/flashcards/screens/deck_screen.dart';
 import 'package:milingo/features/flashcards/screens/exam_screen.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
@@ -72,6 +73,13 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.flashcardsRoute,
         name: 'flashcards',
         builder: (context, state) => const FlashcardsScreen(),
+      ),
+
+      // All Categories Route
+      GoRoute(
+        path: AppConstants.allCategoriesRoute,
+        name: 'all-categories',
+        builder: (context, state) => const AllCategoriesScreen(),
       ),
 
       // Exam Route
