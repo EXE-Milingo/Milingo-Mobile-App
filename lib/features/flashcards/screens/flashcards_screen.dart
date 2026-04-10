@@ -98,9 +98,9 @@ class FlashcardsScreen extends StatelessWidget {
               ),
             ],
           ),
-          // ── Floating Navigation Button ──
+          // ── Floating Navigation Button (top-right) ──
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 16,
+            top: MediaQuery.of(context).padding.top + 8,
             right: 16,
             child: const FloatingNavButton(),
           ),
@@ -213,31 +213,8 @@ class FlashcardsScreen extends StatelessWidget {
                     child: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
                   ),
                   const Spacer(),
-                  // Language chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: const [
-                        Text('🇬🇧', style: TextStyle(fontSize: 16)),
-                        SizedBox(width: 6),
-                        Text(
-                          'English',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white, size: 18),
-                      ],
-                    ),
-                  ),
+                  // Right spacer (FloatingNavButton occupies this zone)
+                  const SizedBox(width: 44),
                 ],
               ),
               const SizedBox(height: 20),
