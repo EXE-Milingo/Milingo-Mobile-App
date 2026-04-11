@@ -6,8 +6,9 @@ class AppConstants {
   static const String appName = 'MiLingo';
   static const String appVersion = '1.0.0';
 
-  // API Keys (Store in environment variables or Firebase Remote Config in production)
+  // API Keys (Store in environment variables in production)
   static String get geminiApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+  static String get openaiApiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
 
   // PayOS Configuration
   static const String payOSBaseUrl = 'https://api-merchant.payos.vn';

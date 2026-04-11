@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,6 +56,12 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     with TickerProviderStateMixin {
   final FlutterTts _tts = FlutterTts();
 
+  // Camera
+  CameraController? _cameraController;
+  bool _isCameraInitialized = false;
+  bool _isCameraError = false;
+  String _cameraErrorMsg = '';
+
   // Bubble pop-in animation
   late final AnimationController _bubbleCtrl;
   // Scanning dots animation
@@ -64,6 +71,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   void initState() {
     super.initState();
     _initTts();
+    _initCamera();
 
     _bubbleCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 900),
@@ -71,6 +79,45 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     _scanCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1500),
     );
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        setState(() {
+          _isCameraError = true;
+          _cameraErrorMsg = 'Không tìm thấy camera trên thiết bị.';
+        });
+        return;
+      }
+
+      // Prefer back camera
+      final backCamera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+
+      _cameraController = CameraController(
+        backCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+
+      await _cameraController!.initialize();
+
+      if (mounted) {
+        setState(() => _isCameraInitialized = true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCameraError = true;
+          _cameraErrorMsg = 'Lỗi khởi tạo camera: $e';
+        });
+      }
+    }
   }
 
   Future<void> _initTts() async {
@@ -92,9 +139,34 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     );
   }
 
+  /// Take a picture from the embedded camera preview and analyze it.
+  Future<void> _captureFromEmbeddedCamera() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+
+    try {
+      final xFile = await _cameraController!.takePicture();
+      final file = File(xFile.path);
+      final ctrl = ref.read(snapControllerProvider.notifier);
+      final snap = ref.read(snapControllerProvider);
+      await ctrl.analyzeFile(file, snap.selectedLanguage);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi chụp ảnh: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _tts.stop();
+    _cameraController?.dispose();
     _bubbleCtrl.dispose();
     _scanCtrl.dispose();
     super.dispose();
@@ -128,12 +200,53 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     });
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.black,
         body: Stack(
           children: [
-            _buildBody(snap, ctrl),
+            // ── Layer 0: Live Camera Preview (full screen background) ──
+            _buildCameraLayer(snap),
+
+            // ── Layer 1: Dark overlay when analyzing/vocab ──
+            if (snap.capturedImage != null)
+              Container(color: Colors.black.withOpacity(0.15)),
+
+            // ── Layer 2: Captured image overlay (after snap) ──
+            if (snap.capturedImage != null)
+              Positioned.fill(
+                child: Image.file(
+                  File(snap.capturedImage!.path),
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+            // ── Layer 3: Semi-transparent overlay when analyzing ──
+            if (snap.isLoading)
+              Container(color: Colors.white.withOpacity(0.25)),
+
+            // ── Layer 4: Scanning dots animation ──
+            if (snap.isLoading)
+              ..._buildScanningDots(),
+
+            // ── Layer 5: Vocabulary bubbles ──
+            if (snap.showVocabulary && snap.result != null)
+              Positioned.fill(
+                child: Stack(
+                  children: _buildVocabBubbles(snap.result!, snap.selectedLanguage),
+                ),
+              ),
+
+            // ── Layer 6: UI overlay ──
+            if (snap.error == null)
+              _buildUIOverlay(snap, ctrl),
+
+            // ── Error overlay (full screen) ──
+            if (snap.error != null)
+              Positioned.fill(
+                child: _buildErrorView(snap.error!, ctrl),
+              ),
+
             // ── Floating Navigation Button (top-right) ──
             Positioned(
               top: MediaQuery.of(context).padding.top + 8,
@@ -146,71 +259,127 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     );
   }
 
-  Widget _buildBody(SnapState snap, SnapController ctrl) {
-    // Error state
-    if (snap.error != null) {
-      return _buildErrorView(snap.error!, ctrl);
+  // ═══════════════════════════════════════════════════════════════
+  // CAMERA LAYER
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildCameraLayer(SnapState snap) {
+    // If we have a captured image, camera isn't visible anyway
+    if (snap.capturedImage != null) return const SizedBox.shrink();
+
+    if (_isCameraError) {
+      return Container(
+        color: Colors.black,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.videocam_off_rounded, size: 48, color: Colors.white38),
+              const SizedBox(height: 12),
+              Text(
+                _cameraErrorMsg,
+                style: const TextStyle(color: Colors.white54, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    // Determine which phase we're in
+    if (!_isCameraInitialized || _cameraController == null) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+                strokeWidth: 2,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Đang khởi tạo camera...',
+                style: TextStyle(color: Colors.white54, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Full-screen camera preview
+    return Positioned.fill(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        clipBehavior: Clip.hardEdge,
+        child: SizedBox(
+          width: _cameraController!.value.previewSize!.height,
+          height: _cameraController!.value.previewSize!.width,
+          child: CameraPreview(_cameraController!),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // UI OVERLAY (top bar + bottom bar + status chips)
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildUIOverlay(SnapState snap, SnapController ctrl) {
     final hasImage = snap.capturedImage != null;
     final isAnalyzing = snap.isLoading;
     final hasResult = snap.result != null;
     final showVocab = snap.showVocabulary;
 
-    return Column(
-      children: [
-        // ── Top Bar (changes label based on phase) ──
-        SafeArea(
-          bottom: false,
-          child: _buildTopBar(hasResult, ctrl),
-        ),
+    return SafeArea(
+      child: Column(
+        children: [
+          // ── Top Bar ──
+          _buildTopBar(hasResult, ctrl),
 
-        // ── "Hoàn thành" chip (shown after capture) ──
-        if (hasImage)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 8),
-            child: _HoanThanhChip(done: hasResult && !isAnalyzing),
-          ),
+          // ── "Hoàn thành" chip (shown after capture) ──
+          if (hasImage)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: _HoanThanhChip(done: hasResult && !isAnalyzing),
+            ),
 
-        // ── Main Content Area ──
-        Expanded(
-          child: hasImage
-              ? _buildImageView(snap, ctrl)
-              : _buildCameraPlaceholder(),
-        ),
+          const Spacer(),
 
-        // ── "Chọn ngôn ngữ khác" button (vocab phase only) ──
-        if (showVocab)
-          GestureDetector(
-            onTap: () => _showLanguagePicker(ctrl, snap.selectedLanguage),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 6),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [_kAccent, Color(0xFFf5a97a)]),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Center(
-                child: Text('Chọn ngôn ngữ khác',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+          // ── "Chọn ngôn ngữ khác" button (vocab phase only) ──
+          if (showVocab)
+            GestureDetector(
+              onTap: () => _showLanguagePicker(ctrl, snap.selectedLanguage),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [_kAccent, Color(0xFFf5a97a)]),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Center(
+                  child: Text('Chọn ngôn ngữ khác',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                ),
               ),
             ),
-          ),
 
-        // ── Bottom Vocab Card (vocab phase only) ──
-        if (showVocab && hasResult)
-          _buildBottomVocabCard(snap.result!, snap.selectedLanguage),
+          // ── Bottom Vocab Card (vocab phase only) ──
+          if (showVocab && hasResult)
+            _buildBottomVocabCard(snap.result!, snap.selectedLanguage),
 
-        // ── Bottom Capture Bar (always visible) ──
-        if (!showVocab)
-          BottomCaptureBar(
-            onGallery: () => ctrl.pickFromGallery(snap.selectedLanguage),
-            onCapture: () => ctrl.captureFromCamera(snap.selectedLanguage),
-          ),
+          // ── Bottom Capture Bar (always visible when not in vocab mode) ──
+          if (!showVocab)
+            BottomCaptureBar(
+              onGallery: () => ctrl.pickFromGallery(snap.selectedLanguage),
+              onCapture: _captureFromEmbeddedCamera,
+            ),
 
-        SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-      ],
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+        ],
+      ),
     );
   }
 
@@ -238,89 +407,32 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.black87),
+              child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
             ),
           ),
           const Spacer(),
 
           // Title
           if (hasResult || ref.read(snapControllerProvider).isLoading)
-            const Text('BÓC TÁCH VẬT THỂ',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800,
-                    color: Colors.black87, letterSpacing: 1)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text('BÓC TÁCH VẬT THỂ',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
+                      color: Colors.white, letterSpacing: 1)),
+            ),
 
           const Spacer(),
 
           // Right spacer (FloatingNavButton occupies this zone)
           const SizedBox(width: 40),
         ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // CAMERA PLACEHOLDER
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _buildCameraPlaceholder() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.camera_alt_outlined, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'Chụp vật thể',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[500],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // IMAGE VIEW (analyzing / detected / vocab)
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _buildImageView(SnapState snap, SnapController ctrl) {
-    final isAnalyzing = snap.isLoading;
-    final hasResult = snap.result != null;
-    final showVocab = snap.showVocabulary;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // ── Background image ──
-            if (snap.capturedImage != null)
-              Image.file(
-                File(snap.capturedImage!.path),
-                fit: BoxFit.cover,
-              ),
-
-            // ── Semi-transparent overlay when analyzing ──
-            if (isAnalyzing)
-              Container(color: Colors.white.withOpacity(0.3)),
-
-            // ── Scanning dots animation ──
-            if (isAnalyzing)
-              ..._buildScanningDots(),
-
-            // ── Vocabulary bubbles (shown automatically after analysis) ──
-            if (showVocab && hasResult)
-              ..._buildVocabBubbles(snap.result!, snap.selectedLanguage),
-          ],
-        ),
       ),
     );
   }
@@ -578,11 +690,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               ),
               const SizedBox(height: 24),
               const Text('Có lỗi xảy ra',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 12),
               Text(error,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500], height: 1.5)),
+                  style: TextStyle(fontSize: 14, color: Colors.white60, height: 1.5)),
               const SizedBox(height: 32),
               GestureDetector(
                 onTap: ctrl.reset,
@@ -689,7 +801,9 @@ class _HoanThanhChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: done ? _kAccentLight : Colors.grey[200],
+        color: done
+            ? _kAccentLight
+            : Colors.white.withOpacity(0.85),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(

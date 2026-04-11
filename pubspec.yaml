@@ -23,10 +23,11 @@ dependencies:
   cloud_firestore: ^5.2.1
 
   # Camera & Image Processing
+  camera: ^0.11.0+2
   image_picker: ^1.1.2
   image_cropper: ^8.0.2
 
-  # AI Integration (Gemini)
+  # AI Integration (switchable: Gemini / OpenAI)
   google_generative_ai: ^0.4.6
 
   # Audio (Text-to-Speech)
@@ -81,9 +82,10 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   windows:
     generate: true
-    image_path: "assets/svg/milingo-logo.png"
+    image_path: "assets/images/app-icon.png"
     icon_size: 48
-  image_path: "assets/svg/milingo-logo.png"
+  image_path: "assets/images/app-icon.png"
   min_sdk_android: 21

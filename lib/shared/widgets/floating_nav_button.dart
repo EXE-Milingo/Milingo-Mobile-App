@@ -113,8 +113,8 @@ class _FloatingNavButtonState extends State<FloatingNavButton>
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _NavIcon(
-                        assetPath: 'assets/svg/home.svg',
-                        label: 'Trang chủ',
+                        assetPath: 'assets/svg/camera.svg',
+                        label: 'Camera',
                         onTap: () => _navigate(AppConstants.snapAndLearnRoute),
                       ),
                       _NavIcon(
@@ -243,3 +243,4 @@ class _NavIcon extends StatelessWidget {
     );
   }
 }
+
