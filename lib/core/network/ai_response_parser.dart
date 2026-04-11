@@ -10,30 +10,33 @@ import 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 class AIResponseParser {
   /// The prompt template used by all AI providers.
   static String buildPrompt(String langName) => '''
-You are MiLingo, a language learning assistant. Analyze this image.
+Hãy đóng vai là trợ lý học tập MiLingo. Phân tích hình ảnh này.
 
-Step 1: Identify the most prominent object.
-Step 2: Find 3 concepts related to it.
+Bước 1: Xác định đối tượng nổi bật nhất trong ảnh.
+Bước 2: Tìm 3-4 khái niệm/đặc điểm liên quan đến đối tượng đó (ví dụ: nếu là cây, thì liên quan có thể là "lá", "thiên nhiên", "xanh", "sống").
+Bước 3: Tạo bài học bằng $langName.
 
-Return ONLY this JSON, no extra text:
+Trả về JSON CHÍNH XÁC theo format sau:
 {
-  "keyword": "main object in English",
-  "translation": "keyword in $langName",
-  "pronunciation": "romanized pronunciation",
-  "partOfSpeech": "Noun/Verb/Adjective",
-  "sentence": "a natural sentence in $langName using the word",
-  "sentenceTranslation": "Vietnamese translation of the sentence",
+  "keyword": "tên đối tượng chính bằng tiếng Anh",
+  "translation": "dịch keyword sang $langName",
+  "pronunciation": "phiên âm romanized của translation",
+  "partOfSpeech": "loại từ bằng tiếng Anh (Noun/Verb/Adjective)",
+  "sentence": "một câu giao tiếp tự nhiên bằng $langName có chứa từ đó",
+  "sentenceTranslation": "dịch câu trên sang tiếng Việt",
   "relatedWords": [
-    {"english": "CONCEPT1", "translation": "$langName translation", "pronunciation": "romanized"},
-    {"english": "CONCEPT2", "translation": "$langName translation", "pronunciation": "romanized"},
-    {"english": "CONCEPT3", "translation": "$langName translation", "pronunciation": "romanized"}
+    {"english": "CONCEPT1", "translation": "dịch sang $langName", "pronunciation": "phiên âm"},
+    {"english": "CONCEPT2", "translation": "dịch sang $langName", "pronunciation": "phiên âm"},
+    {"english": "CONCEPT3", "translation": "dịch sang $langName", "pronunciation": "phiên âm"},
+    {"english": "CONCEPT4", "translation": "dịch sang $langName", "pronunciation": "phiên âm"}
   ]
 }
-Rules:
-- english fields: UPPERCASE
-- pronunciation: Romaji (Japanese), Pinyin (Chinese), standard romanization for others
-- relatedWords: must relate to the identified object
-- Return JSON only
+
+Lưu ý:
+- relatedWords: chọn những khái niệm thật sự liên quan đến vật thể trong ảnh
+- pronunciation: dùng Romaji cho tiếng Nhật, Pinyin cho tiếng Trung, romanization phù hợp cho các ngôn ngữ khác
+- english: viết IN HOA
+- Chỉ trả về JSON, không thêm text nào khác
 ''';
 
   /// Language display names shared across providers.

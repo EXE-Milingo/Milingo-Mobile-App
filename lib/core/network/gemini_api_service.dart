@@ -18,7 +18,7 @@ class GeminiAIService implements AIService {
         topK: 32,
         topP: 0.95,
         // maxOutputTokens: 8192,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
       ),
     );
   }
