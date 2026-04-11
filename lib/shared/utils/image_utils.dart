@@ -20,9 +20,12 @@ class ImageUtils {
       print('?? [ImageUtils] Starting pickFromCamera...');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
+        // maxWidth: 1920,
+        // maxHeight: 1080,
+        // imageQuality: 85,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
       );
 
       if (image != null) {

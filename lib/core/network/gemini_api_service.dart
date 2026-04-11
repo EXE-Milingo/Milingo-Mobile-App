@@ -17,7 +17,8 @@ class GeminiAIService implements AIService {
         temperature: 0.4,
         topK: 32,
         topP: 0.95,
-        maxOutputTokens: 8192,
+        // maxOutputTokens: 8192,
+        maxOutputTokens: 2048,
       ),
     );
   }
