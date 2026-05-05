@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/auth/widgets/social_buttons.dart';
@@ -14,6 +15,91 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // ── Firebase Registration ──────────────────────────────
+  Future<void> _handleRegister() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Basic validation
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showError('Vui lòng điền đầy đủ thông tin.');
+      return;
+    }
+    if (password.length < 6) {
+      _showError('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Create user with Firebase Auth
+      final credential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // 2. Update display name
+      await credential.user?.updateDisplayName(name);
+
+      // 3. Navigate to choose-language screen
+      if (mounted) {
+        context.push(AppConstants.chooseLanguageRoute);
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_mapFirebaseError(e.code));
+    } catch (e) {
+      _showError('Đã xảy ra lỗi không xác định. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+  }
+
+  String _mapFirebaseError(String code) {
+    switch (code) {
+      case 'email-already-in-use':
+        return 'Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.';
+      case 'invalid-email':
+        return 'Email không hợp lệ. Vui lòng kiểm tra lại.';
+      case 'weak-password':
+        return 'Mật khẩu quá yếu. Vui lòng chọn mật khẩu mạnh hơn.';
+      case 'operation-not-allowed':
+        return 'Đăng ký bằng email chưa được bật. Liên hệ quản trị viên.';
+      default:
+        return 'Lỗi đăng ký ($code). Vui lòng thử lại.';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +147,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // ── Full name field ──
                     const _FieldLabel(text: 'Họ và tên'),
                     const SizedBox(height: 8),
-                    const _InputField(
+                    _InputField(
+                      controller: _nameController,
                       hintText: 'Nhập họ và tên của bạn',
                       keyboardType: TextInputType.name,
                       textCapitalization: TextCapitalization.words,
@@ -72,7 +159,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // ── Email field ──
                     const _FieldLabel(text: 'Email'),
                     const SizedBox(height: 8),
-                    const _InputField(
+                    _InputField(
+                      controller: _emailController,
                       hintText: 'example@email.com',
                       keyboardType: TextInputType.emailAddress,
                     ),
@@ -83,6 +171,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const _FieldLabel(text: 'Mật khẩu'),
                     const SizedBox(height: 8),
                     _InputField(
+                      controller: _passwordController,
                       hintText: '••••••••',
                       obscureText: _obscurePassword,
                       suffixIcon: GestureDetector(
@@ -102,7 +191,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     // ── Register button ──
                     _RegisterButton(
-                      onTap: () => context.push(AppConstants.chooseLanguageRoute),
+                      isLoading: _isLoading,
+                      onTap: _handleRegister,
                     ),
 
                     const SizedBox(height: 16),
@@ -240,6 +330,7 @@ class _FieldLabel extends StatelessWidget {
 class _InputField extends StatelessWidget {
   const _InputField({
     required this.hintText,
+    this.controller,
     this.obscureText = false,
     this.keyboardType,
     this.textCapitalization = TextCapitalization.none,
@@ -247,6 +338,7 @@ class _InputField extends StatelessWidget {
   });
 
   final String hintText;
+  final TextEditingController? controller;
   final bool obscureText;
   final TextInputType? keyboardType;
   final TextCapitalization textCapitalization;
@@ -255,6 +347,7 @@ class _InputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
@@ -296,31 +389,42 @@ class _InputField extends StatelessWidget {
 }
 
 class _RegisterButton extends StatelessWidget {
-  const _RegisterButton({required this.onTap});
+  const _RegisterButton({required this.onTap, this.isLoading = false});
   final VoidCallback onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 54,
       child: ElevatedButton(
-        onPressed: onTap,
+        onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
+          disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.7),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        child: const Text(
-          'Đăng ký',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
+              )
+            : const Text(
+                'Đăng ký',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
       ),
     );
   }
@@ -387,4 +491,3 @@ class _OrDivider extends StatelessWidget {
     );
   }
 }
-

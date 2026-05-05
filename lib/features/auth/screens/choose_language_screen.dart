@@ -1,48 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
-
-// ── Language data ─────────────────────────────────────────
-
-class _Language {
-  const _Language({
-    required this.flag,
-    required this.nameVi,
-    required this.nameNative,
-    required this.code,
-  });
-  final String flag;
-  final String nameVi;
-  final String nameNative;
-  final String code;
-}
-
-const _kLanguages = [
-  _Language(flag: '🇺🇸', nameVi: 'Tiếng Anh',        nameNative: 'English',              code: 'en'),
-  _Language(flag: '🇯🇵', nameVi: 'Tiếng Nhật',        nameNative: '日本語 (Nihongo)',       code: 'ja'),
-  _Language(flag: '🇰🇷', nameVi: 'Tiếng Hàn',         nameNative: '한국어 (Hangugeo)',      code: 'ko'),
-  _Language(flag: '🇫🇷', nameVi: 'Tiếng Pháp',        nameNative: 'Français',              code: 'fr'),
-  _Language(flag: '🇪🇸', nameVi: 'Tiếng Tây Ban Nha', nameNative: 'Español',               code: 'es'),
-  _Language(flag: '🇩🇪', nameVi: 'Tiếng Đức',         nameNative: 'Deutsch',               code: 'de'),
-  _Language(flag: '🇨🇳', nameVi: 'Tiếng Trung',       nameNative: '中文 (Zhōngwén)',        code: 'zh'),
-];
+import 'package:milingo/core/network/milingo_models.dart';
+import 'package:milingo/features/auth/providers/auth_provider.dart';
 
 // ── Screen ─────────────────────────────────────────────────
 
-class ChooseLanguageScreen extends StatefulWidget {
+class ChooseLanguageScreen extends ConsumerStatefulWidget {
   const ChooseLanguageScreen({super.key});
 
   @override
-  State<ChooseLanguageScreen> createState() => _ChooseLanguageScreenState();
+  ConsumerState<ChooseLanguageScreen> createState() =>
+      _ChooseLanguageScreenState();
 }
 
-class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
+class _ChooseLanguageScreenState extends ConsumerState<ChooseLanguageScreen> {
   int? _selectedIndex;
+  bool _isSaving = false;
 
   @override
   Widget build(BuildContext context) {
-    final canContinue = _selectedIndex != null;
+    final languagesAsync = ref.watch(supportedLanguagesProvider);
+    final canContinue = _selectedIndex != null && !_isSaving;
 
     return Scaffold(
       body: Container(
@@ -99,7 +81,6 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title
                       const Text(
                         'Bạn muốn học ngôn ngữ nào?',
                         style: TextStyle(
@@ -118,22 +99,26 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
                           height: 1.5,
                         ),
                       ),
-
                       const SizedBox(height: 28),
 
-                      // Language cards
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _kLanguages.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 12),
-                        itemBuilder: (_, i) => _LanguageCard(
-                          language: _kLanguages[i],
-                          selected: _selectedIndex == i,
-                          onTap: () =>
-                              setState(() => _selectedIndex = i),
+                      // ── Language list (driven by backend) ──
+                      languagesAsync.when(
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: CircularProgressIndicator(),
+                          ),
                         ),
+                        error: (_, __) {
+                          // Fallback to hardcoded list on network error
+                          return _buildLanguageList(_fallbackLanguages);
+                        },
+                        data: (languages) {
+                          final list = languages.isEmpty
+                              ? _fallbackLanguages
+                              : languages;
+                          return _buildLanguageList(list);
+                        },
                       ),
 
                       const SizedBox(height: 32),
@@ -152,9 +137,7 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: canContinue
-                          ? () => context.go(AppConstants.snapAndLearnRoute)
-                          : null,
+                      onPressed: canContinue ? _onContinue : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         disabledBackgroundColor: AppTheme.primaryColor,
@@ -164,23 +147,33 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Tiếp tục',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Tiếp tục',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('→',
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold)),
+                              ],
                             ),
-                          ),
-                          SizedBox(width: 8),
-                          Text('→',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
                     ),
                   ),
                 ),
@@ -191,9 +184,63 @@ class _ChooseLanguageScreenState extends State<ChooseLanguageScreen> {
       ),
     );
   }
+
+  Widget _buildLanguageList(List<SupportedLanguage> languages) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: languages.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _LanguageCard(
+        language: languages[i],
+        selected: _selectedIndex == i,
+        onTap: () => setState(() => _selectedIndex = i),
+      ),
+    );
+  }
+
+  Future<void> _onContinue() async {
+    if (_selectedIndex == null) return;
+
+    final languages = ref.read(supportedLanguagesProvider).valueOrNull ??
+        _fallbackLanguages;
+    final selected = languages[_selectedIndex!];
+
+    setState(() => _isSaving = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final displayName = user?.displayName ??
+          user?.email?.split('@').first ??
+          'Milingo User';
+
+      await ref.read(authServiceProvider).initProfile(
+            displayName: displayName,
+            targetLanguage: selected.code,
+          );
+    } catch (_) {
+      // initProfile failure is non-blocking — backend is idempotent.
+      // We still proceed to the main app.
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+
+    if (mounted) context.go(AppConstants.snapAndLearnRoute);
+  }
 }
 
-// ── Language card ─────────────────────────────────────────
+// ── Fallback hardcoded languages (offline safety net) ───
+
+final _fallbackLanguages = [
+  SupportedLanguage(code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸'),
+  SupportedLanguage(code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵'),
+  SupportedLanguage(code: 'ko', name: 'Korean', nativeName: '한국어', flag: '🇰🇷'),
+  SupportedLanguage(code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷'),
+  SupportedLanguage(code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸'),
+  SupportedLanguage(code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪'),
+  SupportedLanguage(code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳'),
+];
+
+// ── Language card widget ──────────────────────────────────
 
 class _LanguageCard extends StatelessWidget {
   const _LanguageCard({
@@ -202,7 +249,7 @@ class _LanguageCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final _Language language;
+  final SupportedLanguage language;
   final bool selected;
   final VoidCallback onTap;
 
@@ -217,9 +264,8 @@ class _LanguageCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected
-                ? AppTheme.primaryColor
-                : Colors.transparent,
+            color:
+                selected ? AppTheme.primaryColor : Colors.transparent,
             width: 2,
           ),
           boxShadow: [
@@ -234,12 +280,11 @@ class _LanguageCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Flag circle
             Container(
               width: 52,
               height: 52,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F0EC),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F0EC),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -249,16 +294,13 @@ class _LanguageCard extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(width: 16),
-
-            // Names
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    language.nameVi,
+                    language.name,
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -269,7 +311,7 @@ class _LanguageCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    language.nameNative,
+                    language.nativeName,
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF9E9E9E),
@@ -278,15 +320,14 @@ class _LanguageCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Radio button
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               width: 22,
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: selected ? AppTheme.primaryColor : Colors.transparent,
+                color:
+                    selected ? AppTheme.primaryColor : Colors.transparent,
                 border: Border.all(
                   color: selected
                       ? AppTheme.primaryColor

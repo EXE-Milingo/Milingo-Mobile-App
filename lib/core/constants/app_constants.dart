@@ -10,6 +10,9 @@ class AppConstants {
   static String get geminiApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
   static String get openaiApiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
 
+  // Milingo Backend API
+  static const String milingoBaseUrl = 'http://10.0.2.2:5098';
+
   // PayOS Configuration
   static const String payOSBaseUrl = 'https://api-merchant.payos.vn';
   static String get payOSClientId =>

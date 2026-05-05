@@ -22,6 +22,7 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
   final _nameCtrl = TextEditingController();
   String _selectedEmoji = '📚';
   String? _savedToDeckName;
+  bool _isBusy = false;
 
   static const _kEmojiOptions = [
     '📚', '⭐', '🎯', '🔥', '💡', '🌟', '📝', '🎓', '🗂️', '🧠',
@@ -35,7 +36,9 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(flashcardProvider);
+    // Use the async provider — fall back to empty state while loading
+    final asyncState = ref.watch(flashcardProvider);
+    final state = asyncState.valueOrNull ?? FlashcardState(decks: const []);
     final notifier = ref.read(flashcardProvider.notifier);
 
     return Container(
@@ -112,8 +115,7 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Colors.green, size: 26),
+          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -171,21 +173,17 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
                 trailing: alreadySaved
                     ? const Icon(Icons.check_circle_rounded,
                         color: Colors.green, size: 22)
-                    : Icon(Icons.add_circle_outline_rounded,
-                        color: AppTheme.primaryColor, size: 22),
-                onTap: alreadySaved
+                    : (_isBusy
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(Icons.add_circle_outline_rounded,
+                            color: AppTheme.primaryColor, size: 22)),
+                onTap: alreadySaved || _isBusy
                     ? null
-                    : () {
-                        final added =
-                            notifier.addCardToDeck(deck.id, widget.entry);
-                        if (added) {
-                          setState(() => _savedToDeckName = deck.name);
-                          Future.delayed(const Duration(milliseconds: 1400),
-                              () {
-                            if (mounted) Navigator.of(context).pop();
-                          });
-                        }
-                      },
+                    : () => _saveToExistingDeck(notifier, deck),
               );
             },
           ),
@@ -196,19 +194,16 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
         GestureDetector(
           onTap: () => setState(() => _creatingNew = true),
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
             decoration: BoxDecoration(
               border: Border.all(
-                  color: AppTheme.primaryColor.withOpacity(0.5),
-                  width: 1.5),
+                  color: AppTheme.primaryColor.withOpacity(0.5), width: 1.5),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add_rounded,
-                    color: AppTheme.primaryColor, size: 20),
+                Icon(Icons.add_rounded, color: AppTheme.primaryColor, size: 20),
                 const SizedBox(width: 8),
                 Text('Tạo bộ thẻ mới',
                     style: TextStyle(
@@ -221,6 +216,27 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
         ),
       ],
     );
+  }
+
+  Future<void> _saveToExistingDeck(
+      FlashcardNotifier notifier, DeckData deck) async {
+    setState(() => _isBusy = true);
+    try {
+      final added = await notifier.addCardToDeck(deck.id, widget.entry);
+      if (added && mounted) {
+        setState(() {
+          _savedToDeckName = deck.name;
+          _isBusy = false;
+        });
+        Future.delayed(const Duration(milliseconds: 1400), () {
+          if (mounted) Navigator.of(context).pop();
+        });
+      } else {
+        setState(() => _isBusy = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isBusy = false);
+    }
   }
 
   Widget _buildCreateNewDeck(FlashcardNotifier notifier) {
@@ -301,8 +317,7 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
                         ),
                       ),
                       child: Center(
-                        child: Text(e,
-                            style: const TextStyle(fontSize: 22)),
+                        child: Text(e, style: const TextStyle(fontSize: 22)),
                       ),
                     ),
                   ))
@@ -333,20 +348,7 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
             Expanded(
               flex: 2,
               child: GestureDetector(
-                onTap: () {
-                  final name = _nameCtrl.text.trim();
-                  if (name.isEmpty) return;
-                  notifier.addDeck(name, _selectedEmoji);
-                  final newDeck = ref.read(flashcardProvider).decks.last;
-                  notifier.addCardToDeck(newDeck.id, widget.entry);
-                  setState(() {
-                    _creatingNew = false;
-                    _savedToDeckName = name;
-                  });
-                  Future.delayed(const Duration(milliseconds: 1400), () {
-                    if (mounted) Navigator.of(context).pop();
-                  });
-                },
+                onTap: _isBusy ? null : () => _createDeckAndSave(notifier),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   decoration: BoxDecoration(
@@ -356,11 +358,18 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
                     ]),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Center(
-                    child: Text('Tạo & Lưu',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
+                  child: Center(
+                    child: _isBusy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Tạo & Lưu',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
                   ),
                 ),
               ),
@@ -369,5 +378,34 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
         ),
       ],
     );
+  }
+
+  Future<void> _createDeckAndSave(FlashcardNotifier notifier) async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+
+    setState(() => _isBusy = true);
+    try {
+      await notifier.addDeck(name, _selectedEmoji);
+      // The newly created deck is the last one in the list
+      final newDeck = ref.read(flashcardProvider).valueOrNull?.decks.last;
+      if (newDeck != null) {
+        await notifier.addCardToDeck(newDeck.id, widget.entry);
+        if (mounted) {
+          setState(() {
+            _creatingNew = false;
+            _savedToDeckName = name;
+            _isBusy = false;
+          });
+          Future.delayed(const Duration(milliseconds: 1400), () {
+            if (mounted) Navigator.of(context).pop();
+          });
+        }
+      } else {
+        setState(() => _isBusy = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isBusy = false);
+    }
   }
 }

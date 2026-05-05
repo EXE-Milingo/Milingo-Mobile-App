@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/auth/widgets/social_buttons.dart';
@@ -14,6 +15,83 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // ── Firebase Login ─────────────────────────────────────
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Basic validation
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Vui lòng nhập email và mật khẩu.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Login successful → navigate to main app
+      if (mounted) {
+        context.go(AppConstants.snapAndLearnRoute);
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_mapFirebaseError(e.code));
+    } catch (e) {
+      _showError('Đã xảy ra lỗi không xác định. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+  }
+
+  String _mapFirebaseError(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'Không tìm thấy tài khoản với email này.';
+      case 'wrong-password':
+        return 'Mật khẩu không đúng. Vui lòng thử lại.';
+      case 'invalid-email':
+        return 'Email không hợp lệ. Vui lòng kiểm tra lại.';
+      case 'user-disabled':
+        return 'Tài khoản này đã bị vô hiệu hóa.';
+      case 'too-many-requests':
+        return 'Quá nhiều lần thử. Vui lòng đợi một lát rồi thử lại.';
+      case 'invalid-credential':
+        return 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.';
+      default:
+        return 'Lỗi đăng nhập ($code). Vui lòng thử lại.';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const _FieldLabel(text: 'Email hoặc Tên đăng nhập'),
                     const SizedBox(height: 8),
                     _InputField(
+                      controller: _emailController,
                       hintText: 'Nhập email hoặc tên của bạn',
                       keyboardType: TextInputType.emailAddress,
                     ),
@@ -105,6 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     _InputField(
+                      controller: _passwordController,
                       hintText: 'Nhập mật khẩu',
                       obscureText: _obscurePassword,
                       suffixIcon: GestureDetector(
@@ -123,7 +203,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // ── Login button ──
                     _LoginButton(
-                      onTap: () => context.go(AppConstants.snapAndLearnRoute),
+                      isLoading: _isLoading,
+                      onTap: _handleLogin,
                     ),
 
                     SizedBox(height: isSmall ? 20 : 28),
@@ -233,12 +314,14 @@ class _FieldLabel extends StatelessWidget {
 class _InputField extends StatelessWidget {
   const _InputField({
     required this.hintText,
+    this.controller,
     this.obscureText = false,
     this.keyboardType,
     this.suffixIcon,
   });
 
   final String hintText;
+  final TextEditingController? controller;
   final bool obscureText;
   final TextInputType? keyboardType;
   final Widget? suffixIcon;
@@ -246,6 +329,7 @@ class _InputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       style: const TextStyle(fontSize: 15, color: Color(0xFF424242)),
@@ -284,31 +368,42 @@ class _InputField extends StatelessWidget {
 }
 
 class _LoginButton extends StatelessWidget {
-  const _LoginButton({required this.onTap});
+  const _LoginButton({required this.onTap, this.isLoading = false});
   final VoidCallback onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 54,
       child: ElevatedButton(
-        onPressed: onTap,
+        onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
+          disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.7),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        child: const Text(
-          'Đăng nhập',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
+              )
+            : const Text(
+                'Đăng nhập',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
       ),
     );
   }
@@ -342,4 +437,3 @@ class _OrDivider extends StatelessWidget {
     );
   }
 }
-

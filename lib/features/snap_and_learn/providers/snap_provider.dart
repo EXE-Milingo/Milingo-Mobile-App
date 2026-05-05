@@ -1,10 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:milingo/core/network/ai_service.dart';
-import 'package:milingo/core/network/ai_provider.dart';
+import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 import 'package:milingo/shared/utils/image_utils.dart';
 import 'package:milingo/core/constants/app_constants.dart';
@@ -12,7 +9,7 @@ import 'package:milingo/core/constants/app_constants.dart';
 export 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 
 // ─────────────────────────────────────────────────────────
-// SnapState
+// SnapState (unchanged shape — UI needs no changes)
 // ─────────────────────────────────────────────────────────
 
 class SnapState {
@@ -24,6 +21,9 @@ class SnapState {
     this.capturedImageBytes,
     this.selectedLanguage = 'en',
     this.showVocabulary = false,
+    this.allVocabItems = const [],
+    this.currentVocabIndex = 0,
+    this.coinsAwarded = 0,
   });
 
   final bool isLoading;
@@ -34,6 +34,15 @@ class SnapState {
   final String selectedLanguage;
   final bool showVocabulary;
 
+  /// All vocabulary items from the backend (multi-object support).
+  final List<MilingoResult> allVocabItems;
+
+  /// Index of the currently displayed vocab item.
+  final int currentVocabIndex;
+
+  /// Coins awarded by the backend for this snap.
+  final int coinsAwarded;
+
   SnapState copyWith({
     bool? isLoading,
     MilingoResult? result,
@@ -42,17 +51,41 @@ class SnapState {
     List<int>? capturedImageBytes,
     String? selectedLanguage,
     bool? showVocabulary,
+    List<MilingoResult>? allVocabItems,
+    int? currentVocabIndex,
+    int? coinsAwarded,
   }) {
     return SnapState(
       isLoading: isLoading ?? this.isLoading,
       result: result ?? this.result,
-      error: error,
+      error: error, // null clears the error
       capturedImage: capturedImage ?? this.capturedImage,
       capturedImageBytes: capturedImageBytes ?? this.capturedImageBytes,
       selectedLanguage: selectedLanguage ?? this.selectedLanguage,
       showVocabulary: showVocabulary ?? this.showVocabulary,
+      allVocabItems: allVocabItems ?? this.allVocabItems,
+      currentVocabIndex: currentVocabIndex ?? this.currentVocabIndex,
+      coinsAwarded: coinsAwarded ?? this.coinsAwarded,
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────
+// Mapping helper: SnapVocabItem → MilingoResult
+// Keeps the existing MilingoResult shape so snap UI widgets
+// need zero changes.
+// ─────────────────────────────────────────────────────────
+
+MilingoResult _vocabItemToMilingoResult(SnapVocabItem item) {
+  return MilingoResult(
+    keyword: item.keyword,
+    translation: item.translation,
+    pronunciation: item.pronunciation,
+    partOfSpeech: 'Noun',
+    sentence: item.exampleSentence,
+    sentenceTranslation: '',
+    relatedWords: const [],
+  );
 }
 
 // ─────────────────────────────────────────────────────────
@@ -60,71 +93,58 @@ class SnapState {
 // ─────────────────────────────────────────────────────────
 
 class SnapController extends StateNotifier<SnapState> {
-  SnapController(this._aiService) : super(const SnapState());
-  final AIService _aiService;
+  SnapController(this._api) : super(const SnapState());
+
+  final MilingoApiService _api;
 
   void setLanguage(String languageCode) {
     state = state.copyWith(selectedLanguage: languageCode);
   }
 
-  void showVocab() {
-    state = state.copyWith(showVocabulary: true);
+  void showVocab() => state = state.copyWith(showVocabulary: true);
+  void hideVocab() => state = state.copyWith(showVocabulary: false);
+
+  /// Navigate between multiple detected objects.
+  void nextVocabItem() {
+    if (state.allVocabItems.isEmpty) return;
+    final next = (state.currentVocabIndex + 1) % state.allVocabItems.length;
+    state = state.copyWith(currentVocabIndex: next, result: state.allVocabItems[next]);
   }
 
-  void hideVocab() {
-    state = state.copyWith(showVocabulary: false);
+  void prevVocabItem() {
+    if (state.allVocabItems.isEmpty) return;
+    final prev = (state.currentVocabIndex - 1 + state.allVocabItems.length) % state.allVocabItems.length;
+    state = state.copyWith(currentVocabIndex: prev, result: state.allVocabItems[prev]);
   }
+
+  // ── Capture / pick ─────────────────────────────────────
 
   Future<void> captureFromCamera(String targetLanguage) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final File? imageFile = await ImageUtils.pickFromCamera();
-      if (imageFile == null) {
-        state = const SnapState();
-        return;
-      }
-      final isValidSize = await ImageUtils.validateFileSize(
-        imageFile,
-        AppConstants.maxImageSizeBytes,
-      );
-      if (!isValidSize) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.',
-        );
+      if (imageFile == null) { state = SnapState(selectedLanguage: state.selectedLanguage); return; }
+      if (!await ImageUtils.validateFileSize(imageFile, AppConstants.maxImageSizeBytes)) {
+        state = state.copyWith(isLoading: false, error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
         return;
       }
       state = state.copyWith(capturedImage: imageFile);
-      await _analyzeFromFile(imageFile, targetLanguage);
+      await _analyzeFile(imageFile);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Lỗi khi chụp ảnh: ${e.toString()}',
-      );
+      state = state.copyWith(isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
     }
   }
 
-  /// Analyze a file captured from the embedded camera preview.
   Future<void> analyzeFile(File imageFile, String targetLanguage) async {
     state = state.copyWith(isLoading: true, error: null, capturedImage: imageFile);
     try {
-      final isValidSize = await ImageUtils.validateFileSize(
-        imageFile,
-        AppConstants.maxImageSizeBytes,
-      );
-      if (!isValidSize) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.',
-        );
+      if (!await ImageUtils.validateFileSize(imageFile, AppConstants.maxImageSizeBytes)) {
+        state = state.copyWith(isLoading: false, error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
         return;
       }
-      await _analyzeFromFile(imageFile, targetLanguage);
+      await _analyzeFile(imageFile);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Lỗi khi chụp ảnh: ${e.toString()}',
-      );
+      state = state.copyWith(isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
     }
   }
 
@@ -132,61 +152,51 @@ class SnapController extends StateNotifier<SnapState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final xFile = await ImageUtils.pickImageAsXFile();
-      if (xFile == null) {
-        state = const SnapState();
-        return;
-      }
+      if (xFile == null) { state = SnapState(selectedLanguage: state.selectedLanguage); return; }
       final imageBytes = await ImageUtils.xFileToBytes(xFile);
       if (imageBytes.length > AppConstants.maxImageSizeBytes) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.',
-        );
+        state = state.copyWith(isLoading: false, error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
         return;
       }
+      final file = File(xFile.path);
       if (kIsWeb) {
         state = state.copyWith(capturedImageBytes: imageBytes);
       } else {
-        state = state.copyWith(capturedImage: File(xFile.path));
+        state = state.copyWith(capturedImage: file);
       }
-      await _analyzeFromBytes(imageBytes, targetLanguage);
+      await _analyzeFile(file);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Lỗi khi chọn ảnh: ${e.toString()}',
-      );
+      state = state.copyWith(isLoading: false, error: 'Lỗi khi chọn ảnh: ${e.toString()}');
     }
   }
 
-  Future<void> _analyzeFromFile(File file, String targetLanguage) async {
-    try {
-      final bytes = await ImageUtils.fileToBytes(file);
-      await _analyzeFromBytes(bytes, targetLanguage);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Lỗi phân tích ảnh: ${e.toString()}',
-      );
-    }
-  }
+  // ── Core analysis ──────────────────────────────────────
 
-  Future<void> _analyzeFromBytes(
-      List<int> imageBytes, String targetLanguage) async {
+  Future<void> _analyzeFile(File file) async {
     try {
-      final result = await _aiService.analyzeImageForLanguage(
-        imageBytes: Uint8List.fromList(imageBytes),
-        targetLanguage: targetLanguage,
-      );
+      final snapResponse = await _api.analyzeSnap(file);
+      final allResults = snapResponse.vocabItems.map(_vocabItemToMilingoResult).toList();
+
+      if (allResults.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Không nhận ra đối tượng nào. Vui lòng thử ảnh khác.',
+        );
+        return;
+      }
+
       state = state.copyWith(
         isLoading: false,
-        result: result,
+        result: allResults.first,
+        allVocabItems: allResults,
+        currentVocabIndex: 0,
+        coinsAwarded: snapResponse.coinsAwarded,
         error: null,
       );
+    } on MilingoApiException catch (e) {
+      state = state.copyWith(isLoading: false, error: e.message);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Lỗi phân tích ảnh: ${e.toString()}',
-      );
+      state = state.copyWith(isLoading: false, error: 'Lỗi phân tích ảnh: ${e.toString()}');
     }
   }
 
@@ -202,6 +212,6 @@ class SnapController extends StateNotifier<SnapState> {
 
 final snapControllerProvider =
     StateNotifierProvider<SnapController, SnapState>((ref) {
-  final aiService = ref.watch(aiServiceProvider);
-  return SnapController(aiService);
+  final api = ref.watch(milingoApiServiceProvider);
+  return SnapController(api);
 });
