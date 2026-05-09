@@ -179,3 +179,27 @@ class SupportedLanguage {
   final String nativeName;
   final String flag;
 }
+  // ── User Stats ────────────────────────────────────────────
+
+  class UserStatsResponse {
+    const UserStatsResponse({
+      required this.coins,
+      required this.currentStreak,
+      required this.totalPoints,
+      this.lastStudyDate,
+    });
+
+    factory UserStatsResponse.fromJson(Map<String, dynamic> json) {
+      return UserStatsResponse(
+        coins: (json['coins'] as num?)?.toInt() ?? 0,
+        currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
+        totalPoints: (json['totalPoints'] as num?)?.toInt() ?? 0,
+        lastStudyDate: json['lastStudyDate'] as String?,
+      );
+    }
+
+    final int coins;
+    final int currentStreak;
+    final int totalPoints;
+    final String? lastStudyDate;
+  }

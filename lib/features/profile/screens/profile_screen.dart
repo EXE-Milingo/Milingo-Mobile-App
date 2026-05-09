@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/shared/widgets/floating_nav_button.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -442,9 +445,12 @@ class _LanguagePickerSheet extends StatelessWidget {
 
 // ── Profile info card ─────────────────────────────────────
 
-class _ProfileCard extends StatelessWidget {
+class _ProfileCard extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName ?? 'Người dùng';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -461,7 +467,6 @@ class _ProfileCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -485,9 +490,9 @@ class _ProfileCard extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Name
-          const Text(
-            'Người dùng',
-            style: TextStyle(
+          Text(
+            displayName,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF1A1A1A),
@@ -618,14 +623,16 @@ class _AvatarWidget extends StatelessWidget {
 
 // ── Stats row ─────────────────────────────────────────────
 
-class _StatsRow extends StatelessWidget {
+class _StatsRow extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(userStatsValueProvider);
+
     return Row(
       children: [
         Expanded(
           child: _StatCard(
-            value: '0',
+            value: stats.totalPoints.toString(), // ← thật
             label: 'Điểm',
             badgeEmoji: '⭐',
             badgeColor: const Color(0xFFFFF3E0),
@@ -635,7 +642,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _StatCard(
-            value: '10',
+            value: stats.coins.toString(), // ← thật
             label: 'Đá quý',
             badgeEmoji: '💎',
             badgeColor: const Color(0xFFEDE7F6),
@@ -645,7 +652,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _StatCard(
-            value: '0',
+            value: stats.currentStreak.toString(), // ← thật
             label: 'Streak',
             badgeEmoji: '🔥',
             badgeColor: const Color(0xFFFFEDE8),

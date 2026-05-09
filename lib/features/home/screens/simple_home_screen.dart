@@ -3,15 +3,16 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 
-class SimpleHomeScreen extends StatefulWidget {
+class SimpleHomeScreen extends ConsumerStatefulWidget {
   const SimpleHomeScreen({super.key});
-
   @override
-  State<SimpleHomeScreen> createState() => _SimpleHomeScreenState();
+  ConsumerState<SimpleHomeScreen> createState() => _SimpleHomeScreenState();
 }
-
-class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
+class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
   int _selectedTab = 0;
 
   void _onTabTapped(int index) {
@@ -90,80 +91,106 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
 
   // ── Header ────────────────────────────────────────────────
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Row(
-        children: [
-          // Logo + app name
-          SvgPicture.asset('assets/svg/milingo-logo.svg', width: 32, height: 32),
-          const SizedBox(width: 8),
-          Text(
-            'MiLingo',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryColor,
+      // Lấy stats thật từ provider
+      final stats = ref.watch(userStatsValueProvider);
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Row(
+          children: [
+            SvgPicture.asset('assets/svg/milingo-logo.svg', width: 32, height: 32),
+            const SizedBox(width: 8),
+            Text(
+              'MiLingo',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+              ),
             ),
-          ),
-          const Spacer(),
-          // Stats chips
-          _StatChip(
-            icon: Icons.local_fire_department_rounded,
-            value: '0',
-            color: const Color(0xFFFF6B35),
-          ),
-          const SizedBox(width: 8),
-          _StatChip(
-            icon: Icons.diamond_rounded,
-            value: '10',
-            color: const Color(0xFF7C5CBF),
-          ),
-          const SizedBox(width: 8),
-          _StatChip(
-            icon: Icons.emoji_events_rounded,
-            value: '0',
-            color: const Color(0xFFFFC107),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Weekly streak row ──────────────────────────────────────
-  Widget _buildWeeklyStreak() {
-    final today = DateTime.now().weekday; // 1=Mon … 7=Sun
-    const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryColor.withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+            const Spacer(),
+            _StatChip(
+              icon: Icons.local_fire_department_rounded,
+              value: stats.currentStreak.toString(),
+              color: const Color(0xFFFF6B35),
+            ),
+            const SizedBox(width: 8),
+            _StatChip(
+              icon: Icons.diamond_rounded,
+              value: stats.coins.toString(),
+              color: const Color(0xFF7C5CBF),
+            ),
+            const SizedBox(width: 8),
+            _StatChip(
+              icon: Icons.emoji_events_rounded,
+              value: stats.totalPoints.toString(),
+              color: const Color(0xFFFFC107),
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(7, (i) {
-            final isToday = i + 1 == today;
-            final isPast = i + 1 < today;
-            return _DayCircle(
-              label: days[i],
-              isToday: isToday,
-              isPast: isPast,
-            );
-          }),
+      );
+    }
+
+  // ── Weekly streak row ──────────────────────────────────────
+  Widget _buildWeeklyStreak() {
+      final stats = ref.watch(userStatsValueProvider);
+      final today = DateTime.now().weekday; // 1=Mon … 7=Sun
+      const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+      // Tính ngày học gần nhất từ backend
+      DateTime? lastStudy;
+      if (stats.lastStudyDate != null) {
+        lastStudy = DateTime.tryParse(stats.lastStudyDate!);
+      }
+
+      final todayDate = DateTime.now();
+      final todayOnly = DateTime(todayDate.year, todayDate.month, todayDate.day);
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryColor.withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (i) {
+              final isToday = i + 1 == today;
+
+              // isPast = ngày đó trong tuần này đã qua VÀ user có streak chứng tỏ đã học
+              // Logic đơn giản: nếu có streak >= N thì N ngày gần nhất đều "đã học"
+              final dayOfWeek = i + 1; // 1=Mon
+              final daysAgoFromToday = today - dayOfWeek; // số ngày trước hôm nay
+              bool isPast = false;
+
+              if (daysAgoFromToday > 0 && stats.currentStreak > 0) {
+                // Ngày đó trong quá khứ tuần này và streak đủ dài
+                isPast = daysAgoFromToday <= stats.currentStreak;
+              } else if (daysAgoFromToday == 0 && lastStudy != null) {
+                // Hôm nay — check xem đã học chưa
+                final lastStudyOnly = DateTime(lastStudy.year, lastStudy.month, lastStudy.day);
+                isPast = lastStudyOnly == todayOnly;
+              }
+
+              return _DayCircle(
+                label: days[i],
+                isToday: isToday,
+                isPast: isPast,
+              );
+            }),
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
   // ── Daily banner ───────────────────────────────────────────
   Widget _buildDailyBanner() {

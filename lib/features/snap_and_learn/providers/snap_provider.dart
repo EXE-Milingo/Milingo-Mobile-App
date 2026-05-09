@@ -5,7 +5,7 @@ import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 import 'package:milingo/shared/utils/image_utils.dart';
 import 'package:milingo/core/constants/app_constants.dart';
-
+import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 export 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 
 // ─────────────────────────────────────────────────────────
@@ -93,9 +93,9 @@ MilingoResult _vocabItemToMilingoResult(SnapVocabItem item) {
 // ─────────────────────────────────────────────────────────
 
 class SnapController extends StateNotifier<SnapState> {
-  SnapController(this._api) : super(const SnapState());
-
+  SnapController(this._api, this._ref) : super(const SnapState());
   final MilingoApiService _api;
+  final Ref _ref;
 
   void setLanguage(String languageCode) {
     state = state.copyWith(selectedLanguage: languageCode);
@@ -170,35 +170,39 @@ class SnapController extends StateNotifier<SnapState> {
     }
   }
 
-  // ── Core analysis ──────────────────────────────────────
+      // ── Core analysis ──────────────────────────────────────
 
-  Future<void> _analyzeFile(File file) async {
-    try {
-      final snapResponse = await _api.analyzeSnap(file);
-      final allResults = snapResponse.vocabItems.map(_vocabItemToMilingoResult).toList();
+      Future<void> _analyzeFile(File file) async {
+        try {
+          final snapResponse = await _api.analyzeSnap(file);
+          final allResults = snapResponse.vocabItems.map(_vocabItemToMilingoResult).toList();
 
-      if (allResults.isEmpty) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Không nhận ra đối tượng nào. Vui lòng thử ảnh khác.',
-        );
-        return;
+          if (snapResponse.coinsAwarded > 0) {
+            _ref.read(userStatsProvider.notifier).addCoinsOptimistic(snapResponse.coinsAwarded);
+            }
+
+          if (allResults.isEmpty) {
+            state = state.copyWith(
+              isLoading: false,
+              error: 'Không nhận ra đối tượng nào. Vui lòng thử ảnh khác.',
+            );
+            return;
+          }
+
+          state = state.copyWith(
+            isLoading: false,
+            result: allResults.first,
+            allVocabItems: allResults,
+            currentVocabIndex: 0,
+            coinsAwarded: snapResponse.coinsAwarded,
+            error: null,
+          );
+        } on MilingoApiException catch (e) {
+          state = state.copyWith(isLoading: false, error: e.message);
+        } catch (e) {
+          state = state.copyWith(isLoading: false, error: 'Lỗi phân tích ảnh: ${e.toString()}');
+        }
       }
-
-      state = state.copyWith(
-        isLoading: false,
-        result: allResults.first,
-        allVocabItems: allResults,
-        currentVocabIndex: 0,
-        coinsAwarded: snapResponse.coinsAwarded,
-        error: null,
-      );
-    } on MilingoApiException catch (e) {
-      state = state.copyWith(isLoading: false, error: e.message);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Lỗi phân tích ảnh: ${e.toString()}');
-    }
-  }
 
   void reset() {
     final lang = state.selectedLanguage;
@@ -213,5 +217,5 @@ class SnapController extends StateNotifier<SnapState> {
 final snapControllerProvider =
     StateNotifierProvider<SnapController, SnapState>((ref) {
   final api = ref.watch(milingoApiServiceProvider);
-  return SnapController(api);
+  return SnapController(api, ref);
 });

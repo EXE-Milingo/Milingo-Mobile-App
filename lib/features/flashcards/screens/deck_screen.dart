@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/widgets/vocab_card.dart';
+import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ── Per-deck sample data ──────────────────────────────────
 
@@ -116,18 +118,27 @@ const _kDark   = Color(0xFF1A1A1A);
 
 // ── Screen ────────────────────────────────────────────────
 
-class DeckScreen extends StatefulWidget {
+class DeckScreen extends ConsumerStatefulWidget {
   const DeckScreen({super.key, required this.deck});
   final DeckArg deck;
 
   @override
-  State<DeckScreen> createState() => _DeckScreenState();
+  ConsumerState<DeckScreen> createState() => _DeckScreenState();
 }
 
-class _DeckScreenState extends State<DeckScreen> {
+class _DeckScreenState extends ConsumerState<DeckScreen> {
   int _filterIndex = 0;
   final _searchController = TextEditingController();
   String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Ghi nhận học flashcard hôm nay — idempotent, an toàn khi gọi nhiều lần
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userStatsProvider.notifier).recordStudy();
+    });
+  }
 
   @override
   void dispose() {

@@ -179,6 +179,33 @@ class MilingoApiService {
     }
   }
 
+/// Lấy stats của user: coins, streak, totalPoints.
+  Future<UserStatsResponse> getUserStats() async {
+    try {
+      final response = await _dio.get('/api/v1/users/stats');
+      return _unwrap(
+        response,
+        (data) => UserStatsResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  /// Ghi nhận học flashcard hôm nay. Idempotent.
+  /// Trả về stats mới nhất sau khi cập nhật streak.
+  Future<UserStatsResponse> recordFlashcardStudy() async {
+    try {
+      final response = await _dio.post('/api/v1/users/record-study');
+      return _unwrap(
+        response,
+        (data) => UserStatsResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   // ═══════════════════════════════════════════════════════
   // Snap & Learn
   // ═══════════════════════════════════════════════════════
