@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 
@@ -46,7 +47,15 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Navigate after 3.5 s so the user sees at least one full spin
     Future.delayed(const Duration(milliseconds: 3500), () {
-      if (mounted) context.go(AppConstants.authRoute);
+      if (!mounted) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Already logged in → go straight to camera
+        context.go(AppConstants.snapAndLearnRoute);
+      } else {
+        // Not logged in → show login
+        context.go(AppConstants.authRoute);
+      }
     });
   }
 

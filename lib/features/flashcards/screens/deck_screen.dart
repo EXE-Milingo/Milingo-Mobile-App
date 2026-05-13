@@ -2,119 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/widgets/vocab_card.dart';
+import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// ── Per-deck sample data ──────────────────────────────────
-
-const _kSampleVocab = <String, List<VocabItem>>{
-  'nouns': [
-    VocabItem(word: 'Pen',       reading: 'コーヒーカップ (Kōhī kappu)',   emoji: '✏️', isNew: true),
-    VocabItem(word: 'Cat',       reading: '観葉植物 (Kanyōshokubutsu)',   emoji: '🐱'),
-    VocabItem(word: 'Laptop',    reading: 'ノートパソコン (Nōto pasokon)', emoji: '💻'),
-    VocabItem(word: 'Headphones',reading: 'ヘッドホン (Heddohon)',        emoji: '🎧'),
-    VocabItem(word: 'Book',      reading: '本 (Hon)',                     emoji: '📖'),
-    VocabItem(word: 'Chair',     reading: '椅子 (Isu)',                   emoji: '🪑'),
-    VocabItem(word: 'Table',     reading: 'テーブル (Tēburu)',            emoji: '🪵'),
-  ],
-  'nha-bep': [
-    VocabItem(word: 'Knife',     reading: '包丁 (Hōchō)',               emoji: '🔪', isNew: true),
-    VocabItem(word: 'Spoon',     reading: 'スプーン (Supūn)',            emoji: '🥄'),
-    VocabItem(word: 'Pan',       reading: 'フライパン (Furaipan)',        emoji: '🍳'),
-    VocabItem(word: 'Cup',       reading: 'コップ (Koppu)',              emoji: '☕'),
-    VocabItem(word: 'Plate',     reading: '皿 (Sara)',                   emoji: '🍽️'),
-    VocabItem(word: 'Pot',       reading: '鍋 (Nabe)',                   emoji: '🫕'),
-    VocabItem(word: 'Oven',      reading: 'オーブン (Ōbun)',             emoji: '🔥'),
-  ],
-  'thien-nhien': [
-    VocabItem(word: 'Tree',      reading: '木 (Ki)',                     emoji: '🌳', isNew: true),
-    VocabItem(word: 'River',     reading: '川 (Kawa)',                   emoji: '🏞️'),
-    VocabItem(word: 'Mountain',  reading: '山 (Yama)',                   emoji: '⛰️'),
-    VocabItem(word: 'Flower',    reading: '花 (Hana)',                   emoji: '🌸'),
-    VocabItem(word: 'Sun',       reading: '太陽 (Taiyō)',               emoji: '☀️'),
-    VocabItem(word: 'Rain',      reading: '雨 (Ame)',                    emoji: '🌧️'),
-  ],
-  'thanh-pho': [
-    VocabItem(word: 'Building',  reading: 'ビル (Biru)',                 emoji: '🏢', isNew: true),
-    VocabItem(word: 'Bridge',    reading: '橋 (Hashi)',                  emoji: '🌉'),
-    VocabItem(word: 'Station',   reading: '駅 (Eki)',                    emoji: '🚉'),
-    VocabItem(word: 'Park',      reading: '公園 (Kōen)',                emoji: '🏞️'),
-    VocabItem(word: 'Traffic',   reading: '交通 (Kōtsū)',               emoji: '🚦'),
-  ],
-  'quan-ca-phe': [
-    VocabItem(word: 'Coffee',    reading: 'コーヒー (Kōhī)',             emoji: '☕', isNew: true),
-    VocabItem(word: 'Tea',       reading: 'お茶 (Ocha)',                 emoji: '🍵'),
-    VocabItem(word: 'Cake',      reading: 'ケーキ (Kēki)',              emoji: '🍰'),
-    VocabItem(word: 'Menu',      reading: 'メニュー (Menyū)',            emoji: '📋'),
-  ],
-  'van-phong': [
-    VocabItem(word: 'Pen',       reading: 'ペン (Pen)',                  emoji: '✏️', isNew: true),
-    VocabItem(word: 'Laptop',    reading: 'ノートパソコン (Nōto pasokon)', emoji: '💻'),
-    VocabItem(word: 'Desk',      reading: '机 (Tsukue)',                 emoji: '🪵'),
-    VocabItem(word: 'Printer',   reading: 'プリンター (Purintā)',        emoji: '🖨️'),
-    VocabItem(word: 'Chair',     reading: '椅子 (Isu)',                  emoji: '🪑'),
-  ],
-  'phong-ngu': [
-    VocabItem(word: 'Bed',       reading: 'ベッド (Beddo)',              emoji: '🛏️', isNew: true),
-    VocabItem(word: 'Pillow',    reading: '枕 (Makura)',                 emoji: '🛌'),
-    VocabItem(word: 'Lamp',      reading: 'ランプ (Ranpu)',              emoji: '💡'),
-    VocabItem(word: 'Curtain',   reading: 'カーテン (Kāten)',            emoji: '🪟'),
-  ],
-  'san-vuon': [
-    VocabItem(word: 'Garden',    reading: '庭 (Niwa)',                   emoji: '🌿', isNew: true),
-    VocabItem(word: 'Flower',    reading: '花 (Hana)',                   emoji: '🌸'),
-    VocabItem(word: 'Grass',     reading: '草 (Kusa)',                   emoji: '🌱'),
-    VocabItem(word: 'Fence',     reading: '柵 (Saku)',                   emoji: '🏡'),
-    VocabItem(word: 'Hose',      reading: 'ホース (Hōsu)',              emoji: '🪴'),
-  ],
-  'duong-pho': [
-    VocabItem(word: 'Car',       reading: '車 (Kuruma)',                 emoji: '🚗', isNew: true),
-    VocabItem(word: 'Bus',       reading: 'バス (Basu)',                 emoji: '🚌'),
-    VocabItem(word: 'Bicycle',   reading: '自転車 (Jitensha)',           emoji: '🚲'),
-    VocabItem(word: 'Sidewalk',  reading: '歩道 (Hodō)',                emoji: '🚶'),
-  ],
-  'truong-hoc': [
-    VocabItem(word: 'Teacher',   reading: '先生 (Sensei)',               emoji: '👩‍🏫', isNew: true),
-    VocabItem(word: 'Student',   reading: '学生 (Gakusei)',              emoji: '🎓'),
-    VocabItem(word: 'Book',      reading: '本 (Hon)',                    emoji: '📖'),
-    VocabItem(word: 'Classroom', reading: '教室 (Kyōshitsu)',           emoji: '🏫'),
-    VocabItem(word: 'Pencil',    reading: '鉛筆 (Enpitsu)',             emoji: '✏️'),
-  ],
-  'du-lich': [
-    VocabItem(word: 'Airport',   reading: '空港 (Kūkō)',                emoji: '✈️', isNew: true),
-    VocabItem(word: 'Hotel',     reading: 'ホテル (Hoteru)',             emoji: '🏨'),
-    VocabItem(word: 'Map',       reading: '地図 (Chizu)',                emoji: '🗺️'),
-    VocabItem(word: 'Camera',    reading: 'カメラ (Kamera)',             emoji: '📷'),
-    VocabItem(word: 'Passport',  reading: 'パスポート (Pasupōto)',       emoji: '🛂'),
-  ],
-  'adjectives': [
-    VocabItem(word: 'Beautiful', reading: '美しい (Utsukushii)',        emoji: '✨', isNew: true),
-    VocabItem(word: 'Fast',      reading: '速い (Hayai)',               emoji: '⚡'),
-    VocabItem(word: 'Tall',      reading: '高い (Takai)',               emoji: '📏'),
-  ],
-  'verbs': [
-    VocabItem(word: 'Run',       reading: '走る (Hashiru)',             emoji: '🏃', isNew: true),
-    VocabItem(word: 'Eat',       reading: '食べる (Taberu)',            emoji: '🍽️'),
-    VocabItem(word: 'Sleep',     reading: '寝る (Neru)',                emoji: '😴'),
-    VocabItem(word: 'Read',      reading: '読む (Yomu)',                emoji: '📚'),
-  ],
-  'pronouns': [
-    VocabItem(word: 'I',         reading: '私 (Watashi)',               emoji: '👤', isNew: true),
-    VocabItem(word: 'You',       reading: 'あなた (Anata)',             emoji: '🫵'),
-    VocabItem(word: 'He',        reading: '彼 (Kare)',                  emoji: '👦'),
-  ],
-};
-
-List<VocabItem> _vocabFor(String id) =>
-    _kSampleVocab[id] ??
-    [
-      VocabItem(word: 'Word 1', reading: 'Sample reading', emoji: '📝', isNew: true),
-      VocabItem(word: 'Word 2', reading: 'Sample reading', emoji: '📝'),
-    ];
 
 // ── Design tokens ─────────────────────────────────────────
 const _kBg     = Color(0xFFFFF8F4);
 const _kDark   = Color(0xFF1A1A1A);
+
+// ── Helper: convert FlashcardEntry → VocabItem for VocabCard ──
+VocabItem _entryToVocabItem(FlashcardEntry entry, {bool isNew = false}) {
+  // Pick a sensible emoji based on partOfSpeech, fallback to 📝
+  const _posEmoji = {
+    'noun': '📦', 'verb': '🏃', 'adjective': '✨', 'adverb': '💨',
+    'pronoun': '👤', 'preposition': '📍', 'conjunction': '🔗',
+  };
+  final emoji = _posEmoji[entry.partOfSpeech.toLowerCase()] ?? '📝';
+
+  return VocabItem(
+    word: entry.english,
+    reading: '${entry.translation} (${entry.pronunciation})',
+    emoji: emoji,
+    isNew: isNew,
+  );
+}
 
 // ── Screen ────────────────────────────────────────────────
 
@@ -137,6 +48,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     // Ghi nhận học flashcard hôm nay — idempotent, an toàn khi gọi nhiều lần
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(userStatsProvider.notifier).recordStudy();
+      // Load cards for this deck from the API
+      ref.read(flashcardProvider.notifier).loadCardsForDeck(widget.deck.id);
     });
   }
 
@@ -146,13 +59,27 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     super.dispose();
   }
 
+  /// Get VocabItem list from the real flashcard state
   List<VocabItem> get _filtered {
-    final all = _vocabFor(widget.deck.id);
+    // Get the current deck's cards from the provider
+    final flashcardState = ref.read(flashcardProvider).valueOrNull ??
+        FlashcardState(decks: const []);
+    final deck = flashcardState.decks
+        .where((d) => d.id == widget.deck.id)
+        .toList();
+    final entries = deck.isNotEmpty ? deck.first.cards : <FlashcardEntry>[];
+
+    // Convert FlashcardEntry → VocabItem
+    final all = entries.asMap().entries.map((e) {
+      // Mark the first 3 items as "new" for visual indicator
+      return _entryToVocabItem(e.value, isNew: e.key < 3);
+    }).toList();
+
     List<VocabItem> list;
     switch (_filterIndex) {
-      case 1: // Recent
-        list = all.take(3).toList();
-      case 2: // Saved
+      case 1: // Recent — show last 3 added
+        list = all.length > 3 ? all.sublist(all.length - 3) : all;
+      case 2: // Saved — all non-new
         list = all.where((v) => !v.isNew).toList();
       default:
         list = all;
@@ -169,6 +96,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch the provider so UI rebuilds when cards load
+    final asyncState = ref.watch(flashcardProvider);
+
     return Scaffold(
       backgroundColor: _kBg,
       body: SafeArea(
@@ -176,13 +106,32 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           children: [
             _buildTopBar(context),
             Expanded(
-              child: Column(
-                children: [
-                  _buildSearchBar(),
-                  _buildFilterTabs(),
-                  const SizedBox(height: 4),
-                  Expanded(child: _buildVocabList()),
-                ],
+              child: asyncState.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFF25F36)),
+                ),
+                error: (err, _) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('⚠️', style: TextStyle(fontSize: 48)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Không tải được thẻ\n$err',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, color: Color(0xFF9E9E9E)),
+                      ),
+                    ],
+                  ),
+                ),
+                data: (_) => Column(
+                  children: [
+                    _buildSearchBar(),
+                    _buildFilterTabs(),
+                    const SizedBox(height: 4),
+                    Expanded(child: _buildVocabList()),
+                  ],
+                ),
               ),
             ),
           ],
@@ -338,7 +287,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
             const Text('📭', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
             const Text(
-              'Không tìm thấy từ nào',
+              'Chưa có từ nào trong bộ thẻ này\nHãy thêm từ qua Snap & Learn!',
+              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 15, color: Color(0xFF9E9E9E)),
             ),
           ],
@@ -353,3 +303,4 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     );
   }
 }
+

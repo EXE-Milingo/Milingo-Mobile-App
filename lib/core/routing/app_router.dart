@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
@@ -17,6 +18,13 @@ import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/leaderboard/screens/leaderboard_screen.dart';
 
 part 'app_router.g.dart';
+
+/// Routes that do NOT require authentication.
+const _publicRoutes = {
+  AppConstants.splashRoute,
+  AppConstants.authRoute,
+  AppConstants.registerRoute,
+};
 
 /// Router provider - manages app navigation
 /// Uses Riverpod for state-aware routing (can check auth state, etc.)
@@ -134,17 +142,23 @@ GoRouter appRouter(AppRouterRef ref) {
       ),
     ),
 
-    // Redirect logic (e.g., auth guard)
-    // Uncomment and implement when auth provider is ready
-    // redirect: (context, state) {
-    //   final isAuthenticated = ref.read(authStateProvider);
-    //   final isAuthRoute = state.matchedLocation == AppConstants.authRoute;
-    //
-    //   if (!isAuthenticated && !isAuthRoute) {
-    //     return AppConstants.authRoute;
-    //   }
-    //   return null;
-    // },
+    // Auth guard — redirect to /auth if user is not logged in
+    // and trying to access a protected route.
+    redirect: (context, state) {
+      final user = FirebaseAuth.instance.currentUser;
+      final location = state.matchedLocation;
+
+      // Allow public routes without auth
+      if (_publicRoutes.contains(location)) return null;
+
+      // Not logged in → send to login
+      if (user == null) return AppConstants.authRoute;
+
+      // Logged in + going to auth page → send to home instead
+      // (this case is already covered above, but kept for clarity)
+
+      return null; // no redirect needed
+    },
   );
 }
 

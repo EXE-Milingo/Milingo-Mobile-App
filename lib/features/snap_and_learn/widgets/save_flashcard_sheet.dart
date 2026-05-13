@@ -223,7 +223,8 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
     setState(() => _isBusy = true);
     try {
       final added = await notifier.addCardToDeck(deck.id, widget.entry);
-      if (added && mounted) {
+      if (!mounted) return;
+      if (added) {
         setState(() {
           _savedToDeckName = deck.name;
           _isBusy = false;
@@ -232,10 +233,29 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
           if (mounted) Navigator.of(context).pop();
         });
       } else {
+        // Card already exists in this deck
         setState(() => _isBusy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Từ này đã có trong bộ thẻ rồi!'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
-    } catch (_) {
-      if (mounted) setState(() => _isBusy = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isBusy = false);
+      final msg = e.toString().contains('MilingoApiException')
+          ? e.toString().split(': ').last
+          : 'Không thể lưu. Vui lòng thử lại.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -402,10 +422,21 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
           });
         }
       } else {
-        setState(() => _isBusy = false);
+        if (mounted) setState(() => _isBusy = false);
       }
-    } catch (_) {
-      if (mounted) setState(() => _isBusy = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isBusy = false);
+      final msg = e.toString().contains('MilingoApiException')
+          ? e.toString().split(': ').last
+          : 'Không thể tạo bộ thẻ. Vui lòng thử lại.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 }

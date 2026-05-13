@@ -198,7 +198,7 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
       return true;
     } catch (e) {
       state = previousState;
-      return false;
+      rethrow;
     }
   }
 

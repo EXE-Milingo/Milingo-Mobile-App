@@ -2,7 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/constants/app_constants.dart';
+import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/shared/widgets/floating_nav_button.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -15,38 +17,65 @@ const _kDark = Color(0xFF1A1A1A);
 const _kGrey = Color(0xFF9E9E9E);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock recent-card data
+// Helper: simple card display model (used only in this file)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _RecentCard {
-  final String imagePath;
   final String word;
   final String reading;
-  final String lang;
+  final String emoji;
+  final String deckName;
 
   const _RecentCard({
-    required this.imagePath,
     required this.word,
     required this.reading,
-    required this.lang,
+    required this.emoji,
+    required this.deckName,
   });
 }
-
-const _kRecentCards = [
-  _RecentCard(imagePath: 'assets/images/dog_beach.png', word: '犬', reading: 'Inu', lang: 'NHẬT'),
-  _RecentCard(imagePath: 'assets/images/dog_beach.png', word: 'Dog', reading: 'Dog', lang: 'ANH'),
-  _RecentCard(imagePath: 'assets/images/dog_beach.png', word: '狗', reading: 'Gǒu', lang: 'TRUNG'),
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-class FlashcardsScreen extends StatelessWidget {
+class FlashcardsScreen extends ConsumerWidget {
   const FlashcardsScreen({super.key});
 
+  /// Collect up to 10 recent cards across all decks from the real state
+  List<_RecentCard> _collectRecentCards(FlashcardState state) {
+    const posEmoji = {
+      'noun': '📦', 'verb': '🏃', 'adjective': '✨', 'adverb': '💨',
+      'pronoun': '👤', 'preposition': '📍', 'conjunction': '🔗',
+    };
+
+    final cards = <_RecentCard>[];
+    for (final deck in state.decks) {
+      for (final card in deck.cards) {
+        final emoji = posEmoji[card.partOfSpeech.toLowerCase()] ?? '📝';
+        cards.add(_RecentCard(
+          word: card.english,
+          reading: '${card.translation} (${card.pronunciation})',
+          emoji: emoji,
+          deckName: deck.name,
+        ));
+      }
+    }
+    // Return last 10 (most recently added)
+    if (cards.length > 10) {
+      return cards.sublist(cards.length - 10);
+    }
+    return cards;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncState = ref.watch(flashcardProvider);
+    final state = asyncState.valueOrNull ?? FlashcardState(decks: const []);
+    final recentCards = _collectRecentCards(state);
+
+    // Count total cards across all decks
+    final totalCards = state.decks.fold<int>(0, (sum, d) => sum + d.cards.length);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
@@ -65,10 +94,10 @@ class FlashcardsScreen extends StatelessWidget {
                         children: [
                           const SizedBox(height: 16),
                           // ── Progress ring ──
-                          const _WordsLearnedRing(),
+                          _WordsLearnedRing(totalCards: totalCards),
                           const SizedBox(height: 20),
                           // ── Stats card ──
-                          const _StatsCard(),
+                          _StatsCard(totalDecks: state.decks.length, totalCards: totalCards),
                           const SizedBox(height: 28),
                           // ── Recent cards header ──
                           Row(
@@ -96,8 +125,11 @@ class FlashcardsScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // ── Swipeable recent cards ──
-                          const _RecentCardsCarousel(),
+                          // ── Swipeable recent cards or empty state ──
+                          if (recentCards.isEmpty)
+                            _EmptyCardsState()
+                          else
+                            _RecentCardsCarousel(cards: recentCards),
                         ],
                       ),
                     ),
@@ -113,6 +145,50 @@ class FlashcardsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// EMPTY STATE — when no cards exist yet
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _EmptyCardsState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text('📝', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 12),
+          const Text(
+            'Chưa có thẻ nào',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _kDark,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Hãy thêm từ vựng qua Snap & Learn\nđể bắt đầu ôn tập!',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: _kGrey),
+          ),
+        ],
       ),
     );
   }
@@ -173,10 +249,15 @@ class _TopBar extends StatelessWidget {
 // ═════════════════════════════════════════════════════════════════════════════
 
 class _WordsLearnedRing extends StatelessWidget {
-  const _WordsLearnedRing();
+  const _WordsLearnedRing({required this.totalCards});
+  final int totalCards;
 
   @override
   Widget build(BuildContext context) {
+    // Progress out of an estimated goal (e.g. 600 words)
+    const goal = 600;
+    final progress = (totalCards / goal).clamp(0.0, 1.0);
+
     return Center(
       child: SizedBox(
         width: 180,
@@ -187,15 +268,15 @@ class _WordsLearnedRing extends StatelessWidget {
             // Ring painter
             CustomPaint(
               size: const Size(180, 180),
-              painter: _RingPainter(progress: 0.72),
+              painter: _RingPainter(progress: progress),
             ),
             // Center text
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  '428',
-                  style: TextStyle(
+                Text(
+                  '$totalCards',
+                  style: const TextStyle(
                     fontSize: 52,
                     fontWeight: FontWeight.w900,
                     color: _kDark,
@@ -219,9 +300,9 @@ class _WordsLearnedRing extends StatelessWidget {
                     color: const Color(0xFFFFF5E9),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    '+12 today',
-                    style: TextStyle(
+                  child: Text(
+                    '${(progress * 100).toInt()}% goal',
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: _kAccent,
@@ -289,7 +370,9 @@ class _RingPainter extends CustomPainter {
 // ═════════════════════════════════════════════════════════════════════════════
 
 class _StatsCard extends StatelessWidget {
-  const _StatsCard();
+  const _StatsCard({required this.totalDecks, required this.totalCards});
+  final int totalDecks;
+  final int totalCards;
 
   @override
   Widget build(BuildContext context) {
@@ -309,13 +392,13 @@ class _StatsCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left: Rank
+          // Left: Decks count
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'HẠNG',
+                  'BỘ THẺ',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -324,53 +407,30 @@ class _StatsCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                RichText(
-                  text: const TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '#4',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          color: _kDark,
-                          height: 1.1,
-                        ),
-                      ),
-                      TextSpan(
-                        text: 'th',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: _kGrey,
-                        ),
-                      ),
-                    ],
+                Text(
+                  '$totalDecks',
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: _kDark,
+                    height: 1.1,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Top 12% • ↑3 Từ tuần trước',
-                  style: TextStyle(fontSize: 11, color: _kGrey),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  '62% to #3',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _kDark,
-                  ),
+                Text(
+                  '$totalCards từ vựng',
+                  style: const TextStyle(fontSize: 11, color: _kGrey),
                 ),
               ],
             ),
           ),
 
-          // Right: Points + streak
+          // Right: Points + streak (placeholder — will connect to userStatsProvider)
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text(
-                '3,540',
+                '—',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
@@ -403,7 +463,7 @@ class _StatsCard extends StatelessWidget {
                     Icon(Icons.local_fire_department_rounded, size: 14, color: _kAccent),
                     const SizedBox(width: 4),
                     const Text(
-                      'Chuỗi · 14',
+                      'Chuỗi · —',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -412,11 +472,6 @@ class _StatsCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Rank #3: 3,990 pts',
-                style: TextStyle(fontSize: 10, color: _kGrey),
               ),
             ],
           ),
@@ -427,11 +482,12 @@ class _StatsCard extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// RECENT CARDS CAROUSEL (swipeable)
+// RECENT CARDS CAROUSEL (swipeable) — now uses real data
 // ═════════════════════════════════════════════════════════════════════════════
 
 class _RecentCardsCarousel extends StatefulWidget {
-  const _RecentCardsCarousel();
+  const _RecentCardsCarousel({required this.cards});
+  final List<_RecentCard> cards;
 
   @override
   State<_RecentCardsCarousel> createState() => _RecentCardsCarouselState();
@@ -459,10 +515,10 @@ class _RecentCardsCarouselState extends State<_RecentCardsCarousel> {
       children: [
         // Cards
         SizedBox(
-          height: 340,
+          height: 200,
           child: PageView.builder(
             controller: _pageCtrl,
-            itemCount: _kRecentCards.length,
+            itemCount: widget.cards.length,
             onPageChanged: (i) => setState(() => _currentPage = i),
             itemBuilder: (context, index) {
               return AnimatedBuilder(
@@ -478,101 +534,84 @@ class _RecentCardsCarouselState extends State<_RecentCardsCarousel> {
                     child: child,
                   );
                 },
-                child: _FlashcardTile(card: _kRecentCards[index]),
+                child: _FlashcardTile(card: widget.cards[index]),
               );
             },
           ),
         ),
-
-
       ],
     );
   }
 }
 
-
-
 // ─────────────────────────────────────────────────────────────────────────────
-// Individual flashcard tile
+// Individual flashcard tile — now shows word/reading/emoji from real data
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _FlashcardTile extends StatelessWidget {
   const _FlashcardTile({required this.card});
   final _RecentCard card;
 
-  // Map Vietnamese language labels to lang codes used by ExamScreen
-  static const _langMap = {
-    'NHẬT': ('ja', 'Tiếng Nhật'),
-    'ANH': ('en', 'English'),
-    'TRUNG': ('zh', 'Tiếng Trung'),
-  };
-
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        final entry = _langMap[card.lang] ?? ('en', 'English');
-        context.push(
-          AppConstants.examRoute,
-          extra: {'langCode': entry.$1, 'langName': entry.$2},
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Image + overlays
-              Expanded(
-                child: Stack(
-                  children: [
-                    // Image
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                      child: Image.asset(
-                        card.imagePath,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    // Top-left: speaker icon
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.volume_up_rounded, size: 18, color: _kAccent),
-                      ),
-                    ),
-                    // Top-right: favorite star
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.star_border_rounded, size: 18, color: _kGrey),
-                      ),
-                    ),
-                  ],
+              // Emoji
+              Text(card.emoji, style: const TextStyle(fontSize: 48)),
+              const SizedBox(height: 12),
+              // Word
+              Text(
+                card.word,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: _kDark,
+                ),
+              ),
+              const SizedBox(height: 6),
+              // Reading / translation
+              Text(
+                card.reading,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: _kGrey,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              // Deck name badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _kAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  card.deckName,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: _kAccent,
+                  ),
                 ),
               ),
             ],
