@@ -175,14 +175,16 @@ class _ProfileTab extends StatelessWidget {
           const SizedBox(height: 20),
           Center(
             child: _UpgradePremiumButton(
-            onTap: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => const _UpgradeModal(),
+              onTap: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const _UpgradeModal(),
+              ),
             ),
           ),
-          ),
+          const SizedBox(height: 16),
+          const _LogoutButton(),
         ],
       ),
     );
@@ -190,6 +192,96 @@ class _ProfileTab extends StatelessWidget {
 }
 
 // ── Language settings card ────────────────────────────────
+
+class _LogoutButton extends ConsumerStatefulWidget {
+  const _LogoutButton();
+
+  @override
+  ConsumerState<_LogoutButton> createState() => _LogoutButtonState();
+}
+
+class _LogoutButtonState extends ConsumerState<_LogoutButton> {
+  bool _isSigningOut = false;
+
+  Future<void> _handleLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log out?'),
+        content: const Text('You will need to log in again to continue.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFE53935),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout != true || !mounted) return;
+
+    setState(() => _isSigningOut = true);
+
+    try {
+      await FirebaseAuth.instance.signOut();
+      ref.invalidate(userStatsProvider);
+      if (mounted) context.go(AppConstants.authRoute);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: const Text('Could not log out. Please try again.'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => _isSigningOut = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: _isSigningOut ? null : _handleLogout,
+        icon: _isSigningOut
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.logout_rounded, size: 20),
+        label: Text(_isSigningOut ? 'Logging out...' : 'Log out'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFFE53935),
+          disabledForegroundColor:
+              const Color(0xFFE53935).withValues(alpha: 0.6),
+          side: const BorderSide(color: Color(0xFFE53935), width: 1.3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 const _kLanguages = [
   ('🇻🇳', 'Tiếng Việt'),

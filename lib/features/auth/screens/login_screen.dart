@@ -41,10 +41,14 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      final token = await credential.user?.getIdToken(true);
+      debugPrint('========== FIREBASE ID TOKEN ==========');
+      debugPrint(token);
+      debugPrint('========== END FIREBASE ID TOKEN ==========');
 
       // Login successful → navigate to main app
       if (mounted) {
