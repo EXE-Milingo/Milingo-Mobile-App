@@ -11,7 +11,6 @@ import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 const _kBg = Color(0xFFFFF8F4);
-const _kHeader = AppTheme.primaryColor;
 const _kAccent = AppTheme.primaryColor;
 const _kDark = Color(0xFF1A1A1A);
 const _kMuted = Color(0xFF9E9E9E);
@@ -27,29 +26,34 @@ class FlashcardsScreen extends ConsumerWidget {
     final totalCards = state.decks.fold<int>(0, (sum, d) => sum + d.cards.length);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _kBg,
-        body: Column(
-          children: [
-            _CategoryHeader(
-              totalCards: totalCards,
-              totalDecks: state.decks.length,
-              canCreateDeck: asyncState.hasValue,
-              onFavoritesTap: () => context.push(AppConstants.allCategoriesRoute),
-              onNewSetTap: () => _showCreateDeckSheet(context, ref, asyncState.hasValue),
-            ),
-            Expanded(
-              child: asyncState.when(
-                loading: () => const _DeckLoadingState(),
-                error: (error, _) => _DeckErrorState(
-                  message: error.toString(),
-                  onRetry: () => ref.read(flashcardProvider.notifier).refresh(),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+            child: Column(
+              children: [
+                _PracticeSummary(
+                  totalCards: totalCards,
+                  totalDecks: state.decks.length,
+                  canCreateDeck: asyncState.hasValue,
+                  onFavoritesTap: () => context.push(AppConstants.allCategoriesRoute),
+                  onNewSetTap: () =>
+                      _showCreateDeckSheet(context, ref, asyncState.hasValue),
                 ),
-                data: (data) => _DeckList(decks: data.decks),
-              ),
+                const SizedBox(height: 20),
+                asyncState.when(
+                  loading: () => const _DeckLoadingState(),
+                  error: (error, _) => _DeckErrorState(
+                    message: error.toString(),
+                    onRetry: () => ref.read(flashcardProvider.notifier).refresh(),
+                  ),
+                  data: (data) => _DeckList(decks: data.decks),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
         bottomNavigationBar: const AppBottomNavBar(currentIndex: 1),
       ),
@@ -73,8 +77,8 @@ class FlashcardsScreen extends ConsumerWidget {
   }
 }
 
-class _CategoryHeader extends StatelessWidget {
-  const _CategoryHeader({
+class _PracticeSummary extends StatelessWidget {
+  const _PracticeSummary({
     required this.totalCards,
     required this.totalDecks,
     required this.canCreateDeck,
@@ -90,119 +94,36 @@ class _CategoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        18,
-        MediaQuery.paddingOf(context).top + 10,
-        18,
-        22,
-      ),
-      decoration: const BoxDecoration(
-        color: _kHeader,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _HeaderToolbar(),
-          const SizedBox(height: 12),
-          const Text(
-            'Categories',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Pick a set to practice',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.74),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _WordsLearnedRing(totalCards: totalCards),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _HeaderActionCard(
-                  icon: Icons.star_rounded,
-                  label: 'My favorites',
-                  subtitle: '$totalCards cards',
-                  onTap: onFavoritesTap,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _HeaderActionCard(
-                  icon: Icons.add_rounded,
-                  label: 'New set',
-                  subtitle: canCreateDeck ? '$totalDecks sets' : 'Loading',
-                  onTap: onNewSetTap,
-                  isPrimaryIcon: true,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderToolbar extends StatelessWidget {
-  const _HeaderToolbar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        IconButton(
-          onPressed: () => context.go(AppConstants.homeRoute),
-          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-          tooltip: 'Menu',
-          style: IconButton.styleFrom(
-            fixedSize: const Size(42, 42),
-            padding: EdgeInsets.zero,
-          ),
-        ),
-        const Spacer(),
-        Container(
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('🇺🇸', style: TextStyle(fontSize: 15)),
-              SizedBox(width: 6),
-              Text(
-                'English',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+        _WordsLearnedRing(totalCards: totalCards),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(
+              child: _HeaderActionCard(
+                icon: Icons.star_rounded,
+                label: 'My favorites',
+                subtitle: '$totalCards cards',
+                onTap: onFavoritesTap,
               ),
-              SizedBox(width: 2),
-              Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 18),
-            ],
-          ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _HeaderActionCard(
+                icon: Icons.add_rounded,
+                label: 'New set',
+                subtitle: canCreateDeck ? '$totalDecks sets' : 'Loading',
+                onTap: onNewSetTap,
+                isPrimaryIcon: true,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
-
 class _HeaderActionCard extends StatelessWidget {
   const _HeaderActionCard({
     required this.icon,
@@ -412,32 +333,32 @@ class _DeckList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (decks.isEmpty) return const _EmptyDeckState();
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
-      itemCount: decks.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final deck = decks[index];
-        final learned = deck.cards.length;
-        final target = _targetForDeck(index, learned);
+    return Column(
+      children: [
+        for (final indexed in decks.indexed) ...[
+          _DeckProgressTile(
+            deck: indexed.$2,
+            learned: indexed.$2.cards.length,
+            target: _targetForDeck(indexed.$1, indexed.$2.cards.length),
+            onTap: () {
+              final target = _targetForDeck(indexed.$1, indexed.$2.cards.length);
 
-        return _DeckProgressTile(
-          deck: deck,
-          learned: learned,
-          target: target,
-          onTap: () => context.push(
-            AppConstants.deckRoute,
-            extra: DeckArg(
-              id: deck.id,
-              name: deck.name,
-              nameVi: deck.name,
-              total: target,
-              learned: learned,
-              emoji: deck.emoji,
-            ),
+              context.push(
+                AppConstants.deckRoute,
+                extra: DeckArg(
+                  id: indexed.$2.id,
+                  name: indexed.$2.name,
+                  nameVi: indexed.$2.name,
+                  total: target,
+                  learned: indexed.$2.cards.length,
+                  emoji: indexed.$2.emoji,
+                ),
+              );
+            },
           ),
-        );
-      },
+          if (indexed.$1 != decks.length - 1) const SizedBox(height: 12),
+        ],
+      ],
     );
   }
 
