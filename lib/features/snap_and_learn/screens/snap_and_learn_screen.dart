@@ -11,7 +11,7 @@ import 'package:milingo/features/snap_and_learn/widgets/vocab_bubble.dart';
 import 'package:milingo/features/snap_and_learn/widgets/bottom_capture_bar.dart';
 import 'package:milingo/features/snap_and_learn/widgets/save_flashcard_sheet.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
-import 'package:milingo/shared/widgets/floating_nav_button.dart';
+import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design Tokens (warm orange accent like mockup)
@@ -248,14 +248,9 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 child: _buildErrorView(snap.error!, ctrl),
               ),
 
-            // ── Floating Navigation Button (top-right) ──
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              right: 16,
-              child: const FloatingNavButton(),
-            ),
           ],
         ),
+        bottomNavigationBar: const AppBottomNavBar(currentIndex: 2),
       ),
     );
   }
@@ -335,6 +330,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     final showVocab = snap.showVocabulary;
 
     return SafeArea(
+      bottom: false,
       child: Column(
         children: [
           // ── Top Bar ──
@@ -378,7 +374,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               onCapture: _captureFromEmbeddedCamera,
             ),
 
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -431,7 +427,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 
           const Spacer(),
 
-          // Right spacer (FloatingNavButton occupies this zone)
+          // Right spacer balances the back button.
           const SizedBox(width: 40),
         ],
       ),

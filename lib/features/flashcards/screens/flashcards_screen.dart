@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
-import 'package:milingo/shared/widgets/floating_nav_button.dart';
+import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design tokens
@@ -137,14 +137,9 @@ class FlashcardsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            // ── Floating Navigation Button (top-right) ──
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              right: 16,
-              child: const FloatingNavButton(),
-            ),
           ],
         ),
+        bottomNavigationBar: const AppBottomNavBar(currentIndex: 1),
       ),
     );
   }
@@ -236,7 +231,7 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Right spacer (FloatingNavButton zone)
+          // Right spacer balances the back button.
           const SizedBox(width: 44),
         ],
       ),

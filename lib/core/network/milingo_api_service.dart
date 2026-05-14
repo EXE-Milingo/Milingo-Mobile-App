@@ -49,13 +49,13 @@ class MilingoApiService {
         onRequest: (options, handler) async {
           try {
             final token = await FirebaseAuth.instance.currentUser
-                ?.getIdToken(false); // false = use cached unless expired
+                ?.getIdToken(false); // false = dùng cache nếu chưa hết hạn
             if (token != null && token.isNotEmpty) {
               options.headers['Authorization'] = 'Bearer $token';
             }
           } catch (_) {
-            // Token fetch failed — let the request go through;
-            // the server will return 401 and we surface that to the user.
+            // Nếu lấy token thất bại, vẫn cho request đi tiếp
+            // Server sẽ trả 401 nếu cần auth
           }
           return handler.next(options);
         },
