@@ -1,372 +1,336 @@
-# MILINGO — AI AGENT CONTEXT FILE
+# MiLingo Agent Context
 
-> Đọc file này **trước tiên** trước mọi thay đổi code.  
-> Cập nhật file này mỗi khi có thay đổi kiến trúc, endpoint, hoặc model mới.
+Read this file before making code changes. Update it whenever project structure, navigation, backend contracts, state models, or coding conventions change.
 
----
+Last updated: 2026-05-14
 
-## 1. TỔNG QUAN DỰ ÁN
+## Project Summary
 
-**Milingo** là app học ngôn ngữ bằng AI, gồm 2 phần:
+MiLingo is a Flutter mobile app for AI-assisted language learning.
 
-| Phần | Công nghệ | Vị trí |
-|------|-----------|--------|
-| Mobile App | Flutter + Riverpod + GoRouter | `Milingo-Mobile-App-MilingoUI/` |
-| Backend API | ASP.NET Core + Firebase Admin + YOLO + Gemini | `Milingo-Backend-Yolo/` |
+Current frontend stack:
 
----
+- Flutter
+- Riverpod
+- GoRouter
+- Firebase Auth
+- Dio-based Milingo backend API client
+- Camera/image picker
+- Flutter TTS
+- Material 3 with the existing warm orange color scheme
 
-## 2. BACKEND API
+Backend assumptions in the mobile app:
 
-### Base URL
-```
-Development (máy thật):     http://localhost:5098
-Development (Android AVD):  http://10.0.2.2:5098
-Swagger UI:                 http://localhost:5098/swagger/index.html
-```
+- Milingo backend base URL: `http://10.0.2.2:5098`
+- Firebase Auth owns login/register.
+- Backend requests use Firebase ID token via `MilingoApiService` interceptor.
+- Snap analysis is backend-driven through `POST /api/v1/snap/analyze`.
 
-### Xác thực
-- **Tất cả endpoint** (trừ `GET /supported-languages`) yêu cầu Firebase JWT:
-  ```
-  Authorization: Bearer <firebase_id_token>
-  ```
-- Backend **không có** endpoint đăng ký / đăng nhập riêng.  
-- Đăng ký / đăng nhập hoàn toàn qua **Firebase Auth** phía client.  
-- Sau đó client lấy `idToken` từ Firebase và gửi lên mọi request.
+## Current Project Structure
 
-### Tất cả Endpoints
-
-```
-# User
-POST  /api/v1/users/init-profile          Body: { displayName, targetLanguage }
-GET   /api/v1/users/supported-languages   Không cần auth
-
-# Snap & Learn
-POST  /api/v1/snap/analyze                multipart/form-data, field "image"
-                                          Header: Idempotency-Key: <uuid-v4>
-                                          Max file: 10MB
-
-# Decks
-GET    /api/v1/decks
-POST   /api/v1/decks                      Body: { name, emoji, description? }
-PATCH  /api/v1/decks/{deckId}             Body: { name?, emoji?, description? }
-DELETE /api/v1/decks/{deckId}             Không xóa được default deck
-
-# Cards
-GET    /api/v1/decks/{deckId}/cards
-POST   /api/v1/decks/{deckId}/cards       Body: { term, translation, pronunciation,
-                                                   partOfSpeech, sourceLangCode,
-                                                   targetLangCode, sourceVocabId? }
-DELETE /api/v1/decks/{deckId}/cards/{cardId}
-
-# Saved Status
-GET    /api/v1/flashcards/saved-status    Query: term, sourceLangCode, targetLangCode
-```
-
-### Chuẩn Response (mọi endpoint)
-```json
-{
-  "status": "success" | "error",
-  "message": "...",
-  "data": <payload> | null
-}
-```
-
-### Ngôn ngữ được hỗ trợ (server-side)
-Backend chỉ chấp nhận các giá trị `targetLanguage` sau (dùng tên đầy đủ, không phải code):
-```
-"English", "Japanese", "Chinese", "Korean", "French", "German", "Spanish", "Italian"
-```
-
----
-
-## 3. FRONTEND — CẤU TRÚC THƯ MỤC
-
-```
+```text
 lib/
-├── main.dart
-├── core/
-│   ├── constants/
-│   │   └── app_constants.dart          # Routes, base URLs, constants
-│   ├── network/
-│   │   ├── milingo_api_service.dart    # ✅ MilingoApiService + Dio interceptor + provider
-│   │   ├── milingo_models.dart         # ✅ Tất cả response models (Dart)
-│   │   ├── ai_service.dart             # (giữ nguyên, không xóa)
-│   │   ├── ai_provider.dart            # (giữ nguyên, không xóa)
-│   │   ├── gemini_api_service.dart     # (giữ nguyên, không xóa)
-│   │   ├── openai_api_service.dart     # (giữ nguyên, không xóa)
-│   │   └── dio_client.dart             # (giữ nguyên — dùng cho PayOS)
-│   ├── providers/
-│   │   └── firebase_providers.dart
-│   ├── routing/
-│   │   └── app_router.dart             # GoRouter, tất cả routes
-│   └── theme/
-│       └── app_theme.dart
-├── features/
-│   ├── auth/
-│   │   ├── models/user_model.dart
-│   │   ├── providers/
-│   │   │   └── auth_provider.dart      # ✅ AuthService, supportedLanguagesProvider
-│   │   ├── screens/
-│   │   │   ├── login_screen.dart       # ⚠️ Chưa có Firebase Auth thật
-│   │   │   ├── register_screen.dart    # ✅ Đã có Firebase createUserWithEmailAndPassword
-│   │   │   └── choose_language_screen.dart  # ✅ Lấy ngôn ngữ từ backend, gọi initProfile
-│   │   └── widgets/
-│   │       └── social_buttons.dart
-│   ├── snap_and_learn/
-│   │   ├── models/
-│   │   │   ├── milingo_result.dart     # MilingoResult (shape giữ nguyên cho UI)
-│   │   │   └── vocabulary_item.dart
-│   │   ├── providers/
-│   │   │   └── snap_provider.dart      # ✅ Dùng MilingoApiService.analyzeSnap()
-│   │   ├── screens/
-│   │   │   └── snap_and_learn_screen.dart
-│   │   └── widgets/
-│   │       ├── save_flashcard_sheet.dart  # ✅ Dùng async flashcardProvider
-│   │       ├── bottom_capture_bar.dart
-│   │       └── vocab_bubble.dart
-│   ├── flashcards/
-│   │   ├── models/
-│   │   │   ├── flashcard_models.dart   # ✅ DeckData, FlashcardEntry, FlashcardState
-│   │   │   └── deck_arg.dart
-│   │   ├── providers/
-│   │   │   └── flashcard_provider.dart # ✅ AsyncNotifier, load từ API, optimistic update
-│   │   ├── screens/
-│   │   │   ├── flashcards_screen.dart
-│   │   │   ├── all_categories_screen.dart
-│   │   │   ├── deck_screen.dart
-│   │   │   └── exam_screen.dart
-│   │   └── widgets/
-│   │       ├── deck_list_item.dart
-│   │       ├── exam_banner.dart
-│   │       ├── quick_card.dart
-│   │       └── vocab_card.dart
-│   ├── home/screens/simple_home_screen.dart
-│   ├── leaderboard/screens/leaderboard_screen.dart
-│   ├── profile/screens/profile_screen.dart
-│   └── splash/screens/splash_screen.dart
-├── shared/
-│   ├── utils/
-│   │   ├── extensions.dart
-│   │   └── image_utils.dart
-│   └── widgets/
-│       ├── common_widgets.dart
-│       └── floating_nav_button.dart
+|-- main.dart
+|-- core/
+|   |-- constants/app_constants.dart
+|   |-- network/
+|   |   |-- ai_provider.dart
+|   |   |-- ai_response_parser.dart
+|   |   |-- ai_service.dart
+|   |   |-- dio_client.dart
+|   |   |-- gemini_api_service.dart
+|   |   |-- milingo_api_service.dart
+|   |   |-- milingo_models.dart
+|   |   `-- openai_api_service.dart
+|   |-- providers/firebase_providers.dart
+|   |-- routing/
+|   |   |-- app_router.dart
+|   |   `-- app_router.g.dart
+|   `-- theme/app_theme.dart
+|-- features/
+|   |-- auth/
+|   |   |-- models/user_model.dart
+|   |   |-- providers/auth_provider.dart
+|   |   |-- screens/choose_language_screen.dart
+|   |   |-- screens/login_screen.dart
+|   |   |-- screens/register_screen.dart
+|   |   `-- widgets/social_buttons.dart
+|   |-- flashcards/
+|   |   |-- models/deck_arg.dart
+|   |   |-- models/flashcard_models.dart
+|   |   |-- providers/flashcard_provider.dart
+|   |   |-- screens/all_categories_screen.dart
+|   |   |-- screens/deck_screen.dart
+|   |   |-- screens/exam_screen.dart
+|   |   |-- screens/flashcards_screen.dart
+|   |   |-- widgets/deck_list_item.dart
+|   |   |-- widgets/exam_banner.dart
+|   |   |-- widgets/quick_card.dart
+|   |   `-- widgets/vocab_card.dart
+|   |-- gamification/providers/user_stats_provider.dart
+|   |-- home/screens/simple_home_screen.dart
+|   |-- leaderboard/screens/leaderboard_screen.dart
+|   |-- profile/
+|   |   |-- providers/profile_provider.dart
+|   |   `-- screens/profile_screen.dart
+|   |-- snap_and_learn/
+|   |   |-- models/milingo_result.dart
+|   |   |-- models/vocabulary_item.dart
+|   |   |-- providers/snap_provider.dart
+|   |   |-- screens/snap_and_learn_screen.dart
+|   |   |-- widgets/bottom_capture_bar.dart
+|   |   |-- widgets/save_flashcard_sheet.dart
+|   |   `-- widgets/vocab_bubble.dart
+|   `-- splash/screens/splash_screen.dart
+`-- shared/
+    |-- utils/extensions.dart
+    |-- utils/image_utils.dart
+    |-- widgets/app_bottom_nav_bar.dart
+    |-- widgets/common_widgets.dart
+    `-- widgets/floating_nav_button.dart
 ```
 
----
+## Recent Work Done
 
-## 4. CÁC FILE QUAN TRỌNG — NỘI DUNG CỐT LÕI
+### Bottom Navigation Refactor
 
-### `app_constants.dart` — Routes & Config
-```dart
-static const String milingoBaseUrl = 'http://10.0.2.2:5098'; // Android AVD
-// Routes
-static const String splashRoute         = '/';
-static const String authRoute           = '/auth';
-static const String registerRoute       = '/register';
-static const String chooseLanguageRoute = '/choose-language';
-static const String homeRoute           = '/home';
-static const String snapAndLearnRoute   = '/snap-and-learn';
-static const String flashcardsRoute     = '/flashcards';
-static const String deckRoute           = '/flashcards/deck';
-static const String examRoute           = '/flashcards/exam';
-static const String allCategoriesRoute  = '/flashcards/all-categories';
-static const String profileRoute        = '/profile';
-static const String leaderboardRoute    = '/leaderboard';
-// Image
-static const int maxImageSizeBytes = 5 * 1024 * 1024; // 5MB
+The app now uses a shared bottom navigation bar:
+
+- New file: `lib/shared/widgets/app_bottom_nav_bar.dart`
+- Home uses `AppBottomNavBar(currentIndex: 0)`.
+- Flashcards/Learn uses `currentIndex: 1`.
+- Snap & Learn uses `currentIndex: 2`.
+- Profile uses `currentIndex: 3`.
+- Leaderboard/Progress uses `currentIndex: 4`.
+
+The centered Snap tab is intentional. New users and returning logged-in users should land on Snap & Learn first.
+
+The previous top-right dropdown plus button was removed from active tab screens. `floating_nav_button.dart` is now legacy/unused unless a future design intentionally brings it back.
+
+### Documentation Refresh
+
+`ARCHITECTURE.md` was rewritten to match the current code structure. This file was also rewritten to be the quick-start context for future agents.
+
+## Navigation Rules
+
+Routes live in `AppConstants` and are wired in `app_router.dart`.
+
+Main tab route mapping:
+
+```text
+0 Coach    -> AppConstants.homeRoute           -> /home
+1 Learn    -> AppConstants.flashcardsRoute     -> /flashcards
+2 Snap     -> AppConstants.snapAndLearnRoute   -> /snap-and-learn
+3 Profile  -> AppConstants.profileRoute        -> /profile
+4 Progress -> AppConstants.leaderboardRoute    -> /leaderboard
 ```
 
-### `milingo_models.dart` — Response Models
-```dart
-DeckResponse        { id, name, emoji, description, vocabCount, isDefault, createdAt }
-CardResponse        { id, term, translation, pronunciation, partOfSpeech,
-                      sourceLangCode, targetLangCode, createdAt, sourceVocabId? }
-SnapVocabItem       { keyword, translation, pronunciation, exampleSentence,
-                      detectionLabel?, detectionConfidence? }
-SnapAnalysisResponse { vocabItems, coinsAwarded, snapGroupId, usedFallback }
-SavedStatusResponse { isSaved, deckIds }
-SupportedLanguage   { code, name, nativeName, flag }
+Use:
+
+- `context.go(...)` for main-tab navigation.
+- `context.push(...)` for detail/drill-in screens where back navigation matters.
+
+Auth/navigation behavior:
+
+- Splash waits, checks `FirebaseAuth.instance.currentUser`, then goes to Snap if logged in or Auth if not.
+- Login calls `signInWithEmailAndPassword` and then goes to Snap.
+- Register/choose-language flow ends at Snap.
+- Router protects non-public routes by redirecting unauthenticated users to `/auth`.
+
+## State Management Rules
+
+Use Riverpod. Keep API and mutation logic out of screens unless it is truly local UI state.
+
+Current provider map:
+
+```text
+appRouterProvider
+authServiceProvider
+supportedLanguagesProvider
+snapControllerProvider
+flashcardProvider
+flashcardStateProvider
+userStatsProvider
+userStatsValueProvider
 ```
 
-### `flashcard_models.dart` — Local State Models
-```dart
-FlashcardEntry  { id, english, translation, pronunciation, partOfSpeech, langCode }
-DeckData        { id, name, emoji, cards, isDefault }
-FlashcardState  { decks }
-```
+Patterns to follow:
 
-### `milingo_result.dart` — Snap UI Model (KHÔNG thay đổi shape)
-```dart
-MilingoResult { keyword, translation, pronunciation, partOfSpeech,
-                sentence, sentenceTranslation, relatedWords }
-```
+- Use `AsyncNotifier` for state that loads from backend.
+- Use `StateNotifier` for local feature flow state.
+- Use sync shim providers only when the UI can tolerate default/fallback values.
+- Do not add `setState` for global/backend state; `setState` is fine for local visual state such as toggles, tab controllers, and form loading flags.
 
----
+## Backend and API Rules
 
-## 5. STATE MANAGEMENT — RIVERPOD
+Use `MilingoApiService` for backend calls. Do not call Dio directly from screens.
 
-### Providers hiện có
+Important backend-related files:
 
-| Provider | Loại | Mô tả |
-|----------|------|-------|
-| `milingoApiServiceProvider` | `Provider<MilingoApiService>` | Singleton Dio client |
-| `authServiceProvider` | `Provider<AuthService>` | Gọi initProfile |
-| `supportedLanguagesProvider` | `FutureProvider<List<SupportedLanguage>>` | Fetch từ backend |
-| `snapControllerProvider` | `StateNotifierProvider<SnapController, SnapState>` | Snap & Learn |
-| `flashcardProvider` | `AsyncNotifierProvider<FlashcardNotifier, FlashcardState>` | Decks + Cards |
-| `flashcardStateProvider` | `Provider<FlashcardState>` | Shim sync cho UI cũ |
-| `appRouterProvider` | Riverpod annotation | GoRouter |
+- `core/network/milingo_api_service.dart`
+- `core/network/milingo_models.dart`
+- `core/constants/app_constants.dart`
 
-### Lấy FlashcardState trong widget
-```dart
-// Cách mới (đầy đủ):
-final asyncState = ref.watch(flashcardProvider);
-final state = asyncState.valueOrNull ?? FlashcardState(decks: []);
+Important current API methods used by the app:
 
-// Cách shim (nhanh hơn, không có loading state):
-final state = ref.watch(flashcardStateProvider);
-```
+- `getSupportedLanguages()`
+- `initProfile(...)`
+- `analyzeSnap(file)`
+- `getDecks()`
+- `createDeck(...)`
+- `updateDeck(...)`
+- `deleteDeck(...)`
+- `getCards(deckId)`
+- `addCard(...)`
+- `deleteCard(...)`
+- `getUserStats()`
+- `recordFlashcardStudy()`
 
----
+Rules:
 
-## 6. LUỒNG AUTH (QUAN TRỌNG)
+- Firebase ID token attachment belongs in the service/interceptor.
+- Keep backend DTOs in `milingo_models.dart`.
+- Keep UI-facing feature models inside their feature folders.
+- Do not break `MilingoResult`; Snap UI depends on that shape.
+- Do not reintroduce direct Gemini/OpenAI Snap calls unless explicitly requested.
 
-```
-1. User nhập email + password
-2. Flutter gọi FirebaseAuth.instance.createUserWithEmailAndPassword() HOẶC
-                  FirebaseAuth.instance.signInWithEmailAndPassword()
-3. Firebase trả về UserCredential
-4. User được navigate sang ChooseLanguageScreen
-5. ChooseLanguageScreen gọi GET /api/v1/users/supported-languages (hiển thị danh sách)
-6. User chọn ngôn ngữ → bấm Tiếp tục
-7. ChooseLanguageScreen gọi POST /api/v1/users/init-profile
-   Body: { displayName: user.displayName, targetLanguage: "English" } ← tên đầy đủ!
-8. Navigate sang /snap-and-learn
-```
+## Feature Status
 
-**Lưu ý quan trọng:**
-- `targetLanguage` trong `initProfile` phải là **tên đầy đủ** (e.g. `"English"`), không phải code (`"en"`)
-- `login_screen.dart` **chưa có** Firebase Auth thật — cần implement `signInWithEmailAndPassword`
-- Token Firebase được tự động attach vào mọi request qua Dio interceptor trong `MilingoApiService`
+### Auth
 
----
+Current:
 
-## 7. PACKAGES (pubspec.yaml)
+- Login uses Firebase email/password.
+- Register uses Firebase account creation.
+- Choose Language fetches backend supported languages and calls profile initialization.
 
-```yaml
-flutter_riverpod: ^2.5.1
-go_router: ^14.2.0
-firebase_core: ^3.3.0
-firebase_auth: ^5.1.4
-cloud_firestore: ^5.2.1
-camera: ^0.11.0+2
-image_picker: ^1.1.2
-google_generative_ai: ^0.4.6
-flutter_tts: ^4.0.2
-dio: ^5.5.0+1
-flutter_svg: ^2.0.10+1
-shared_preferences: ^2.2.3
-flutter_dotenv: ^5.2.1
-# uuid chưa có trong pubspec — cần thêm nếu dùng
-```
+Known gaps:
 
-> ⚠️ Package `uuid` đang được dùng trong `milingo_api_service.dart` nhưng **chưa có trong pubspec.yaml**.  
-> Cần thêm: `uuid: ^4.4.0`
+- Forgot password is not implemented.
+- Social login buttons are mostly visual unless individually wired.
 
----
+### Snap & Learn
 
-## 8. NHỮNG GÌ ĐÃ LÀM ✅ VÀ CHƯA LÀM ⚠️
+Current:
 
-### Đã làm ✅
-- `milingo_api_service.dart` — Dio client + Firebase JWT interceptor + tất cả methods
-- `milingo_models.dart` — Tất cả response models khớp với backend C#
-- `snap_provider.dart` — Dùng `MilingoApiService.analyzeSnap()`, hỗ trợ multi-object
-- `flashcard_provider.dart` — AsyncNotifier, load từ API, optimistic update + rollback
-- `flashcard_models.dart` — Thêm `isDefault`, `partOfSpeech`
-- `auth_provider.dart` — `AuthService`, `supportedLanguagesProvider`
-- `choose_language_screen.dart` — Fetch ngôn ngữ từ backend, gọi `initProfile`
-- `register_screen.dart` — Firebase `createUserWithEmailAndPassword`
-- `save_flashcard_sheet.dart` — Tương thích với async `flashcardProvider`
-- `app_constants.dart` — Thêm `milingoBaseUrl`
-- `launchSettings.json` backend — Đổi sang `0.0.0.0:5098`
+- Embedded camera preview.
+- Gallery picker.
+- Backend snap analysis through `MilingoApiService`.
+- Vocabulary overlay/result flow.
+- Save to flashcard sheet.
+- Optimistic user stats update from `coinsAwarded`.
+- Shared bottom nav with Snap centered.
 
-### Chưa làm ⚠️
-- `login_screen.dart` — **Chưa có** `signInWithEmailAndPassword` thật
-- `uuid` package — **Chưa thêm** vào `pubspec.yaml`
-- `app_router.dart` — Auth guard (redirect về `/auth` nếu chưa đăng nhập) đang bị comment
-- `profile_screen.dart` — Chưa kết nối API user data
-- `leaderboard_screen.dart` — Chưa có API tương ứng
-- `simple_home_screen.dart` — Chưa kết nối API
+Follow:
 
----
+- Keep capture UI in `snap_and_learn_screen.dart` and small reusable pieces under `snap_and_learn/widgets/`.
+- Keep analysis state in `snap_provider.dart`.
+- Keep camera/gallery utility logic in `shared/utils/image_utils.dart`.
 
-## 9. NGUYÊN TẮC BẮT BUỘC KHI CODE
+### Flashcards / Learn
 
-### PHẢI làm
-- Luôn dùng `MilingoApiService` cho mọi call API (không gọi Dio trực tiếp trong widget/screen)
-- Luôn dùng Riverpod (`ref.watch` / `ref.read`) — không dùng `setState` cho global state
-- Dùng `AsyncNotifier` cho state có async init (decks, cards)
-- Dùng `StateNotifier` cho state đơn giản (snap)
-- Xử lý lỗi bằng `MilingoApiException` — hiển thị message tiếng Việt cho user
-- Optimistic update + rollback cho mọi mutation (create/update/delete)
-- Import model qua `export` chain: widget → provider → `milingo_api_service.dart` → `milingo_models.dart`
+Current:
 
-### KHÔNG được làm
-- ❌ Không gọi Gemini/OpenAI API trực tiếp từ frontend nữa (đã chuyển sang backend)
-- ❌ Không xóa `ai_service.dart`, `gemini_api_service.dart`, `openai_api_service.dart` (giữ để không break imports cũ)
-- ❌ Không dùng `localhost` trong `milingoBaseUrl` khi chạy trên Android emulator (dùng `10.0.2.2`)
-- ❌ Không hardcode API key trong source code (dùng `.env`)
-- ❌ Không throw exception raw lên UI — luôn bắt và convert sang message thân thiện
-- ❌ Không break shape của `MilingoResult` (snap UI widget phụ thuộc vào nó)
-- ❌ Không tạo Dio instance mới ngoài `MilingoApiService`
-- ❌ Không quản lý Firebase token thủ công — interceptor đã xử lý tự động
+- `flashcardProvider` loads decks from backend.
+- Supports optimistic add/update/delete for decks and cards.
+- `flashcards_screen.dart` reads provider state for counts/recent cards.
 
----
+Known risk:
 
-## 10. LỖI THƯỜNG GẶP VÀ CÁCH FIX
+- Some deeper flashcard screens can still have fallback/sample vocabulary. Inspect before assuming backend data is complete.
 
-| Lỗi | Nguyên nhân | Fix |
-|-----|-------------|-----|
-| `The system cannot find milingo_models.dart` | File chưa được copy vào đúng thư mục | Copy vào `lib/core/network/milingo_models.dart` |
-| `401 Unauthorized` | Firebase token không được gửi | Kiểm tra user đã đăng nhập Firebase chưa; interceptor chỉ hoạt động khi có `currentUser` |
-| `Connection refused` trên emulator | Dùng `localhost` thay vì `10.0.2.2` | Đổi `milingoBaseUrl = 'http://10.0.2.2:5098'` |
-| `Type 'DeckResponse' not found` | `milingo_models.dart` thiếu hoặc chưa export | Kiểm tra `export` statement trong `milingo_api_service.dart` |
-| `List<dynamic> can't be assigned to List<DeckData>` | Thiếu import model | Đảm bảo `milingo_models.dart` được import đúng |
-| `uuid` package not found | Chưa thêm vào pubspec | Thêm `uuid: ^4.4.0` vào pubspec.yaml, chạy `flutter pub get` |
-| Backend trả về 400 cho `initProfile` | `targetLanguage` dùng code (`"en"`) thay vì tên (`"English"`) | Dùng `language.name` không phải `language.code` |
+### Gamification
 
----
+Current:
 
-## 11. QUY TRÌNH KHI CÓ THAY ĐỔI
+- `userStatsProvider` fetches stats from backend.
+- `recordStudy()` can update streak/stats.
+- `addCoinsOptimistic()` updates coins/points after Snap.
+- Home/profile consume stats through provider shims.
 
-### Thêm endpoint mới
-1. Thêm model vào `milingo_models.dart`
-2. Thêm method vào `MilingoApiService`
-3. Tạo/cập nhật provider trong feature tương ứng
-4. Cập nhật file này (section 2 và 8)
+### Home / Coach
 
-### Debug API
-1. Mở Swagger: `http://localhost:5098/swagger/index.html`
-2. Lấy token: Flutter console log hoặc `FirebaseAuth.instance.currentUser?.getIdToken()`
-3. Test thủ công trong Swagger với token đó
+Current:
 
-### Khi build lỗi
-```bash
-flutter clean
-flutter pub get
-flutter run
-```
+- `simple_home_screen.dart` is the Coach/Home dashboard.
+- Uses `userStatsValueProvider`.
+- Uses shared bottom nav.
 
----
+### Profile
 
-## 12. MÔIT TRƯỜNG CHẠY
+Current:
 
-| Thiết bị | `milingoBaseUrl` |
-|----------|------------------|
-| Android Emulator (AVD) | `http://10.0.2.2:5098` |
-| Thiết bị thật (USB) | `http://<IP-LAN-máy-tính>:5098` |
-| iOS Simulator | `http://localhost:5098` |
+- `profile_screen.dart` contains profile UI, tabs, stats, language settings, premium modal, and logout.
+- `profile_provider.dart` owns profile data/fallback behavior.
+- Uses shared bottom nav.
 
-Backend phải chạy với `--urls "http://0.0.0.0:5098"` hoặc `applicationUrl: "http://0.0.0.0:5098"` trong `launchSettings.json`.
+### Leaderboard / Progress
+
+Current:
+
+- Placeholder only.
+- Uses shared bottom nav.
+
+## Structure and Coding Conventions
+
+Use the current structure:
+
+- Feature screens: `lib/features/<feature>/screens/`
+- Feature providers: `lib/features/<feature>/providers/`
+- Feature models: `lib/features/<feature>/models/`
+- Feature-only widgets: `lib/features/<feature>/widgets/`
+- App-wide widgets: `lib/shared/widgets/`
+- App-wide utilities: `lib/shared/utils/`
+- App-wide constants/theme/routing/network: `lib/core/`
+
+Naming:
+
+- Files: `snake_case.dart`
+- Classes/widgets: `PascalCase`
+- Methods/variables: `camelCase`
+- Private members: `_leadingUnderscore`
+
+Implementation preferences:
+
+- Match the existing design language and `AppTheme` colors.
+- Prefer small feature widgets over giant reusable abstractions.
+- Keep API DTO conversion near the provider/service that needs it.
+- Use `const` constructors when straightforward.
+- Use `context.go` for bottom tab navigation.
+- Avoid deleting legacy files unless the user asks or the deletion is clearly safe.
+- If a file has unrelated dirty changes, work around them and do not revert them.
+
+## Markdown File Audit
+
+Root documentation currently overlaps. Treat these as current:
+
+- `ARCHITECTURE.md` - current project structure and architecture.
+- `AGENT_CONTEXT.md` - current agent handoff and coding conventions.
+- `MODULE_ANALYSIS.md` - useful module/status notes, but some sections can become stale and should be verified against code.
+
+Likely stale or overlapping:
+
+- `README.md` - still useful as public overview, but setup/next steps mention older direct Gemini/API-key flow and placeholder implementation.
+- `QUICKSTART.md` - old boilerplate setup guide; many "next steps" are already done or no longer match the current code.
+- `PROJECT_SUMMARY.md` - old setup-complete snapshot; overlaps heavily with README/QUICKSTART and is not current.
+- `DEVELOPMENT_CHECKLIST.md` - old phase checklist; still useful as historical roadmap, but much of the current status is inaccurate.
+- `SNAP_AND_LEARN_GUIDE.md` - old Snap implementation guide; describes `controllers/snap_controller.dart` and direct Gemini flow that do not match current `providers/snap_provider.dart` backend flow.
+- `DEBUG_GUIDE.md` - old debugging note for image picker/SnapController; references files and patterns that have changed.
+- `IMAGE_PICKER_FIX.md` - narrow historical fix note; keep only if the team wants old troubleshooting notes.
+- `CONCLUSION.md` - gamification/backend summary; useful historical note, but the "remaining work" section is partly outdated because user stats are now wired into home/profile.
+
+Recommended cleanup:
+
+- Keep `README.md`, `ARCHITECTURE.md`, `AGENT_CONTEXT.md`, and `MODULE_ANALYSIS.md`.
+- Move old snapshot/debug docs into a `docs/archive/` folder or delete them after confirming they are no longer needed.
+- If keeping old docs, add a "stale snapshot" banner at the top so future agents do not treat them as current.
+
+## Known Verification Notes
+
+Recent analyzer context:
+
+- `flutter analyze lib/shared/widgets/app_bottom_nav_bar.dart` passes.
+- Full `flutter analyze` has existing project issues, including `test/widget_test.dart` referencing `MyApp` instead of current `MiLingoApp`.
+- There are many existing lint/info warnings such as deprecated `withOpacity`, `prefer_const_constructors`, and ordering rules.
+
+Do not claim the whole project is analyzer-clean until the existing issues are fixed.
