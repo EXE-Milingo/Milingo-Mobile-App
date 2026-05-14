@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:camera/camera.dart';
@@ -539,6 +540,12 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildBottomVocabCard(MilingoResult r, String langCode) {
+    final snap = ref.watch(snapControllerProvider);
+    final ctrl = ref.read(snapControllerProvider.notifier);
+    final hasMultipleItems = snap.allVocabItems.length > 1;
+    final currentIndex = snap.currentVocabIndex;
+    final totalItems = snap.allVocabItems.length;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -553,117 +560,219 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Left column: icon buttons + keyword + pronunciation + POS
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Action icons
-                Row(
+          // ── Object image with white border (if available) ──
+          if (r.objectImageBase64 != null)
+            _buildObjectImageCard(r),
+
+          // ── Multi-object navigation ──
+          if (hasMultipleItems)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: ctrl.prevVocabItem,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: _kAccentLight,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.chevron_left_rounded,
+                          color: _kAccent, size: 20),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      '${currentIndex + 1} / $totalItems',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: ctrl.nextVocabItem,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: _kAccentLight,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.chevron_right_rounded,
+                          color: _kAccent, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Vocabulary info row ──
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left column: icon buttons + keyword + pronunciation + POS
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SmallIconBtn(
-                      icon: Icons.copy_rounded,
-                      onTap: () {
-                        Clipboard.setData(ClipboardData(text: '${r.keyword} - ${r.translation}'));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Đã copy! 📋'),
-                            backgroundColor: _kAccent,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    _SmallIconBtn(
-                      icon: Icons.volume_up_rounded,
-                      onTap: () => _speak(r.translation, langCode),
-                    ),
-                    const SizedBox(width: 8),
-                    _SmallIconBtn(
-                      icon: Icons.bookmark_add_rounded,
-                      onTap: () => _showSaveToFlashcard(
-                        context,
-                        FlashcardEntry(
-                          id: '${r.keyword}_$langCode',
-                          english: r.keyword,
-                          translation: r.translation,
-                          pronunciation: r.pronunciation,
-                          partOfSpeech: r.partOfSpeech,
-                          langCode: langCode,
+                    // Action icons
+                    Row(
+                      children: [
+                        _SmallIconBtn(
+                          icon: Icons.copy_rounded,
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: '${r.keyword} - ${r.translation}'));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Đã copy! 📋'),
+                                backgroundColor: _kAccent,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
                         ),
+                        const SizedBox(width: 8),
+                        _SmallIconBtn(
+                          icon: Icons.volume_up_rounded,
+                          onTap: () => _speak(r.translation, langCode),
+                        ),
+                        const SizedBox(width: 8),
+                        _SmallIconBtn(
+                          icon: Icons.bookmark_add_rounded,
+                          onTap: () => _showSaveToFlashcard(
+                            context,
+                            FlashcardEntry(
+                              id: '${r.keyword}_$langCode',
+                              english: r.keyword,
+                              translation: r.translation,
+                              pronunciation: r.pronunciation,
+                              partOfSpeech: r.partOfSpeech,
+                              langCode: langCode,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Keyword (English)
+                    Text(r.keyword,
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF222222))),
+                    const SizedBox(height: 2),
+
+                    // Pronunciation
+                    Text('/${r.pronunciation}/',
+                        style: TextStyle(fontSize: 15, color: Colors.grey[500], fontStyle: FontStyle.italic)),
+                    const SizedBox(height: 6),
+
+                    // Part of speech
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(r.partOfSpeech,
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Right column: Translation large + romanized label
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 24),
+                    GestureDetector(
+                      onTap: () => _speak(r.translation, langCode),
+                      child: Text(
+                        r.translation,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF333333),
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      r.pronunciation.toUpperCase(),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[400],
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-
-                // Keyword (English)
-                Text(r.keyword,
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF222222))),
-                const SizedBox(height: 2),
-
-                // Pronunciation
-                Text('/${r.pronunciation}/',
-                    style: TextStyle(fontSize: 15, color: Colors.grey[500], fontStyle: FontStyle.italic)),
-                const SizedBox(height: 6),
-
-                // Part of speech
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(r.partOfSpeech,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[600])),
-                ),
-              ],
-            ),
-          ),
-
-          // Right column: Translation large + romanized label
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 24),
-                GestureDetector(
-                  onTap: () => _speak(r.translation, langCode),
-                  child: Text(
-                    r.translation,
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF333333),
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  r.pronunciation.toUpperCase(),
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  /// Builds the cropped object image card with a white border and
+  /// elegant drop shadow, giving the image a "polaroid" feel.
+  Widget _buildObjectImageCard(MilingoResult r) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.10),
+              blurRadius: 12,
+              spreadRadius: 1,
+              offset: const Offset(0, 3),
+            ),
+            BoxShadow(
+              color: _kAccent.withOpacity(0.08),
+              blurRadius: 20,
+              spreadRadius: 2,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.memory(
+            base64Decode(r.objectImageBase64!),
+            height: 140,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              height: 100,
+              color: Colors.grey[200],
+              child: const Center(
+                child: Icon(Icons.broken_image_rounded,
+                    color: Colors.grey, size: 32),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

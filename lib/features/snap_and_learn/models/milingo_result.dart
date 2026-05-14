@@ -29,6 +29,8 @@ class MilingoResult {
     required this.sentence,
     required this.sentenceTranslation,
     this.relatedWords = const [],
+    this.objectImageBase64,
+    this.objectImageUrl,
   });
 
   factory MilingoResult.fromJson(Map<String, dynamic> json) {
@@ -68,4 +70,12 @@ class MilingoResult {
 
   /// Related concepts shown as floating bubbles on the image
   final List<RelatedWord> relatedWords;
+
+  /// Base64-encoded JPEG of the cropped object from YOLO detection.
+  /// Null when fallback (full-image) was used.
+  String? objectImageBase64;
+
+  /// Firebase Storage download URL of the cropped object image.
+  /// Set after the image is uploaded to Cloud Storage.
+  String? objectImageUrl;
 }

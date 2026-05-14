@@ -87,6 +87,7 @@ class SnapVocabItem {
     required this.exampleSentence,
     this.detectionLabel,
     this.detectionConfidence,
+    this.croppedImageBase64,
   });
 
   factory SnapVocabItem.fromJson(Map<String, dynamic> json) {
@@ -97,6 +98,7 @@ class SnapVocabItem {
       exampleSentence: (json['example_sentence'] ?? '').toString(),
       detectionLabel: json['detection_label'] as String?,
       detectionConfidence: (json['detection_confidence'] as num?)?.toDouble(),
+      croppedImageBase64: json['cropped_image_base64'] as String?,
     );
   }
 
@@ -106,6 +108,10 @@ class SnapVocabItem {
   final String exampleSentence;
   final String? detectionLabel;
   final double? detectionConfidence;
+
+  /// Base64-encoded JPEG of the cropped object from YOLO detection.
+  /// Null when fallback (full-image) was used.
+  final String? croppedImageBase64;
 }
 
 class SnapAnalysisResponse {
