@@ -99,11 +99,11 @@ The app now uses a shared bottom navigation bar:
 - New file: `lib/shared/widgets/app_bottom_nav_bar.dart`
 - Home uses `AppBottomNavBar(currentIndex: 0)`.
 - Flashcards/Learn uses `currentIndex: 1`.
-- Snap & Learn uses `currentIndex: 2`.
+- Snap & Learn is a full-screen camera route and does not show the shared bottom nav.
 - Profile uses `currentIndex: 3`.
 - Leaderboard/Progress uses `currentIndex: 4`.
 
-The centered Snap tab is intentional. New users and returning logged-in users should land on Snap & Learn first.
+The centered Snap tab in the shared nav is used to enter Snap from other tabs, but the Snap screen itself hides the nav for an immersive camera view. New users and returning logged-in users should still land on Snap & Learn first.
 
 The previous top-right dropdown plus button was removed from active tab screens. `floating_nav_button.dart` is now legacy/unused unless a future design intentionally brings it back.
 
@@ -120,7 +120,7 @@ Main tab route mapping:
 ```text
 0 Coach    -> AppConstants.homeRoute           -> /home
 1 Learn    -> AppConstants.flashcardsRoute     -> /flashcards
-2 Snap     -> AppConstants.snapAndLearnRoute   -> /snap-and-learn
+2 Snap     -> AppConstants.snapAndLearnRoute   -> /snap-and-learn (full-screen, no bottom nav)
 3 Profile  -> AppConstants.profileRoute        -> /profile
 4 Progress -> AppConstants.leaderboardRoute    -> /leaderboard
 ```
@@ -219,7 +219,8 @@ Current:
 - Vocabulary overlay/result flow.
 - Save to flashcard sheet.
 - Optimistic user stats update from `coinsAwarded`.
-- Shared bottom nav with Snap centered.
+- Full-screen camera UI; no bottom nav while on Snap.
+- The top-left arrow resets the Snap state and routes users back to Home (`/home`).
 
 Follow:
 

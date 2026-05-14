@@ -6,12 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/snap_and_learn/providers/snap_provider.dart';
 import 'package:milingo/features/snap_and_learn/widgets/vocab_bubble.dart';
 import 'package:milingo/features/snap_and_learn/widgets/bottom_capture_bar.dart';
 import 'package:milingo/features/snap_and_learn/widgets/save_flashcard_sheet.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
-import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design Tokens (warm orange accent like mockup)
@@ -250,7 +251,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 
           ],
         ),
-        bottomNavigationBar: const AppBottomNavBar(currentIndex: 2),
       ),
     );
   }
@@ -392,14 +392,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           // Back button
           GestureDetector(
             onTap: () {
-              final snap = ref.read(snapControllerProvider);
-              if (snap.showVocabulary) {
-                ctrl.hideVocab();
-              } else if (snap.result != null || snap.isLoading) {
-                ctrl.reset();
-              } else {
-                Navigator.of(context).pop();
-              }
+              ctrl.reset();
+              context.go(AppConstants.homeRoute);
             },
             child: Container(
               padding: const EdgeInsets.all(10),
