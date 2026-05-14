@@ -86,6 +86,14 @@ MilingoResult _vocabItemToMilingoResult(SnapVocabItem item) {
     sentence: item.exampleSentence,
     sentenceTranslation: '',
     relatedWords: const [],
+    boundingBox: item.boundingBox == null
+        ? null
+        : ObjectBoundingBox(
+            x: item.boundingBox!.x,
+            y: item.boundingBox!.y,
+            width: item.boundingBox!.width,
+            height: item.boundingBox!.height,
+          ),
     objectImageBase64: item.croppedImageBase64,
   );
 }
@@ -110,13 +118,16 @@ class SnapController extends StateNotifier<SnapState> {
   void nextVocabItem() {
     if (state.allVocabItems.isEmpty) return;
     final next = (state.currentVocabIndex + 1) % state.allVocabItems.length;
-    state = state.copyWith(currentVocabIndex: next, result: state.allVocabItems[next]);
+    state = state.copyWith(
+        currentVocabIndex: next, result: state.allVocabItems[next]);
   }
 
   void prevVocabItem() {
     if (state.allVocabItems.isEmpty) return;
-    final prev = (state.currentVocabIndex - 1 + state.allVocabItems.length) % state.allVocabItems.length;
-    state = state.copyWith(currentVocabIndex: prev, result: state.allVocabItems[prev]);
+    final prev = (state.currentVocabIndex - 1 + state.allVocabItems.length) %
+        state.allVocabItems.length;
+    state = state.copyWith(
+        currentVocabIndex: prev, result: state.allVocabItems[prev]);
   }
 
   // ── Capture / pick ─────────────────────────────────────
@@ -125,28 +136,40 @@ class SnapController extends StateNotifier<SnapState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final File? imageFile = await ImageUtils.pickFromCamera();
-      if (imageFile == null) { state = SnapState(selectedLanguage: state.selectedLanguage); return; }
-      if (!await ImageUtils.validateFileSize(imageFile, AppConstants.maxImageSizeBytes)) {
-        state = state.copyWith(isLoading: false, error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
+      if (imageFile == null) {
+        state = SnapState(selectedLanguage: state.selectedLanguage);
+        return;
+      }
+      if (!await ImageUtils.validateFileSize(
+          imageFile, AppConstants.maxImageSizeBytes)) {
+        state = state.copyWith(
+            isLoading: false,
+            error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
         return;
       }
       state = state.copyWith(capturedImage: imageFile);
       await _analyzeFile(imageFile);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
+      state = state.copyWith(
+          isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
     }
   }
 
   Future<void> analyzeFile(File imageFile, String targetLanguage) async {
-    state = state.copyWith(isLoading: true, error: null, capturedImage: imageFile);
+    state =
+        state.copyWith(isLoading: true, error: null, capturedImage: imageFile);
     try {
-      if (!await ImageUtils.validateFileSize(imageFile, AppConstants.maxImageSizeBytes)) {
-        state = state.copyWith(isLoading: false, error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
+      if (!await ImageUtils.validateFileSize(
+          imageFile, AppConstants.maxImageSizeBytes)) {
+        state = state.copyWith(
+            isLoading: false,
+            error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
         return;
       }
       await _analyzeFile(imageFile);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
+      state = state.copyWith(
+          isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
     }
   }
 
@@ -154,10 +177,15 @@ class SnapController extends StateNotifier<SnapState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final xFile = await ImageUtils.pickImageAsXFile();
-      if (xFile == null) { state = SnapState(selectedLanguage: state.selectedLanguage); return; }
+      if (xFile == null) {
+        state = SnapState(selectedLanguage: state.selectedLanguage);
+        return;
+      }
       final imageBytes = await ImageUtils.xFileToBytes(xFile);
       if (imageBytes.length > AppConstants.maxImageSizeBytes) {
-        state = state.copyWith(isLoading: false, error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
+        state = state.copyWith(
+            isLoading: false,
+            error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
         return;
       }
       final file = File(xFile.path);
@@ -168,75 +196,80 @@ class SnapController extends StateNotifier<SnapState> {
       }
       await _analyzeFile(file);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Lỗi khi chọn ảnh: ${e.toString()}');
+      state = state.copyWith(
+          isLoading: false, error: 'Lỗi khi chọn ảnh: ${e.toString()}');
     }
   }
 
-      // ── Core analysis ──────────────────────────────────────
+  // ── Core analysis ──────────────────────────────────────
 
-      Future<void> _analyzeFile(File file) async {
-        try {
-          final snapResponse = await _api.analyzeSnap(file);
-          final allResults = snapResponse.vocabItems.map(_vocabItemToMilingoResult).toList();
+  Future<void> _analyzeFile(File file) async {
+    try {
+      final snapResponse = await _api.analyzeSnap(file);
+      final allResults =
+          snapResponse.vocabItems.map(_vocabItemToMilingoResult).toList();
 
-          if (snapResponse.coinsAwarded > 0) {
-            _ref.read(userStatsProvider.notifier).addCoinsOptimistic(snapResponse.coinsAwarded);
-            }
-
-          if (allResults.isEmpty) {
-            state = state.copyWith(
-              isLoading: false,
-              error: 'Không nhận ra đối tượng nào. Vui lòng thử ảnh khác.',
-            );
-            return;
-          }
-
-          state = state.copyWith(
-            isLoading: false,
-            result: allResults.first,
-            allVocabItems: allResults,
-            currentVocabIndex: 0,
-            coinsAwarded: snapResponse.coinsAwarded,
-            error: null,
-          );
-
-          // Upload cropped object images to Firebase Storage in background
-          _uploadCroppedImages(allResults);
-        } on MilingoApiException catch (e) {
-          state = state.copyWith(isLoading: false, error: e.message);
-        } catch (e) {
-          state = state.copyWith(isLoading: false, error: 'Lỗi phân tích ảnh: ${e.toString()}');
-        }
+      if (snapResponse.coinsAwarded > 0) {
+        _ref
+            .read(userStatsProvider.notifier)
+            .addCoinsOptimistic(snapResponse.coinsAwarded);
       }
 
-      /// Uploads each cropped object image to Firebase Storage in background.
-      /// Updates the MilingoResult.objectImageUrl with the download URL.
-      Future<void> _uploadCroppedImages(List<MilingoResult> results) async {
-        final storage = _ref.read(storageServiceProvider);
+      if (allResults.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Không nhận ra đối tượng nào. Vui lòng thử ảnh khác.',
+        );
+        return;
+      }
 
-        for (int i = 0; i < results.length; i++) {
-          final item = results[i];
-          if (item.objectImageBase64 == null) continue;
+      state = state.copyWith(
+        isLoading: false,
+        result: allResults.first,
+        allVocabItems: allResults,
+        currentVocabIndex: 0,
+        coinsAwarded: snapResponse.coinsAwarded,
+        error: null,
+      );
 
-          try {
-            final url = await storage.uploadCroppedObjectImage(
-              base64Image: item.objectImageBase64!,
-              keyword: item.keyword,
-            );
+      // Upload cropped object images to Firebase Storage in background
+      _uploadCroppedImages(allResults);
+    } on MilingoApiException catch (e) {
+      state = state.copyWith(isLoading: false, error: e.message);
+    } catch (e) {
+      state = state.copyWith(
+          isLoading: false, error: 'Lỗi phân tích ảnh: ${e.toString()}');
+    }
+  }
 
-            if (url != null) {
-              item.objectImageUrl = url;
+  /// Uploads each cropped object image to Firebase Storage in background.
+  /// Updates the MilingoResult.objectImageUrl with the download URL.
+  Future<void> _uploadCroppedImages(List<MilingoResult> results) async {
+    final storage = _ref.read(storageServiceProvider);
 
-              // Update state if this is the currently displayed item
-              if (state.currentVocabIndex == i) {
-                state = state.copyWith(result: item);
-              }
-            }
-          } catch (_) {
-            // Non-fatal: image display still works from base64
+    for (int i = 0; i < results.length; i++) {
+      final item = results[i];
+      if (item.objectImageBase64 == null) continue;
+
+      try {
+        final url = await storage.uploadCroppedObjectImage(
+          base64Image: item.objectImageBase64!,
+          keyword: item.keyword,
+        );
+
+        if (url != null) {
+          item.objectImageUrl = url;
+
+          // Update state if this is the currently displayed item
+          if (state.currentVocabIndex == i) {
+            state = state.copyWith(result: item);
           }
         }
+      } catch (_) {
+        // Non-fatal: image display still works from base64
       }
+    }
+  }
 
   void reset() {
     final lang = state.selectedLanguage;

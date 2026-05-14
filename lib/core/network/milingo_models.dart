@@ -79,6 +79,31 @@ class CardResponse {
 
 // ── Snap Analysis ────────────────────────────────────────
 
+class SnapBoundingBox {
+  const SnapBoundingBox({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  factory SnapBoundingBox.fromJson(Map<String, dynamic> json) {
+    return SnapBoundingBox(
+      x: (json['x'] as num?)?.toDouble() ?? 0,
+      y: (json['y'] as num?)?.toDouble() ?? 0,
+      width: (json['width'] as num?)?.toDouble() ?? 0,
+      height: (json['height'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  bool get isValid => width > 0 && height > 0;
+}
+
 class SnapVocabItem {
   const SnapVocabItem({
     required this.keyword,
@@ -87,6 +112,7 @@ class SnapVocabItem {
     required this.exampleSentence,
     this.detectionLabel,
     this.detectionConfidence,
+    this.boundingBox,
     this.croppedImageBase64,
   });
 
@@ -98,8 +124,16 @@ class SnapVocabItem {
       exampleSentence: (json['example_sentence'] ?? '').toString(),
       detectionLabel: json['detection_label'] as String?,
       detectionConfidence: (json['detection_confidence'] as num?)?.toDouble(),
+      boundingBox: _parseBoundingBox(json),
       croppedImageBase64: json['cropped_image_base64'] as String?,
     );
+  }
+
+  static SnapBoundingBox? _parseBoundingBox(Map<String, dynamic> json) {
+    final raw = json['bounding_box'] ?? json['boundingBox'];
+    if (raw is! Map<String, dynamic>) return null;
+    final box = SnapBoundingBox.fromJson(raw);
+    return box.isValid ? box : null;
   }
 
   final String keyword;
@@ -108,6 +142,7 @@ class SnapVocabItem {
   final String exampleSentence;
   final String? detectionLabel;
   final double? detectionConfidence;
+  final SnapBoundingBox? boundingBox;
 
   /// Base64-encoded JPEG of the cropped object from YOLO detection.
   /// Null when fallback (full-image) was used.
@@ -185,27 +220,27 @@ class SupportedLanguage {
   final String nativeName;
   final String flag;
 }
-  // ── User Stats ────────────────────────────────────────────
+// ── User Stats ────────────────────────────────────────────
 
-  class UserStatsResponse {
-    const UserStatsResponse({
-      required this.coins,
-      required this.currentStreak,
-      required this.totalPoints,
-      this.lastStudyDate,
-    });
+class UserStatsResponse {
+  const UserStatsResponse({
+    required this.coins,
+    required this.currentStreak,
+    required this.totalPoints,
+    this.lastStudyDate,
+  });
 
-    factory UserStatsResponse.fromJson(Map<String, dynamic> json) {
-      return UserStatsResponse(
-        coins: (json['coins'] as num?)?.toInt() ?? 0,
-        currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
-        totalPoints: (json['totalPoints'] as num?)?.toInt() ?? 0,
-        lastStudyDate: json['lastStudyDate'] as String?,
-      );
-    }
-
-    final int coins;
-    final int currentStreak;
-    final int totalPoints;
-    final String? lastStudyDate;
+  factory UserStatsResponse.fromJson(Map<String, dynamic> json) {
+    return UserStatsResponse(
+      coins: (json['coins'] as num?)?.toInt() ?? 0,
+      currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
+      totalPoints: (json['totalPoints'] as num?)?.toInt() ?? 0,
+      lastStudyDate: json['lastStudyDate'] as String?,
+    );
   }
+
+  final int coins;
+  final int currentStreak;
+  final int totalPoints;
+  final String? lastStudyDate;
+}

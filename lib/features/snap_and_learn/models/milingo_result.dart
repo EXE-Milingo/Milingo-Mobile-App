@@ -29,6 +29,7 @@ class MilingoResult {
     required this.sentence,
     required this.sentenceTranslation,
     this.relatedWords = const [],
+    this.boundingBox,
     this.objectImageBase64,
     this.objectImageUrl,
   });
@@ -47,7 +48,15 @@ class MilingoResult {
       sentence: (json['sentence'] ?? '').toString(),
       sentenceTranslation: (json['sentenceTranslation'] ?? '').toString(),
       relatedWords: related,
+      boundingBox: _parseBoundingBox(json),
     );
+  }
+
+  static ObjectBoundingBox? _parseBoundingBox(Map<String, dynamic> json) {
+    final raw = json['boundingBox'] ?? json['bounding_box'];
+    if (raw is! Map<String, dynamic>) return null;
+    final box = ObjectBoundingBox.fromJson(raw);
+    return box.isValid ? box : null;
   }
 
   /// Main object name in English
@@ -71,6 +80,9 @@ class MilingoResult {
   /// Related concepts shown as floating bubbles on the image
   final List<RelatedWord> relatedWords;
 
+  /// YOLO bounding box in original image pixels.
+  final ObjectBoundingBox? boundingBox;
+
   /// Base64-encoded JPEG of the cropped object from YOLO detection.
   /// Null when fallback (full-image) was used.
   String? objectImageBase64;
@@ -78,4 +90,29 @@ class MilingoResult {
   /// Firebase Storage download URL of the cropped object image.
   /// Set after the image is uploaded to Cloud Storage.
   String? objectImageUrl;
+}
+
+class ObjectBoundingBox {
+  const ObjectBoundingBox({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  factory ObjectBoundingBox.fromJson(Map<String, dynamic> json) {
+    return ObjectBoundingBox(
+      x: (json['x'] as num?)?.toDouble() ?? 0,
+      y: (json['y'] as num?)?.toDouble() ?? 0,
+      width: (json['width'] as num?)?.toDouble() ?? 0,
+      height: (json['height'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  bool get isValid => width > 0 && height > 0;
 }

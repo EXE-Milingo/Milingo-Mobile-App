@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,8 +39,14 @@ const _kLanguages = [
 ];
 
 const _kTtsLocales = {
-  'en': 'en-US', 'ja': 'ja-JP', 'ko': 'ko-KR', 'zh': 'zh-CN',
-  'es': 'es-ES', 'fr': 'fr-FR', 'de': 'de-DE', 'th': 'th-TH',
+  'en': 'en-US',
+  'ja': 'ja-JP',
+  'ko': 'ko-KR',
+  'zh': 'zh-CN',
+  'es': 'es-ES',
+  'fr': 'fr-FR',
+  'de': 'de-DE',
+  'th': 'th-TH',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,10 +82,12 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     _initCamera();
 
     _bubbleCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 900),
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
     );
     _scanCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1500),
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
     );
   }
 
@@ -173,8 +182,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     super.dispose();
   }
 
-  _Lang _lang(String code) =>
-      _kLanguages.firstWhere((l) => l.code == code, orElse: () => _kLanguages.first);
+  _Lang _lang(String code) => _kLanguages.firstWhere((l) => l.code == code,
+      orElse: () => _kLanguages.first);
 
   @override
   Widget build(BuildContext context) {
@@ -221,33 +230,38 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   fit: BoxFit.cover,
                 ),
               ),
+            if (snap.result?.boundingBox != null && snap.capturedImage != null)
+              Positioned.fill(
+                child: _DetectedObjectOverlay(
+                  imageFile: File(snap.capturedImage!.path),
+                  boundingBox: snap.result!.boundingBox!,
+                ),
+              ),
 
             // ── Layer 3: Semi-transparent overlay when analyzing ──
             if (snap.isLoading)
               Container(color: Colors.white.withOpacity(0.25)),
 
             // ── Layer 4: Scanning dots animation ──
-            if (snap.isLoading)
-              ..._buildScanningDots(),
+            if (snap.isLoading) ..._buildScanningDots(),
 
             // ── Layer 5: Vocabulary bubbles ──
             if (snap.showVocabulary && snap.result != null)
               Positioned.fill(
                 child: Stack(
-                  children: _buildVocabBubbles(snap.result!, snap.selectedLanguage),
+                  children:
+                      _buildVocabBubbles(snap.result!, snap.selectedLanguage),
                 ),
               ),
 
             // ── Layer 6: UI overlay ──
-            if (snap.error == null)
-              _buildUIOverlay(snap, ctrl),
+            if (snap.error == null) _buildUIOverlay(snap, ctrl),
 
             // ── Error overlay (full screen) ──
             if (snap.error != null)
               Positioned.fill(
                 child: _buildErrorView(snap.error!, ctrl),
               ),
-
           ],
         ),
         bottomNavigationBar: const AppBottomNavBar(currentIndex: 2),
@@ -353,12 +367,16 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 6),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_kAccent, Color(0xFFf5a97a)]),
+                  gradient: const LinearGradient(
+                      colors: [_kAccent, Color(0xFFf5a97a)]),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Center(
                   child: Text('Chọn ngôn ngữ khác',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14)),
                 ),
               ),
             ),
@@ -407,7 +425,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 color: Colors.black.withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+              child: const Icon(Icons.arrow_back_ios_new,
+                  size: 18, color: Colors.white),
             ),
           ),
           const Spacer(),
@@ -421,8 +440,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Text('BÓC TÁCH VẬT THỂ',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
-                      color: Colors.white, letterSpacing: 1)),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 1)),
             ),
 
           const Spacer(),
@@ -456,7 +478,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         builder: (_, __) {
           // Staggered opacity pulse
           final phase = (_scanCtrl.value + i * 0.12) % 1.0;
-          final opacity = (math.sin(phase * math.pi * 2) * 0.5 + 0.5).clamp(0.0, 1.0);
+          final opacity =
+              (math.sin(phase * math.pi * 2) * 0.5 + 0.5).clamp(0.0, 1.0);
           final scale = 0.6 + opacity * 0.6;
 
           return Align(
@@ -484,10 +507,10 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     if (result.relatedWords.isEmpty) return [];
 
     const positions = [
-      Alignment(0.0, -0.88),    // top-center
-      Alignment(-0.9, -0.6),   // top-left
-      Alignment(0.9, -0.65),    // top-right
-      Alignment(0.85, -0.1),   // middle-right
+      Alignment(0.0, -0.88), // top-center
+      Alignment(-0.9, -0.6), // top-left
+      Alignment(0.9, -0.65), // top-right
+      Alignment(0.85, -0.1), // middle-right
     ];
 
     return result.relatedWords.asMap().entries.map((entry) {
@@ -560,8 +583,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Object image with white border (if available) ──
-          if (r.objectImageBase64 != null)
-            _buildObjectImageCard(r),
+          if (r.objectImageBase64 != null) _buildObjectImageCard(r),
 
           // ── Multi-object navigation ──
           if (hasMultipleItems)
@@ -625,13 +647,15 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                         _SmallIconBtn(
                           icon: Icons.copy_rounded,
                           onTap: () {
-                            Clipboard.setData(ClipboardData(text: '${r.keyword} - ${r.translation}'));
+                            Clipboard.setData(ClipboardData(
+                                text: '${r.keyword} - ${r.translation}'));
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: const Text('Đã copy! 📋'),
                                 backgroundColor: _kAccent,
                                 behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
@@ -663,23 +687,33 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 
                     // Keyword (English)
                     Text(r.keyword,
-                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF222222))),
+                        style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF222222))),
                     const SizedBox(height: 2),
 
                     // Pronunciation
                     Text('/${r.pronunciation}/',
-                        style: TextStyle(fontSize: 15, color: Colors.grey[500], fontStyle: FontStyle.italic)),
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic)),
                     const SizedBox(height: 6),
 
                     // Part of speech
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.grey[200],
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(r.partOfSpeech,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600])),
                     ),
                   ],
                 ),
@@ -791,20 +825,26 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   shape: BoxShape.circle,
                   color: Colors.red.withOpacity(0.1),
                 ),
-                child: const Icon(Icons.error_outline_rounded, size: 56, color: Color(0xFFFF6B6B)),
+                child: const Icon(Icons.error_outline_rounded,
+                    size: 56, color: Color(0xFFFF6B6B)),
               ),
               const SizedBox(height: 24),
               const Text('Có lỗi xảy ra',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white)),
               const SizedBox(height: 12),
               Text(error,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.white60, height: 1.5)),
+                  style: TextStyle(
+                      fontSize: 14, color: Colors.white60, height: 1.5)),
               const SizedBox(height: 32),
               GestureDetector(
                 onTap: ctrl.reset,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   decoration: BoxDecoration(
                     color: _kAccent,
                     borderRadius: BorderRadius.circular(24),
@@ -812,9 +852,13 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                      Icon(Icons.refresh_rounded,
+                          color: Colors.white, size: 20),
                       SizedBox(width: 8),
-                      Text('Thử lại', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                      Text('Thử lại',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
@@ -841,14 +885,22 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
             const Text('Chọn ngôn ngữ học',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
             const SizedBox(height: 8),
             Text('AI sẽ dịch vật thể sang ngôn ngữ bạn chọn',
-                style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.6))),
+                style: TextStyle(
+                    fontSize: 14, color: Colors.white.withOpacity(0.6))),
             const SizedBox(height: 24),
             GridView.count(
               shrinkWrap: true,
@@ -860,24 +912,41 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               children: _kLanguages.map((lang) {
                 final selected = lang.code == currentCode;
                 return GestureDetector(
-                  onTap: () { ctrl.setLanguage(lang.code); Navigator.pop(context); },
+                  onTap: () {
+                    ctrl.setLanguage(lang.code);
+                    Navigator.pop(context);
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     decoration: BoxDecoration(
-                      gradient: selected ? const LinearGradient(colors: [_kAccent, Color(0xFFf5a97a)]) : null,
+                      gradient: selected
+                          ? const LinearGradient(
+                              colors: [_kAccent, Color(0xFFf5a97a)])
+                          : null,
                       color: selected ? null : Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: selected ? Colors.transparent : Colors.white.withOpacity(0.1)),
+                      border: Border.all(
+                          color: selected
+                              ? Colors.transparent
+                              : Colors.white.withOpacity(0.1)),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Row(
                       children: [
                         Text(lang.flag, style: const TextStyle(fontSize: 22)),
                         const SizedBox(width: 10),
-                        Expanded(child: Text(lang.name,
-                            style: TextStyle(fontSize: 14, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: Colors.white),
-                            overflow: TextOverflow.ellipsis)),
-                        if (selected) const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                        Expanded(
+                            child: Text(lang.name,
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: Colors.white),
+                                overflow: TextOverflow.ellipsis)),
+                        if (selected)
+                          const Icon(Icons.check_circle,
+                              color: Colors.white, size: 18),
                       ],
                     ),
                   ),
@@ -906,9 +975,7 @@ class _HoanThanhChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: done
-            ? _kAccentLight
-            : Colors.white.withOpacity(0.85),
+        color: done ? _kAccentLight : Colors.white.withOpacity(0.85),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -938,6 +1005,125 @@ class _HoanThanhChip extends StatelessWidget {
 // BottomCaptureBar  → widgets/bottom_capture_bar.dart
 // VocabBubble       → widgets/vocab_bubble.dart
 // SaveFlashcardSheet→ widgets/save_flashcard_sheet.dart
+
+class _DetectedObjectOverlay extends StatefulWidget {
+  const _DetectedObjectOverlay({
+    required this.imageFile,
+    required this.boundingBox,
+  });
+
+  final File imageFile;
+  final ObjectBoundingBox boundingBox;
+
+  @override
+  State<_DetectedObjectOverlay> createState() => _DetectedObjectOverlayState();
+}
+
+class _DetectedObjectOverlayState extends State<_DetectedObjectOverlay> {
+  late Future<Size> _imageSizeFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageSizeFuture = _loadImageSize(widget.imageFile);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DetectedObjectOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageFile.path != widget.imageFile.path) {
+      _imageSizeFuture = _loadImageSize(widget.imageFile);
+    }
+  }
+
+  Future<Size> _loadImageSize(File file) async {
+    final bytes = await file.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    final size = Size(image.width.toDouble(), image.height.toDouble());
+    image.dispose();
+    return size;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Size>(
+      future: _imageSizeFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        return IgnorePointer(
+          child: CustomPaint(
+            painter: _DetectedObjectPainter(
+              imageSize: snapshot.data!,
+              boundingBox: widget.boundingBox,
+            ),
+            child: const SizedBox.expand(),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DetectedObjectPainter extends CustomPainter {
+  const _DetectedObjectPainter({
+    required this.imageSize,
+    required this.boundingBox,
+  });
+
+  final Size imageSize;
+  final ObjectBoundingBox boundingBox;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (imageSize.width <= 0 || imageSize.height <= 0 || !boundingBox.isValid) {
+      return;
+    }
+
+    final scale = math.max(
+      size.width / imageSize.width,
+      size.height / imageSize.height,
+    );
+    final displayedWidth = imageSize.width * scale;
+    final displayedHeight = imageSize.height * scale;
+    final dx = (size.width - displayedWidth) / 2;
+    final dy = (size.height - displayedHeight) / 2;
+
+    final rect = Rect.fromLTWH(
+      dx + boundingBox.x * scale,
+      dy + boundingBox.y * scale,
+      boundingBox.width * scale,
+      boundingBox.height * scale,
+    ).intersect(Offset.zero & size);
+
+    if (rect.isEmpty) return;
+
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+    final shadowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..color = Colors.black.withValues(alpha: 0.45);
+    final outlinePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..color = _kAccent;
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10
+      ..color = _kAccent.withValues(alpha: 0.18);
+
+    canvas.drawRRect(rrect, glowPaint);
+    canvas.drawRRect(rrect, shadowPaint);
+    canvas.drawRRect(rrect, outlinePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DetectedObjectPainter oldDelegate) {
+    return oldDelegate.imageSize != imageSize ||
+        oldDelegate.boundingBox != boundingBox;
+  }
+}
 
 /// Small icon button (for copy, speak, bookmark in bottom card)
 class _SmallIconBtn extends StatelessWidget {
