@@ -98,10 +98,10 @@ The app now uses a shared bottom navigation bar:
 
 - New file: `lib/shared/widgets/app_bottom_nav_bar.dart`
 - Home uses `AppBottomNavBar(currentIndex: 0)`.
-- Flashcards/Learn uses `currentIndex: 1`.
+- Flashcards/Vocabulary uses `currentIndex: 1`.
 - Snap & Learn is a full-screen camera route and does not show the shared bottom nav.
-- Profile uses `currentIndex: 3`.
-- Leaderboard/Progress uses `currentIndex: 4`.
+- Leaderboard/Progress uses `currentIndex: 3`.
+- Profile uses `currentIndex: 4`.
 
 The centered Snap tab in the shared nav is used to enter Snap from other tabs, but the Snap screen itself hides the nav for an immersive camera view. New users and returning logged-in users should still land on Snap & Learn first.
 
@@ -118,11 +118,11 @@ Routes live in `AppConstants` and are wired in `app_router.dart`.
 Main tab route mapping:
 
 ```text
-0 Coach    -> AppConstants.homeRoute           -> /home
-1 Learn    -> AppConstants.flashcardsRoute     -> /flashcards
+0 Home     -> AppConstants.homeRoute           -> /home
+1 Vocabulary -> AppConstants.flashcardsRoute   -> /flashcards
 2 Snap     -> AppConstants.snapAndLearnRoute   -> /snap-and-learn (full-screen, no bottom nav)
-3 Profile  -> AppConstants.profileRoute        -> /profile
-4 Progress -> AppConstants.leaderboardRoute    -> /leaderboard
+3 Progress -> AppConstants.leaderboardRoute    -> /leaderboard
+4 Profile  -> AppConstants.profileRoute        -> /profile
 ```
 
 Use:
@@ -228,7 +228,7 @@ Follow:
 - Keep analysis state in `snap_provider.dart`.
 - Keep camera/gallery utility logic in `shared/utils/image_utils.dart`.
 
-### Flashcards / Learn
+### Flashcards / Vocabulary
 
 Current:
 
@@ -249,11 +249,11 @@ Current:
 - `addCoinsOptimistic()` updates coins/points after Snap.
 - Home/profile consume stats through provider shims.
 
-### Home / Coach
+### Home
 
 Current:
 
-- `simple_home_screen.dart` is the Coach/Home dashboard.
+- `simple_home_screen.dart` is the Home dashboard.
 - Uses `userStatsValueProvider`.
 - Uses shared bottom nav.
 
