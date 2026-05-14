@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
-import 'package:milingo/shared/widgets/floating_nav_button.dart';
+import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
@@ -65,14 +65,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
-          // ── Floating Navigation Button (top-right) ──
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            right: 16,
-            child: const FloatingNavButton(),
-          ),
         ],
       ),
+      bottomNavigationBar: const AppBottomNavBar(currentIndex: 3),
     );
   }
 
@@ -150,8 +145,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Bottom nav (removed – using FloatingNavButton instead) ──
-  Widget _buildBottomNavStub(BuildContext context) => const SizedBox.shrink();
 }
 
 // ─────────────────────────────────────────────────────────

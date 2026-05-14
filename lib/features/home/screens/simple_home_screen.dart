@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
+import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class SimpleHomeScreen extends ConsumerStatefulWidget {
   const SimpleHomeScreen({super.key});
@@ -13,21 +13,6 @@ class SimpleHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<SimpleHomeScreen> createState() => _SimpleHomeScreenState();
 }
 class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
-  int _selectedTab = 0;
-
-  void _onTabTapped(int index) {
-    switch (index) {
-      case 0:
-        setState(() => _selectedTab = 0);
-      case 1:
-        context.push(AppConstants.snapAndLearnRoute);
-      case 2:
-        context.go(AppConstants.flashcardsRoute);
-      case 3:
-        context.go(AppConstants.profileRoute);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,7 +70,7 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: const AppBottomNavBar(currentIndex: 0),
     );
   }
 
@@ -277,57 +262,6 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
     );
   }
 
-  // ── Bottom navigation ─────────────────────────────────────
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: const Color(0xFFBDBDBD),
-        selectedLabelStyle: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home_rounded),
-            label: 'Trang chủ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt_outlined),
-            activeIcon: Icon(Icons.camera_alt_rounded),
-            label: 'Snap & Learn',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.style_outlined),
-            activeIcon: Icon(Icons.style_rounded),
-            label: 'Flashcards',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            activeIcon: Icon(Icons.person_rounded),
-            label: 'Hồ sơ',
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────
