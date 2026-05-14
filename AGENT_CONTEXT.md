@@ -334,3 +334,427 @@ Recent analyzer context:
 - There are many existing lint/info warnings such as deprecated `withOpacity`, `prefer_const_constructors`, and ordering rules.
 
 Do not claim the whole project is analyzer-clean until the existing issues are fixed.
+
+## Code Review Findings To Address
+
+These findings came from a project-wide structure and lifecycle review. They are not all fixed yet. Use this section as a cleanup backlog when optimizing the app.
+
+### Object Lifecycle
+
+#### `SnapAndLearnScreen` / `_SnapAndLearnScreenState._initCamera`
+
+Problem: `_initCamera()` awaits `availableCameras()` before checking `mounted`. If the screen is disposed while camera discovery or initialization is pending, a `CameraController` can be created after `dispose()` has already run.
+
+Suggested pattern:
+
+```dart
+Future<void> _initCamera() async {
+  CameraController? controller;
+
+  try {
+    final cameras = await availableCameras();
+    if (!mounted) return;
+
+    if (cameras.isEmpty) {
+      setState(() {
+        _isCameraError = true;
+        _cameraErrorMsg = 'Không tìm thấy camera trên thiết bị.';
+      });
+      return;
+    }
+
+    final backCamera = cameras.firstWhere(
+      (c) => c.lensDirection == CameraLensDirection.back,
+      orElse: () => cameras.first,
+    );
+
+    controller = CameraController(
+      backCamera,
+      ResolutionPreset.high,
+      enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
+
+    await controller.initialize();
+    if (!mounted) {
+      await controller.dispose();
+      return;
+    }
+
+    setState(() {
+      _cameraController = controller;
+      _isCameraInitialized = true;
+    });
+  } catch (e) {
+    await controller?.dispose();
+    if (!mounted) return;
+    setState(() {
+      _isCameraError = true;
+      _cameraErrorMsg = 'Lỗi khởi tạo camera: $e';
+    });
+  }
+}
+```
+
+Lifecycle check result: obvious owned controllers are mostly disposed correctly. Login/register text controllers, deck search controller, save sheet text controller, profile tab controller, splash animation controllers, snap animation/camera controllers, and flashcards page controller all have `dispose()` paths. The main concern is async initialization continuing after disposal.
+
+### Widget Rebuild Efficiency
+
+#### `SnapAndLearnScreen` / `_SnapAndLearnScreenState.build`
+
+Problem: `ref.listen` currently lives inside `build()` and drives animation controllers plus a post-frame provider mutation. Move it to `initState()` with `ref.listenManual`.
+
+Suggested pattern:
+
+```dart
+ProviderSubscription<SnapState>? _snapSub;
+
+@override
+void initState() {
+  super.initState();
+
+  _bubbleCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+  _scanCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  );
+
+  _snapSub = ref.listenManual<SnapState>(snapControllerProvider, (prev, next) {
+    if (next.isLoading && !(prev?.isLoading ?? false)) {
+      _scanCtrl.repeat();
+    }
+
+    if (prev?.result == null && next.result != null) {
+      _scanCtrl.stop();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(snapControllerProvider.notifier).showVocab();
+        }
+      });
+    }
+
+    if (!(prev?.showVocabulary ?? false) && next.showVocabulary) {
+      _bubbleCtrl.forward(from: 0);
+    }
+  });
+
+  _initTts();
+  _initCamera();
+}
+
+@override
+void dispose() {
+  _snapSub?.close();
+  _tts.stop();
+  _cameraController?.dispose();
+  _bubbleCtrl.dispose();
+  _scanCtrl.dispose();
+  super.dispose();
+}
+```
+
+#### `DeckScreen` / `_DeckScreenState._filtered`
+
+Problem: `_filtered` calls `ref.read(flashcardProvider)` and rebuilds converted/filter lists from scratch from a getter. Since `build()` already watches the provider, pass the state into a pure method.
+
+Suggested pattern:
+
+```dart
+List<VocabItem> _filteredFromState(FlashcardState state) {
+  final deck = state.decks.where((d) => d.id == widget.deck.id).firstOrNull;
+  final entries = deck?.cards ?? const <FlashcardEntry>[];
+  final query = _query.trim().toLowerCase();
+
+  final all = [
+    for (final entry in entries.indexed)
+      _entryToVocabItem(entry.$2, isNew: entry.$1 < 3),
+  ];
+
+  final byFilter = switch (_filterIndex) {
+    1 => all.length > 3 ? all.sublist(all.length - 3) : all,
+    2 => all.where((v) => !v.isNew).toList(),
+    _ => all,
+  };
+
+  if (query.isEmpty) return byFilter;
+
+  return byFilter.where((v) {
+    return v.word.toLowerCase().contains(query) ||
+        v.reading.toLowerCase().contains(query);
+  }).toList();
+}
+```
+
+Then call it from the provider `data` branch and pass the result into `_buildVocabList(items)`.
+
+#### `AllCategoriesScreen` / `_filtered`
+
+Problem: `_filtered` creates a new list every time it is accessed. `GridView.builder` uses it for `itemCount` and again in `itemBuilder`, causing repeated filtering.
+
+Suggested pattern:
+
+```dart
+@override
+Widget build(BuildContext context) {
+  final query = _query.trim().toLowerCase();
+  final filtered = query.isEmpty
+      ? _kCategories
+      : _kCategories
+          .where((c) => c.nameVi.toLowerCase().contains(query))
+          .toList();
+
+  return GridView.builder(
+    itemCount: filtered.length,
+    itemBuilder: (context, i) => _CategoryCard(category: filtered[i]),
+  );
+}
+```
+
+### Redundant Or Unused Code
+
+#### `ExamScreen` / `_ExamScreenState`
+
+Problem: `_optionCtrl` is initialized, forwarded, reset, and disposed, but no widget consumes it. Remove it unless a real option animation is added.
+
+Suggested cleanup:
+
+```dart
+class _ExamScreenState extends State<ExamScreen> {
+  late List<_Question> _questions;
+  late final FlutterTts _tts;
+
+  @override
+  void initState() {
+    super.initState();
+    _questions = _buildQuestions(widget.langCode);
+    _tts = FlutterTts();
+    unawaited(_tts.setSpeechRate(0.45));
+  }
+
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
+  }
+}
+```
+
+If using `unawaited`, import:
+
+```dart
+import 'dart:async';
+```
+
+#### `SaveFlashcardSheet`
+
+Problem: `flashcard_models.dart` is imported directly, but `flashcard_provider.dart` already exports the models. Analyzer flags this as unnecessary.
+
+Suggested cleanup:
+
+```dart
+import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+// Remove:
+// import 'package:milingo/features/flashcards/models/flashcard_models.dart';
+```
+
+#### `floating_nav_button.dart`
+
+Problem: legacy top-right dropdown nav is now unused after the bottom navigation refactor.
+
+Suggested options:
+
+- Delete it if confirmed no future design needs it.
+- Or mark it deprecated:
+
+```dart
+@Deprecated('Legacy top-right dropdown nav. Use AppBottomNavBar instead.')
+class FloatingNavButton extends StatefulWidget {
+  const FloatingNavButton({super.key});
+}
+```
+
+#### `test/widget_test.dart`
+
+Problem: analyzer fails because the test pumps `MyApp`, but current root widget is `MiLingoApp`.
+
+Suggested correction:
+
+```dart
+await tester.pumpWidget(
+  const ProviderScope(
+    child: MiLingoApp(),
+  ),
+);
+```
+
+### Async Handling
+
+#### `FlashcardNotifier` mutation methods
+
+Problem: several mutations use `state.value!`. If the provider is loading or has errored, these can crash. Affected methods include `addDeck`, `updateDeck`, `deleteDeck`, `addCardToDeck`, and `deleteCard`.
+
+Suggested pattern:
+
+```dart
+FlashcardState? get _currentState => state.valueOrNull;
+
+Future<void> addDeck(String name, String emoji, {String? description}) async {
+  final current = _currentState;
+  if (current == null) return;
+
+  final previousState = state;
+  final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
+  state = AsyncData(
+    current.copyWith(
+      decks: [
+        ...current.decks,
+        DeckData(id: tempId, name: name, emoji: emoji),
+      ],
+    ),
+  );
+
+  try {
+    final created = await _api.createDeck(
+      name: name,
+      emoji: emoji,
+      description: description,
+    );
+
+    final next = state.valueOrNull;
+    if (next == null) return;
+
+    state = AsyncData(
+      next.copyWith(
+        decks: next.decks
+            .map((d) => d.id == tempId ? _deckResponseToDeckData(created) : d)
+            .toList(),
+      ),
+    );
+  } catch (_) {
+    state = previousState;
+    rethrow;
+  }
+}
+```
+
+#### `SaveFlashcardSheet` delayed close callbacks
+
+Problem: `Future.delayed` callbacks are used to pop the sheet. They check `mounted`, which is good, but there is no cancelable handle. This is acceptable for a short-lived sheet, but if this grows more complex, replace with a `Timer` stored on state and cancel in `dispose()`.
+
+Suggested pattern:
+
+```dart
+Timer? _closeTimer;
+
+void _scheduleClose() {
+  _closeTimer?.cancel();
+  _closeTimer = Timer(const Duration(milliseconds: 1400), () {
+    if (mounted) Navigator.of(context).pop();
+  });
+}
+
+@override
+void dispose() {
+  _closeTimer?.cancel();
+  _nameCtrl.dispose();
+  super.dispose();
+}
+```
+
+### Build Method Hygiene
+
+#### `FlashcardsScreen.build`
+
+Problem: `_collectRecentCards(state)` and `totalCards` are recalculated on every rebuild. For current data sizes this is fine, but if decks/cards grow, move aggregation into provider/selectors or a derived provider.
+
+Suggested derived provider idea:
+
+```dart
+final flashcardSummaryProvider = Provider<FlashcardSummary>((ref) {
+  final state = ref.watch(flashcardStateProvider);
+  final totalCards = state.decks.fold<int>(0, (sum, d) => sum + d.cards.length);
+  final recentCards = collectRecentCards(state);
+  return FlashcardSummary(totalCards: totalCards, recentCards: recentCards);
+});
+```
+
+Then the screen watches only the summary:
+
+```dart
+final summary = ref.watch(flashcardSummaryProvider);
+```
+
+### Memory And Resource Management
+
+#### `AllCategoriesScreen` / `_CategoryCard.build`
+
+Problem: `Image.network` does not specify `cacheWidth`/`cacheHeight`. Grid thumbnails may decode larger images than needed on high-density screens.
+
+Suggested pattern:
+
+```dart
+LayoutBuilder(
+  builder: (context, constraints) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    return Image.network(
+      category.imageUrl,
+      fit: BoxFit.cover,
+      cacheWidth: (constraints.maxWidth * dpr).round(),
+      cacheHeight: (constraints.maxHeight * dpr).round(),
+      loadingBuilder: (ctx, child, progress) {
+        if (progress == null) return child;
+        return const ColoredBox(
+          color: Color(0xFFD8D8D8),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+      },
+    );
+  },
+)
+```
+
+#### `SnapAndLearnScreen.build`
+
+Problem: captured camera image uses full-screen `Image.file` without decode sizing. Camera images can be large.
+
+Suggested pattern:
+
+```dart
+LayoutBuilder(
+  builder: (context, constraints) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    return Image.file(
+      File(snap.capturedImage!.path),
+      fit: BoxFit.cover,
+      cacheWidth: (constraints.maxWidth * dpr).round(),
+      cacheHeight: (constraints.maxHeight * dpr).round(),
+    );
+  },
+)
+```
+
+### Logging Cleanup
+
+#### `ImageUtils` and `dio_client.dart`
+
+Problem: shared/network utilities use many production `print()` calls. Replace with debug-only logging.
+
+Suggested helper:
+
+```dart
+import 'package:flutter/foundation.dart';
+
+void logDebug(String message) {
+  if (kDebugMode) debugPrint(message);
+}
+```
+
+Usage:
+
+```dart
+logDebug('[ImageUtils] Starting pickImageAsXFile...');
+```
