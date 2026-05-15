@@ -13,6 +13,7 @@ DeckData _deckResponseToDeckData(DeckResponse r) {
     id: r.id,
     name: r.name,
     emoji: r.emoji.isEmpty ? '📚' : r.emoji,
+    vocabCount: r.vocabCount,
     isDefault: r.isDefault,
   );
 }
@@ -132,12 +133,33 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
     try {
       final cards = await _api.getCards(deckId);
       final entries = cards.map(_cardResponseToEntry).toList();
-      final updatedDecks = state.value!.decks.map((d) {
-        return d.id == deckId ? d.copyWith(cards: entries) : d;
+      final current = state.valueOrNull;
+      if (current == null) return;
+
+      final updatedDecks = current.decks.map((d) {
+        return d.id == deckId
+            ? d.copyWith(cards: entries, vocabCount: entries.length)
+            : d;
       }).toList();
-      state = AsyncValue.data(state.value!.copyWith(decks: updatedDecks));
+      state = AsyncValue.data(current.copyWith(decks: updatedDecks));
     } catch (_) {
       // Non-fatal — deck list still shows; cards just won't load
+    }
+  }
+
+  Future<void> loadCardsForAllDecks() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    for (final deck in current.decks) {
+      final latest = state.valueOrNull;
+      final matchingDecks =
+          latest?.decks.where((d) => d.id == deck.id).toList() ?? const [];
+      final latestDeck = matchingDecks.isEmpty ? null : matchingDecks.first;
+      if (latestDeck == null || latestDeck.cards.isNotEmpty || latestDeck.total == 0) {
+        continue;
+      }
+      await loadCardsForDeck(deck.id);
     }
   }
 

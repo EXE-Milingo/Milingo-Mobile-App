@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,48 +9,86 @@ import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 const _kBg = Color(0xFFFFF8F4);
+const _kSurface = Colors.white;
 const _kAccent = AppTheme.primaryColor;
 const _kDark = Color(0xFF1A1A1A);
-const _kMuted = Color(0xFF9E9E9E);
+const _kMuted = Color(0xFF8F8F8F);
+const _kBorder = Color(0xFFE8E2DE);
 const _kSoft = Color(0xFFFFEDE7);
 
-class FlashcardsScreen extends ConsumerWidget {
+const _kTabs = [
+  'Tất cả bộ',
+  'Tất cả từ vựng',
+  'Từ vựng yêu thích',
+  'Từ đã học',
+  'Từ chưa học',
+];
+
+class FlashcardsScreen extends ConsumerStatefulWidget {
   const FlashcardsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FlashcardsScreen> createState() => _FlashcardsScreenState();
+}
+
+class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
+  final _searchController = TextEditingController();
+  int _tabIndex = 0;
+  String _query = '';
+  bool _requestedAllCards = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _selectTab(int index) {
+    setState(() => _tabIndex = index);
+    if (index > 0 && !_requestedAllCards) {
+      _requestedAllCards = true;
+      ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final asyncState = ref.watch(flashcardProvider);
-    final state = asyncState.valueOrNull ?? FlashcardState(decks: const []);
-    final totalCards = state.decks.fold<int>(0, (sum, d) => sum + d.cards.length);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _kBg,
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-            child: Column(
-              children: [
-                _PracticeSummary(
-                  totalCards: totalCards,
-                  totalDecks: state.decks.length,
-                  canCreateDeck: asyncState.hasValue,
-                  onFavoritesTap: () => context.push(AppConstants.allCategoriesRoute),
-                  onNewSetTap: () =>
-                      _showCreateDeckSheet(context, ref, asyncState.hasValue),
-                ),
-                const SizedBox(height: 20),
-                asyncState.when(
-                  loading: () => const _DeckLoadingState(),
-                  error: (error, _) => _DeckErrorState(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _LibraryHeader(
+                selectedIndex: _tabIndex,
+                onTabSelected: _selectTab,
+                onCreateDeck: () => _showCreateDeckSheet(context, asyncState.hasValue),
+              ),
+              _SearchBox(
+                controller: _searchController,
+                hintText: _tabIndex == 0 ? 'Tìm kiếm bộ từ...' : 'Tìm kiếm từ vựng...',
+                onChanged: (value) => setState(() => _query = value),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: asyncState.when(
+                  loading: () => const _LoadingState(),
+                  error: (error, _) => _ErrorState(
                     message: error.toString(),
                     onRetry: () => ref.read(flashcardProvider.notifier).refresh(),
                   ),
-                  data: (data) => _DeckList(decks: data.decks),
+                  data: (data) => _FlashcardTabBody(
+                    tabIndex: _tabIndex,
+                    query: _query,
+                    state: data,
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         bottomNavigationBar: const AppBottomNavBar(currentIndex: 1),
@@ -60,10 +96,10 @@ class FlashcardsScreen extends ConsumerWidget {
     );
   }
 
-  void _showCreateDeckSheet(BuildContext context, WidgetRef ref, bool canCreate) {
+  void _showCreateDeckSheet(BuildContext context, bool canCreate) {
     if (!canCreate) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Decks are still loading.')),
+        const SnackBar(content: Text('Đang tải danh sách bộ từ.')),
       );
       return;
     }
@@ -77,339 +113,340 @@ class FlashcardsScreen extends ConsumerWidget {
   }
 }
 
-class _PracticeSummary extends StatelessWidget {
-  const _PracticeSummary({
-    required this.totalCards,
-    required this.totalDecks,
-    required this.canCreateDeck,
-    required this.onFavoritesTap,
-    required this.onNewSetTap,
+class _LibraryHeader extends StatelessWidget {
+  const _LibraryHeader({
+    required this.selectedIndex,
+    required this.onTabSelected,
+    required this.onCreateDeck,
   });
 
-  final int totalCards;
-  final int totalDecks;
-  final bool canCreateDeck;
-  final VoidCallback onFavoritesTap;
-  final VoidCallback onNewSetTap;
+  final int selectedIndex;
+  final ValueChanged<int> onTabSelected;
+  final VoidCallback onCreateDeck;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _WordsLearnedRing(totalCards: totalCards),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: _HeaderActionCard(
-                icon: Icons.star_rounded,
-                label: 'My favorites',
-                subtitle: '$totalCards cards',
-                onTap: onFavoritesTap,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: _HeaderActionCard(
-                icon: Icons.add_rounded,
-                label: 'New set',
-                subtitle: canCreateDeck ? '$totalDecks sets' : 'Loading',
-                onTap: onNewSetTap,
-                isPrimaryIcon: true,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-class _HeaderActionCard extends StatelessWidget {
-  const _HeaderActionCard({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.onTap,
-    this.isPrimaryIcon = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final VoidCallback onTap;
-  final bool isPrimaryIcon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: _kSoft,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: SizedBox(
-          height: 96,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: isPrimaryIcon ? _kAccent.withValues(alpha: 0.68) : Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: isPrimaryIcon ? Colors.white : _kAccent.withValues(alpha: 0.62),
-                    size: isPrimaryIcon ? 23 : 26,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Thư viện',
+                  style: TextStyle(
                     color: _kDark,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _kMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WordsLearnedRing extends StatelessWidget {
-  const _WordsLearnedRing({required this.totalCards});
-
-  final int totalCards;
-
-  @override
-  Widget build(BuildContext context) {
-    const goal = 600;
-    final progress = (totalCards / goal).clamp(0.0, 1.0);
-
-    return Center(
-      child: Container(
-        width: 164,
-        height: 164,
-        decoration: BoxDecoration(
-          color: _kBg,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            CustomPaint(
-              size: const Size(144, 144),
-              painter: _RingPainter(progress: progress),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$totalCards',
-                  style: const TextStyle(
-                    color: _kDark,
-                    fontSize: 44,
+                    fontSize: 34,
                     fontWeight: FontWeight.w900,
                     height: 1,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'WORDS LEARNED',
-                  style: TextStyle(
-                    color: _kMuted,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _kSoft,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    '${(progress * 100).round()}% goal',
-                    style: const TextStyle(
-                      color: _kAccent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
+              ),
+              IconButton(
+                tooltip: 'Tạo bộ từ',
+                onPressed: onCreateDeck,
+                icon: const Icon(Icons.add_rounded, color: _kDark, size: 32),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _kTabs.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final selected = index == selectedIndex;
+                return _TabPill(
+                  label: _kTabs[index],
+                  selected: selected,
+                  onTap: () => onTabSelected(index),
+                );
+              },
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabPill extends StatelessWidget {
+  const _TabPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? Colors.transparent : const Color(0xFFFFEEE9),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: selected ? _kAccent : Colors.transparent,
+          width: selected ? 1.8 : 0,
+        ),
+      ),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected ? _kDark : const Color(0xFF5E5A58),
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _RingPainter extends CustomPainter {
-  const _RingPainter({required this.progress});
+class _SearchBox extends StatelessWidget {
+  const _SearchBox({
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+  });
 
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 8;
-    const strokeWidth = 11.0;
-
-    final bgPaint = Paint()
-      ..color = const Color(0xFFF0F0F0)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, radius, bgPaint);
-
-    final progressPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..shader = const SweepGradient(
-        startAngle: -math.pi / 2,
-        endAngle: 3 * math.pi / 2,
-        colors: [
-          AppTheme.primaryColor,
-          Color(0xFFFF8A65),
-          AppTheme.primaryColor,
-        ],
-      ).createShader(Rect.fromCircle(center: center, radius: radius));
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * progress,
-      false,
-      progressPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
-}
-
-class _DeckList extends StatelessWidget {
-  const _DeckList({required this.decks});
-
-  final List<DeckData> decks;
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    if (decks.isEmpty) return const _EmptyDeckState();
-
-    return Column(
-      children: [
-        for (final indexed in decks.indexed) ...[
-          _DeckProgressTile(
-            deck: indexed.$2,
-            learned: indexed.$2.cards.length,
-            target: _targetForDeck(indexed.$1, indexed.$2.cards.length),
-            onTap: () {
-              final target = _targetForDeck(indexed.$1, indexed.$2.cards.length);
-
-              context.push(
-                AppConstants.deckRoute,
-                extra: DeckArg(
-                  id: indexed.$2.id,
-                  name: indexed.$2.name,
-                  nameVi: indexed.$2.name,
-                  total: target,
-                  learned: indexed.$2.cards.length,
-                  emoji: indexed.$2.emoji,
-                ),
-              );
-            },
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        style: const TextStyle(color: _kDark, fontSize: 15, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: const TextStyle(color: Color(0xFFB8B3B0), fontSize: 15),
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFB8B3B0), size: 24),
+          filled: true,
+          fillColor: _kSurface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: _kBorder),
           ),
-          if (indexed.$1 != decks.length - 1) const SizedBox(height: 12),
-        ],
-      ],
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: _kBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: _kAccent, width: 1.4),
+          ),
+        ),
+      ),
     );
-  }
-
-  int _targetForDeck(int index, int learned) {
-    const defaults = [150, 48, 132, 20, 80, 64];
-    final fallback = defaults[index % defaults.length];
-    return math.max(learned, fallback);
   }
 }
 
-class _DeckProgressTile extends StatelessWidget {
-  const _DeckProgressTile({
+class _FlashcardTabBody extends StatelessWidget {
+  const _FlashcardTabBody({
+    required this.tabIndex,
+    required this.query,
+    required this.state,
+  });
+
+  final int tabIndex;
+  final String query;
+  final FlashcardState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tabIndex == 0) {
+      final decks = _filteredDecks();
+      if (decks.isEmpty) {
+        return const _EmptyState(
+          icon: Icons.style_rounded,
+          title: 'Chưa có bộ từ',
+          message: 'Tạo bộ từ mới hoặc lưu từ qua Snap & Learn.',
+        );
+      }
+
+      return ListView.separated(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+        itemCount: decks.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) => _DeckLibraryRow(
+          deck: decks[index],
+          onTap: () => _openDeck(context, decks[index]),
+        ),
+      );
+    }
+
+    final vocabItems = _filteredVocab();
+    if (vocabItems.isEmpty) {
+      return _EmptyState(
+        icon: _emptyIconForTab(),
+        title: _emptyTitleForTab(),
+        message: _emptyMessageForTab(),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+      itemCount: vocabItems.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final item = vocabItems[index];
+        return _VocabLibraryRow(
+          entry: item.entry,
+          deckName: item.deck.name,
+          onTap: () => context.push(
+            AppConstants.vocabDetailRoute,
+            extra: VocabDetailArg(
+              deckId: item.deck.id,
+              deckName: item.deck.name,
+              entry: item.entry,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<DeckData> _filteredDecks() {
+    final trimmed = query.trim().toLowerCase();
+    if (trimmed.isEmpty) return state.decks;
+    return state.decks.where((deck) {
+      return deck.name.toLowerCase().contains(trimmed);
+    }).toList();
+  }
+
+  List<_DeckVocabItem> _filteredVocab() {
+    final trimmed = query.trim().toLowerCase();
+    final all = [
+      for (final deck in state.decks)
+        for (final entry in deck.cards) _DeckVocabItem(deck: deck, entry: entry),
+    ];
+
+    final tabFiltered = switch (tabIndex) {
+      1 => all,
+      2 => const <_DeckVocabItem>[],
+      3 => const <_DeckVocabItem>[],
+      4 => all,
+      _ => all,
+    };
+
+    if (trimmed.isEmpty) return tabFiltered;
+    return tabFiltered.where((item) {
+      return item.entry.english.toLowerCase().contains(trimmed) ||
+          item.entry.translation.toLowerCase().contains(trimmed) ||
+          item.deck.name.toLowerCase().contains(trimmed);
+    }).toList();
+  }
+
+  IconData _emptyIconForTab() {
+    return switch (tabIndex) {
+      2 => Icons.star_border_rounded,
+      3 => Icons.check_circle_outline_rounded,
+      4 => Icons.school_outlined,
+      _ => Icons.menu_book_rounded,
+    };
+  }
+
+  String _emptyTitleForTab() {
+    return switch (tabIndex) {
+      2 => 'Chưa có từ yêu thích',
+      3 => 'Chưa có từ đã học',
+      4 => 'Chưa có từ chưa học',
+      _ => 'Chưa có từ vựng',
+    };
+  }
+
+  String _emptyMessageForTab() {
+    return switch (tabIndex) {
+      2 => 'Khi có dữ liệu yêu thích từ API, các từ sẽ xuất hiện ở đây.',
+      3 => 'Khi có tiến độ học từng từ từ API, các từ sẽ xuất hiện ở đây.',
+      4 => 'Mở một bộ từ để tải danh sách từ vựng.',
+      _ => 'Mở một bộ từ để tải danh sách từ vựng.',
+    };
+  }
+
+  void _openDeck(BuildContext context, DeckData deck) {
+    context.push(
+      AppConstants.deckRoute,
+      extra: DeckArg(
+        id: deck.id,
+        name: deck.name,
+        nameVi: deck.name,
+        total: deck.total,
+        learned: deck.cards.length,
+        emoji: deck.emoji,
+      ),
+    );
+  }
+}
+
+class _DeckVocabItem {
+  const _DeckVocabItem({required this.deck, required this.entry});
+
+  final DeckData deck;
+  final FlashcardEntry entry;
+}
+
+class _DeckLibraryRow extends StatelessWidget {
+  const _DeckLibraryRow({
     required this.deck,
-    required this.learned,
-    required this.target,
     required this.onTap,
   });
 
   final DeckData deck;
-  final int learned;
-  final int target;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final progress = target == 0 ? 0.0 : (learned / target).clamp(0.0, 1.0);
+    final count = deck.total;
 
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      elevation: 0,
-      shadowColor: Colors.black.withValues(alpha: 0.05),
+      color: _kSurface,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Container(
-          height: 68,
-          padding: const EdgeInsets.fromLTRB(16, 11, 8, 10),
+          constraints: const BoxConstraints(minHeight: 78),
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.black.withValues(alpha: 0.03)),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _kBorder),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 14,
+                blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
             children: [
+              _IconTile(
+                child: Text(
+                  deck.emoji.isEmpty ? '📚' : deck.emoji,
+                  style: const TextStyle(fontSize: 24),
+                ),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,36 +458,26 @@ class _DeckProgressTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _kDark,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: 126,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 5,
-                          backgroundColor: const Color(0xFFEDEDED),
-                          color: _kAccent,
-                        ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Học phần  ·  $count thuật ngữ',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _kMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-              Text(
-                '$learned/$target',
-                style: const TextStyle(
-                  color: _kDark,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Icon(Icons.more_vert_rounded, color: Color(0xFFD6D6D6), size: 20),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFFC4BFBC), size: 26),
             ],
           ),
         ),
@@ -459,19 +486,115 @@ class _DeckProgressTile extends StatelessWidget {
   }
 }
 
-class _DeckLoadingState extends StatelessWidget {
-  const _DeckLoadingState();
+class _VocabLibraryRow extends StatelessWidget {
+  const _VocabLibraryRow({
+    required this.entry,
+    required this.deckName,
+    required this.onTap,
+  });
+
+  final FlashcardEntry entry;
+  final String deckName;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(color: _kAccent),
+    return Material(
+      color: _kSurface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 82),
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _kBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              _IconTile(
+                child: Icon(_iconForPartOfSpeech(entry.partOfSpeech), color: _kAccent, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      entry.english,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _kDark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${entry.translation}  ·  $deckName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _kMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFFC4BFBC), size: 26),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _DeckErrorState extends StatelessWidget {
-  const _DeckErrorState({
+class _IconTile extends StatelessWidget {
+  const _IconTile({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        color: _kSoft,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: CircularProgressIndicator(color: _kAccent));
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({
     required this.message,
     required this.onRetry,
   });
@@ -490,12 +613,8 @@ class _DeckErrorState extends StatelessWidget {
             const Icon(Icons.error_outline_rounded, color: _kAccent, size: 38),
             const SizedBox(height: 10),
             const Text(
-              'Could not load your sets',
-              style: TextStyle(
-                color: _kDark,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
+              'Không tải được thư viện',
+              style: TextStyle(color: _kDark, fontSize: 17, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
@@ -509,7 +628,7 @@ class _DeckErrorState extends StatelessWidget {
             FilledButton(
               onPressed: onRetry,
               style: FilledButton.styleFrom(backgroundColor: _kAccent),
-              child: const Text('Try again'),
+              child: const Text('Thử lại'),
             ),
           ],
         ),
@@ -518,46 +637,61 @@ class _DeckErrorState extends StatelessWidget {
   }
 }
 
-class _EmptyDeckState extends StatelessWidget {
-  const _EmptyDeckState();
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 58,
-              height: 58,
-              decoration: const BoxDecoration(
-                color: _kSoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.style_rounded, color: _kAccent, size: 30),
+              width: 62,
+              height: 62,
+              decoration: const BoxDecoration(color: _kSoft, shape: BoxShape.circle),
+              child: Icon(icon, color: _kAccent, size: 32),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'No sets yet',
-              style: TextStyle(
-                color: _kDark,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Create a set or save words from Snap & Learn.',
+            Text(
+              title,
               textAlign: TextAlign.center,
-              style: TextStyle(color: _kMuted, fontSize: 13),
+              style: const TextStyle(color: _kDark, fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _kMuted, fontSize: 13, height: 1.35),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+IconData _iconForPartOfSpeech(String partOfSpeech) {
+  return switch (partOfSpeech.toLowerCase()) {
+    'noun' => Icons.category_rounded,
+    'verb' => Icons.directions_run_rounded,
+    'adjective' => Icons.auto_awesome_rounded,
+    'adverb' => Icons.speed_rounded,
+    'pronoun' => Icons.person_rounded,
+    'preposition' => Icons.place_rounded,
+    'conjunction' => Icons.link_rounded,
+    _ => Icons.menu_book_rounded,
+  };
 }
 
 class _CreateDeckSheet extends ConsumerStatefulWidget {
@@ -599,7 +733,7 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not create set: $error')),
+        SnackBar(content: Text('Không tạo được bộ từ: $error')),
       );
     }
   }
@@ -633,12 +767,8 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
             ),
             const SizedBox(height: 18),
             const Text(
-              'New set',
-              style: TextStyle(
-                color: _kDark,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-              ),
+              'Tạo bộ từ',
+              style: TextStyle(color: _kDark, fontSize: 20, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -662,8 +792,8 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
               controller: _nameCtrl,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
-                labelText: 'Set name',
-                hintText: 'Travel words',
+                labelText: 'Tên bộ từ',
+                hintText: 'Từ vựng du lịch',
               ),
             ),
             const SizedBox(height: 10),
@@ -672,8 +802,8 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
               minLines: 1,
               maxLines: 2,
               decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'Optional',
+                labelText: 'Mô tả',
+                hintText: 'Không bắt buộc',
               ),
             ),
             const SizedBox(height: 18),
@@ -684,23 +814,15 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
                 style: FilledButton.styleFrom(
                   backgroundColor: _kAccent,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _saving
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text(
-                        'Create set',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
+                    : const Text('Tạo bộ từ', style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
           ],

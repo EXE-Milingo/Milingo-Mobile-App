@@ -63,6 +63,7 @@ lib/
 |   |   |-- screens/deck_screen.dart
 |   |   |-- screens/exam_screen.dart
 |   |   |-- screens/flashcards_screen.dart
+|   |   |-- screens/vocab_detail_screen.dart
 |   |   |-- widgets/deck_list_item.dart
 |   |   |-- widgets/exam_banner.dart
 |   |   |-- widgets/quick_card.dart
@@ -134,6 +135,13 @@ Main tab route mapping:
 2 Snap     -> AppConstants.snapAndLearnRoute   -> /snap-and-learn (full-screen, no bottom nav)
 3 Progress -> AppConstants.leaderboardRoute    -> /leaderboard
 4 Profile  -> AppConstants.profileRoute        -> /profile
+
+Flashcard drill-down routes:
+
+```text
+Deck detail       -> AppConstants.deckRoute        -> /flashcards/deck
+Vocabulary detail -> AppConstants.vocabDetailRoute -> /flashcards/vocabulary
+```
 ```
 
 Use:
@@ -245,9 +253,11 @@ Current:
 
 - `flashcardProvider` loads decks from backend.
 - Supports optimistic add/update/delete for decks and cards.
-- `flashcards_screen.dart` reads provider state for total card/deck counts and deck progress rows.
-- The flashcards landing screen is intentionally minimal: no top hamburger, language selector, category title text, or pinned orange header.
-- The big words-learned ring plus "My favorites" / "New set" cards are part of the same scroll view as the deck list.
+- `flashcards_screen.dart` is a library-style landing page with horizontal top tabs: "Tất cả bộ", "Tất cả từ vựng", "Từ vựng yêu thích", "Từ đã học", and "Từ chưa học".
+- The default "Tất cả bộ" tab is backed by the deck API and shows horizontal deck rows without category photos.
+- Deck rows navigate to `DeckScreen`, which loads cards for the selected deck and shows horizontal vocabulary rows.
+- Vocabulary rows navigate to `VocabDetailScreen`, which displays the saved vocabulary detail.
+- `DeckData` keeps backend `vocabCount` so deck rows can show counts before cards are loaded.
 
 Known risk:
 

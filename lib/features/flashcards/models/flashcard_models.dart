@@ -26,6 +26,7 @@ class DeckData {
     required this.name,
     required this.emoji,
     List<FlashcardEntry>? cards,
+    this.vocabCount = 0,
     this.isDefault = false,
   }) : cards = List.unmodifiable(cards ?? const []);
 
@@ -33,16 +34,18 @@ class DeckData {
   final String name;
   final String emoji;
   final List<FlashcardEntry> cards;
+  final int vocabCount;
 
   /// True for decks that the backend marks as default (cannot be deleted).
   final bool isDefault;
 
-  int get total => cards.length;
+  int get total => cards.isEmpty ? vocabCount : cards.length;
 
   DeckData copyWith({
     String? name,
     String? emoji,
     List<FlashcardEntry>? cards,
+    int? vocabCount,
     bool? isDefault,
   }) =>
       DeckData(
@@ -50,6 +53,7 @@ class DeckData {
         name: name ?? this.name,
         emoji: emoji ?? this.emoji,
         cards: cards ?? List<FlashcardEntry>.from(this.cards),
+        vocabCount: vocabCount ?? this.vocabCount,
         isDefault: isDefault ?? this.isDefault,
       );
 }

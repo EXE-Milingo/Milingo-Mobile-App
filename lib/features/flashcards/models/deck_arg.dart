@@ -1,6 +1,4 @@
-// ─────────────────────────────────────────────────────────
-// Deck navigation argument (passed via GoRouter extra)
-// ─────────────────────────────────────────────────────────
+import 'package:milingo/features/flashcards/models/flashcard_models.dart';
 
 class DeckArg {
   const DeckArg({
@@ -20,10 +18,6 @@ class DeckArg {
   final String emoji;
 }
 
-// ─────────────────────────────────────────────────────────
-// Vocabulary item displayed inside a deck
-// ─────────────────────────────────────────────────────────
-
 class VocabItem {
   const VocabItem({
     required this.word,
@@ -36,4 +30,16 @@ class VocabItem {
   final String reading;
   final String emoji;
   final bool isNew;
+}
+
+class VocabDetailArg {
+  const VocabDetailArg({
+    required this.deckId,
+    required this.deckName,
+    required this.entry,
+  });
+
+  final String deckId;
+  final String deckName;
+  final FlashcardEntry entry;
 }
