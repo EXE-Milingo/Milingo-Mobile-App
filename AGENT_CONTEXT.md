@@ -2,7 +2,7 @@
 
 Read this file before making code changes. Update it whenever project structure, navigation, backend contracts, state models, or coding conventions change.
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## Project Summary
 
@@ -160,18 +160,29 @@ The app now uses a shared bottom navigation bar:
 
 - New file: `lib/shared/widgets/app_bottom_nav_bar.dart`
 - Home uses `AppBottomNavBar(currentIndex: 0)`.
-- Flashcards/Learn uses `currentIndex: 1`.
-- Snap & Learn uses `currentIndex: 2`.
-- Profile uses `currentIndex: 3`.
-- Leaderboard/Progress uses `currentIndex: 4`.
+- Flashcards/Vocabulary uses `currentIndex: 1`.
+- Snap & Learn is a full-screen camera route and does not show the shared bottom nav.
+- Leaderboard/Progress uses `currentIndex: 3`.
+- Profile uses `currentIndex: 4`.
 
-The centered Snap tab is intentional. New users and returning logged-in users should land on Snap & Learn first.
+The centered Snap tab in the shared nav is used to enter Snap from other tabs, but the Snap screen itself hides the nav for an immersive camera view. New users and returning logged-in users should still land on Snap & Learn first.
 
 The previous top-right dropdown plus button was removed from active tab screens. `floating_nav_button.dart` is now legacy/unused unless a future design intentionally brings it back.
 
 ### Documentation Refresh
 
 `ARCHITECTURE.md` was rewritten to match the current code structure. This file was also rewritten to be the quick-start context for future agents.
+
+### Flashcards Screen Layout Refresh
+
+`lib/features/flashcards/screens/flashcards_screen.dart` was redesigned to match the requested flashcard/category layout while keeping the existing warm orange MiLingo color scheme:
+
+- The screen no longer has a hamburger icon, top-right language selector, "Categories" title, "Pick a set to practice" subtitle, or orange pinned header panel.
+- The large words-learned progress ring remains near the top of the screen.
+- The "My favorites" and "New set" action cards remain below the ring.
+- The ring, action cards, and deck progress rows now live in a single normal scroll view, so the top summary area is not pinned separately from the deck list.
+- Deck rows still navigate to `AppConstants.deckRoute` with `DeckArg`.
+- The "New set" card opens a small bottom sheet and creates decks through `flashcardProvider.addDeck(...)`.
 
 ## Navigation Rules
 
@@ -180,11 +191,11 @@ Routes live in `AppConstants` and are wired in `app_router.dart`.
 Main tab route mapping:
 
 ```text
-0 Coach    -> AppConstants.homeRoute           -> /home
-1 Learn    -> AppConstants.flashcardsRoute     -> /flashcards
-2 Snap     -> AppConstants.snapAndLearnRoute   -> /snap-and-learn
-3 Profile  -> AppConstants.profileRoute        -> /profile
-4 Progress -> AppConstants.leaderboardRoute    -> /leaderboard
+0 Home     -> AppConstants.homeRoute           -> /home
+1 Vocabulary -> AppConstants.flashcardsRoute   -> /flashcards
+2 Snap     -> AppConstants.snapAndLearnRoute   -> /snap-and-learn (full-screen, no bottom nav)
+3 Progress -> AppConstants.leaderboardRoute    -> /leaderboard
+4 Profile  -> AppConstants.profileRoute        -> /profile
 ```
 
 Use:
@@ -281,7 +292,8 @@ Current:
 - Vocabulary overlay/result flow.
 - Save to flashcard sheet.
 - Optimistic user stats update from `coinsAwarded`.
-- Shared bottom nav with Snap centered.
+- Full-screen camera UI; no bottom nav while on Snap.
+- The top-left arrow resets the Snap state and routes users back to Home (`/home`).
 
 Follow:
 
@@ -289,13 +301,15 @@ Follow:
 - Keep analysis state in `snap_provider.dart`.
 - Keep camera/gallery utility logic in `shared/utils/image_utils.dart`.
 
-### Flashcards / Learn
+### Flashcards / Vocabulary
 
 Current:
 
 - `flashcardProvider` loads decks from backend.
 - Supports optimistic add/update/delete for decks and cards.
-- `flashcards_screen.dart` reads provider state for counts/recent cards.
+- `flashcards_screen.dart` reads provider state for total card/deck counts and deck progress rows.
+- The flashcards landing screen is intentionally minimal: no top hamburger, language selector, category title text, or pinned orange header.
+- The big words-learned ring plus "My favorites" / "New set" cards are part of the same scroll view as the deck list.
 
 Known risk:
 
@@ -310,11 +324,11 @@ Current:
 - `addCoinsOptimistic()` updates coins/points after Snap.
 - Home/profile consume stats through provider shims.
 
-### Home / Coach
+### Home
 
 Current:
 
-- `simple_home_screen.dart` is the Coach/Home dashboard.
+- `simple_home_screen.dart` is the Home dashboard.
 - Uses `userStatsValueProvider`.
 - Uses shared bottom nav.
 
@@ -392,6 +406,7 @@ Recommended cleanup:
 Recent analyzer context:
 
 - `flutter analyze lib/shared/widgets/app_bottom_nav_bar.dart` passes.
+- `flutter analyze lib/features/flashcards/screens/flashcards_screen.dart` passes after the layout refresh.
 - Full `flutter analyze` has existing project issues, including `test/widget_test.dart` referencing `MyApp` instead of current `MiLingoApp`.
 - There are many existing lint/info warnings such as deprecated `withOpacity`, `prefer_const_constructors`, and ordering rules.
 
@@ -458,7 +473,7 @@ Future<void> _initCamera() async {
 }
 ```
 
-Lifecycle check result: obvious owned controllers are mostly disposed correctly. Login/register text controllers, deck search controller, save sheet text controller, profile tab controller, splash animation controllers, snap animation/camera controllers, and flashcards page controller all have `dispose()` paths. The main concern is async initialization continuing after disposal.
+Lifecycle check result: obvious owned controllers are mostly disposed correctly. Login/register text controllers, deck search controller, save sheet text controller, profile tab controller, splash animation controllers, and snap animation/camera controllers all have `dispose()` paths. The main concern is async initialization continuing after disposal.
 
 ### Widget Rebuild Efficiency
 
@@ -731,7 +746,7 @@ void dispose() {
 
 #### `FlashcardsScreen.build`
 
-Problem: `_collectRecentCards(state)` and `totalCards` are recalculated on every rebuild. For current data sizes this is fine, but if decks/cards grow, move aggregation into provider/selectors or a derived provider.
+Problem: `totalCards` is recalculated on every rebuild. For current data sizes this is fine, but if decks/cards grow, move aggregation into provider/selectors or a derived provider.
 
 Suggested derived provider idea:
 
@@ -739,8 +754,7 @@ Suggested derived provider idea:
 final flashcardSummaryProvider = Provider<FlashcardSummary>((ref) {
   final state = ref.watch(flashcardStateProvider);
   final totalCards = state.decks.fold<int>(0, (sum, d) => sum + d.cards.length);
-  final recentCards = collectRecentCards(state);
-  return FlashcardSummary(totalCards: totalCards, recentCards: recentCards);
+  return FlashcardSummary(totalCards: totalCards, totalDecks: state.decks.length);
 });
 ```
 

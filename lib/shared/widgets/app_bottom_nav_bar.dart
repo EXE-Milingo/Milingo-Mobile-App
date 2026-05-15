@@ -26,10 +26,10 @@ class AppBottomNavBar extends StatelessWidget {
         context.go(AppConstants.snapAndLearnRoute);
         return;
       case 3:
-        context.go(AppConstants.profileRoute);
+        context.go(AppConstants.leaderboardRoute);
         return;
       case 4:
-        context.go(AppConstants.leaderboardRoute);
+        context.go(AppConstants.profileRoute);
         return;
     }
   }
@@ -38,12 +38,12 @@ class AppBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = [
       _BottomNavItem(
-        label: 'Coach',
+        label: 'Home',
         icon: Icons.home_outlined,
         activeIcon: Icons.home_rounded,
       ),
       _BottomNavItem(
-        label: 'Learn',
+        label: 'Vocabulary',
         assetPath: 'assets/svg/review.svg',
       ),
       _BottomNavItem(
@@ -52,13 +52,13 @@ class AppBottomNavBar extends StatelessWidget {
         isCenter: true,
       ),
       _BottomNavItem(
-        label: 'Profile',
-        assetPath: 'assets/svg/personalize.svg',
-      ),
-      _BottomNavItem(
         label: 'Progress',
         icon: Icons.trending_up_rounded,
         activeIcon: Icons.trending_up_rounded,
+      ),
+      _BottomNavItem(
+        label: 'Profile',
+        assetPath: 'assets/svg/personalize.svg',
       ),
     ];
 

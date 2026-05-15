@@ -159,11 +159,11 @@ Main tabs use `lib/shared/widgets/app_bottom_nav_bar.dart`.
 Tab mapping:
 
 ```text
-0 - Coach    -> /home
-1 - Learn    -> /flashcards
-2 - Snap     -> /snap-and-learn
-3 - Profile  -> /profile
-4 - Progress -> /leaderboard
+0 - Home       -> /home
+1 - Vocabulary -> /flashcards
+2 - Snap       -> /snap-and-learn
+3 - Progress   -> /leaderboard
+4 - Profile    -> /profile
 ```
 
 Snap is intentionally centered and selected when users first enter the app after login/session restore.
@@ -247,9 +247,9 @@ Current behavior:
 - Keeps `MilingoResult` shape stable for UI widgets.
 - Updates user stats optimistically with `coinsAwarded`.
 - Can save vocabulary into flashcard decks.
-- Uses the shared bottom tab bar with Snap selected.
+- Snap is a full-screen camera route and does not show the shared bottom tab bar.
 
-### Flashcards / Learn
+### Flashcards / Vocabulary
 
 Files:
 
@@ -279,7 +279,7 @@ Current behavior:
 - Can optimistically add snap coins and total points.
 - Home/profile use stats through provider shims.
 
-### Home / Coach
+### Home
 
 File:
 
@@ -289,7 +289,7 @@ Current behavior:
 
 - Dashboard-style screen with stats, streak row, upgrade banner, feature cards.
 - Uses `userStatsValueProvider`.
-- Uses shared bottom navigation with Coach selected.
+- Uses shared bottom navigation with Home selected.
 
 ### Profile
 

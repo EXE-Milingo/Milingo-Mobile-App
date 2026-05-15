@@ -8,7 +8,7 @@ class LeaderboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(child: Text('Leaderboard Screen - TODO')),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 4),
+      bottomNavigationBar: AppBottomNavBar(currentIndex: 3),
     );
   }
 }
