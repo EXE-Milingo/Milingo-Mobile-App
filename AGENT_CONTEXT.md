@@ -93,6 +93,132 @@ lib/
 
 ## Recent Work Done
 
+### Snap & Learn YOLO Segmentation Upgrade
+
+Snap & Learn now supports YOLOv8 segmentation outlines in addition to the
+existing bounding-box fallback.
+
+YOLO service changes in `C:\FPTU\SP26\EXE\milingo_be\milingo_yolo_service`:
+
+- `app/detector.py`
+  - Uses `yolov8n-seg.pt` instead of `yolov8n.pt`.
+  - Reads YOLO mask contours from `result.masks.xy`.
+  - Returns compact `segmentation.points` in original-image pixels, capped at
+    90 contour points per object.
+  - Keeps `boundingBox` and `croppedImageBase64` so existing crop/Gemini flow
+    still works.
+- `app/main.py`
+  - `/detect` response objects now include nullable:
+
+```json
+"segmentation": {
+  "points": [{ "x": 123, "y": 456 }]
+}
+```
+
+- `Dockerfile`
+  - Pre-downloads `yolov8n-seg.pt`.
+
+Backend contract changes in `C:\FPTU\SP26\EXE\milingo_be\Milingo.Backend`:
+
+- `Models/Yolo/DetectedObject.cs`
+  - Added `YoloSegmentation` / `YoloSegmentationPoint`.
+- `Models/SnapAnalysisResponse.cs`
+  - `SnapVocabItem` now serializes nullable `segmentation`.
+  - Added `SnapSegmentation` / `SnapSegmentationPoint`.
+- `Controller/SnapController.cs`
+  - Copies YOLO segmentation points into each returned `SnapVocabItem`.
+- `Services/FirestoreService.cs`
+  - Includes segmentation in stored detection details and cached snap response.
+
+Frontend changes:
+
+- `lib/core/network/milingo_models.dart`
+  - Added `SnapSegmentation` / `SnapSegmentationPoint`.
+  - `SnapVocabItem` parses `segmentation`.
+- `lib/features/snap_and_learn/models/milingo_result.dart`
+  - Added `ObjectSegmentation` / `ObjectSegmentationPoint`.
+  - `MilingoResult` carries optional `segmentation`.
+- `lib/features/snap_and_learn/providers/snap_provider.dart`
+  - Maps backend segmentation into UI models.
+- `lib/features/snap_and_learn/screens/snap_and_learn_screen.dart`
+  - `_DetectedObjectPainter` draws the segmentation path with orange glow/fill.
+  - If segmentation is unavailable, it falls back to the old bounding-box
+    rectangle.
+
+Verification run:
+
+- `python -m py_compile app\detector.py app\main.py` in the YOLO service passed.
+- `dotnet build -o C:\tmp\milingo-backend-build-check /p:UseAppHost=false` in
+  `Milingo.Backend` passed.
+- `dart format` ran on the modified Flutter files.
+- `flutter analyze --no-fatal-infos --no-fatal-warnings ...` on the modified
+  Flutter files completed, but still reports existing Snap screen warnings/info
+  such as unused `_kBg`, unused `_lang`, deprecated `withOpacity`, and
+  `prefer_const_constructors`.
+
+### Snap & Learn YOLO Detection Fixes
+
+Recent issue investigated: Snap & Learn sometimes recognized the vocabulary word correctly but did not draw a border around the object, or selected a large background object such as `sofa` instead of the intended foreground object such as `cup`.
+
+Root causes found:
+
+- The YOLO service already returned `boundingBox`, but the ASP.NET backend did not expose it in `/api/v1/snap/analyze`.
+- Flutter parsed only `cropped_image_base64`, `detection_label`, and `detection_confidence`, so it had no original-image bbox to draw.
+- The YOLO service sorted detections by raw area, which favored large background objects.
+- YOLOv8n COCO can miss stylized/toy/paper objects, e.g. a paper cat model. Gemini can still label the full image, but without YOLO bbox Flutter cannot draw the object border.
+
+Frontend changes:
+
+- `lib/core/network/milingo_models.dart`
+  - Added `SnapBoundingBox`.
+  - `SnapVocabItem` now parses `bounding_box` or `boundingBox`.
+- `lib/features/snap_and_learn/models/milingo_result.dart`
+  - Added `ObjectBoundingBox`.
+  - `MilingoResult` carries optional `boundingBox`.
+- `lib/features/snap_and_learn/providers/snap_provider.dart`
+  - Maps backend `SnapBoundingBox` into UI `ObjectBoundingBox`.
+- `lib/features/snap_and_learn/screens/snap_and_learn_screen.dart`
+  - Adds `_DetectedObjectOverlay` and `_DetectedObjectPainter`.
+  - Draws bbox on the captured full-screen image.
+  - Bbox scaling accounts for the same `BoxFit.cover` used by `Image.file`, so original-image coordinates map correctly to screen coordinates.
+
+Backend contract changes in `C:\FPTU\SP26\EXE\milingo_be\Milingo.Backend`:
+
+- `Models/SnapAnalysisResponse.cs`
+  - Added `SnapBoundingBox`.
+  - `SnapVocabItem` now serializes nullable `bounding_box`.
+- `Controller/SnapController.cs`
+  - Copies YOLO `DetectedObject.BoundingBox` into each returned `SnapVocabItem`.
+- `Services/YoloService.cs`
+  - Calls YOLO with `confidence_threshold=0.35` instead of `0.5`.
+
+YOLO service changes in `C:\FPTU\SP26\EXE\milingo_be\milingo_yolo_service`:
+
+- `app/main.py`
+  - Default `confidence_threshold` is now `0.35`.
+  - Applies `ImageOps.exif_transpose(image)` before inference so phone images respect EXIF orientation.
+- `app/detector.py`
+  - Uses `imgsz=960`, `iou=0.45`, and a larger `max_det` candidate pool.
+  - Adds padded crops with `CROP_PADDING_RATIO = 0.08` so object cards are not clipped tightly.
+  - Replaces raw-area sorting with `rank_score`, combining confidence, center proximity, reasonable object size, and penalty for frame-filling background objects.
+  - Adds foreground fallback when YOLO returns no usable boxes. This estimates a central foreground bbox using edge/contrast saliency and returns label `object`; backend still sends the crop to Gemini for final vocabulary naming.
+
+Important runtime note:
+
+- Restart both the ASP.NET backend and `milingo_yolo_service` after these changes. If old processes are still running, Flutter may show the correct Gemini word but no bbox/crop border.
+- During verification, `dotnet build` failed while the backend was running because `Milingo.Backend.exe/.dll` were locked by process `Milingo.Backend`. Building to a temp output worked:
+
+```powershell
+dotnet build -o C:\tmp\milingo-backend-build-check /p:UseAppHost=false
+```
+
+Verification already run:
+
+- `python -m py_compile app\detector.py app\main.py` in the YOLO service passed.
+- `dotnet build -o C:\tmp\milingo-backend-build-check /p:UseAppHost=false` in `Milingo.Backend` passed.
+- Full `flutter analyze` still fails for existing project issues, especially `test/widget_test.dart` referencing `MyApp`; do not treat the project as analyzer-clean yet.
+
 ### Bottom Navigation Refactor
 
 The app now uses a shared bottom navigation bar:
