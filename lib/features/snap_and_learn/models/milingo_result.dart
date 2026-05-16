@@ -30,6 +30,7 @@ class MilingoResult {
     required this.sentenceTranslation,
     this.relatedWords = const [],
     this.boundingBox,
+    this.segmentation,
     this.objectImageBase64,
     this.objectImageUrl,
   });
@@ -49,6 +50,7 @@ class MilingoResult {
       sentenceTranslation: (json['sentenceTranslation'] ?? '').toString(),
       relatedWords: related,
       boundingBox: _parseBoundingBox(json),
+      segmentation: _parseSegmentation(json),
     );
   }
 
@@ -57,6 +59,15 @@ class MilingoResult {
     if (raw is! Map<String, dynamic>) return null;
     final box = ObjectBoundingBox.fromJson(raw);
     return box.isValid ? box : null;
+  }
+
+  static ObjectSegmentation? _parseSegmentation(Map<String, dynamic> json) {
+    final raw = json['segmentation'];
+    if (raw is! Map) return null;
+    final segmentation = ObjectSegmentation.fromJson(
+      Map<String, dynamic>.from(raw),
+    );
+    return segmentation.isValid ? segmentation : null;
   }
 
   /// Main object name in English
@@ -82,6 +93,9 @@ class MilingoResult {
 
   /// YOLO bounding box in original image pixels.
   final ObjectBoundingBox? boundingBox;
+
+  /// YOLO segmentation contour in original image pixels.
+  final ObjectSegmentation? segmentation;
 
   /// Base64-encoded JPEG of the cropped object from YOLO detection.
   /// Null when fallback (full-image) was used.
@@ -115,4 +129,44 @@ class ObjectBoundingBox {
   final double height;
 
   bool get isValid => width > 0 && height > 0;
+}
+
+class ObjectSegmentationPoint {
+  const ObjectSegmentationPoint({
+    required this.x,
+    required this.y,
+  });
+
+  factory ObjectSegmentationPoint.fromJson(Map<String, dynamic> json) {
+    return ObjectSegmentationPoint(
+      x: (json['x'] as num?)?.toDouble() ?? 0,
+      y: (json['y'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final double x;
+  final double y;
+}
+
+class ObjectSegmentation {
+  const ObjectSegmentation({
+    required this.points,
+  });
+
+  factory ObjectSegmentation.fromJson(Map<String, dynamic> json) {
+    final rawPoints = json['points'] as List<dynamic>? ?? const [];
+    final points = <ObjectSegmentationPoint>[];
+    for (final raw in rawPoints) {
+      if (raw is Map) {
+        points.add(
+          ObjectSegmentationPoint.fromJson(Map<String, dynamic>.from(raw)),
+        );
+      }
+    }
+    return ObjectSegmentation(points: points);
+  }
+
+  final List<ObjectSegmentationPoint> points;
+
+  bool get isValid => points.length >= 3;
 }

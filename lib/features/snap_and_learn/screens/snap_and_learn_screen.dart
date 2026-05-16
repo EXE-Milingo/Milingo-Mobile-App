@@ -231,11 +231,14 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   fit: BoxFit.cover,
                 ),
               ),
-            if (snap.result?.boundingBox != null && snap.capturedImage != null)
+            if ((snap.result?.segmentation != null ||
+                    snap.result?.boundingBox != null) &&
+                snap.capturedImage != null)
               Positioned.fill(
                 child: _DetectedObjectOverlay(
                   imageFile: File(snap.capturedImage!.path),
-                  boundingBox: snap.result!.boundingBox!,
+                  boundingBox: snap.result!.boundingBox,
+                  segmentation: snap.result!.segmentation,
                 ),
               ),
 
@@ -1003,11 +1006,13 @@ class _HoanThanhChip extends StatelessWidget {
 class _DetectedObjectOverlay extends StatefulWidget {
   const _DetectedObjectOverlay({
     required this.imageFile,
-    required this.boundingBox,
+    this.boundingBox,
+    this.segmentation,
   });
 
   final File imageFile;
-  final ObjectBoundingBox boundingBox;
+  final ObjectBoundingBox? boundingBox;
+  final ObjectSegmentation? segmentation;
 
   @override
   State<_DetectedObjectOverlay> createState() => _DetectedObjectOverlayState();
@@ -1051,6 +1056,7 @@ class _DetectedObjectOverlayState extends State<_DetectedObjectOverlay> {
             painter: _DetectedObjectPainter(
               imageSize: snapshot.data!,
               boundingBox: widget.boundingBox,
+              segmentation: widget.segmentation,
             ),
             child: const SizedBox.expand(),
           ),
@@ -1063,15 +1069,17 @@ class _DetectedObjectOverlayState extends State<_DetectedObjectOverlay> {
 class _DetectedObjectPainter extends CustomPainter {
   const _DetectedObjectPainter({
     required this.imageSize,
-    required this.boundingBox,
+    this.boundingBox,
+    this.segmentation,
   });
 
   final Size imageSize;
-  final ObjectBoundingBox boundingBox;
+  final ObjectBoundingBox? boundingBox;
+  final ObjectSegmentation? segmentation;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (imageSize.width <= 0 || imageSize.height <= 0 || !boundingBox.isValid) {
+    if (imageSize.width <= 0 || imageSize.height <= 0) {
       return;
     }
 
@@ -1084,28 +1092,59 @@ class _DetectedObjectPainter extends CustomPainter {
     final dx = (size.width - displayedWidth) / 2;
     final dy = (size.height - displayedHeight) / 2;
 
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = _kAccent.withValues(alpha: 0.22);
+    final shadowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.black.withValues(alpha: 0.50);
+    final outlinePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = _kAccent;
+
+    final contour = segmentation;
+    if (contour != null && contour.isValid) {
+      final path = Path();
+      final first = contour.points.first;
+      path.moveTo(dx + first.x * scale, dy + first.y * scale);
+      for (final point in contour.points.skip(1)) {
+        path.lineTo(dx + point.x * scale, dy + point.y * scale);
+      }
+      path.close();
+
+      final fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = _kAccent.withValues(alpha: 0.08);
+
+      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(path, glowPaint);
+      canvas.drawPath(path, shadowPaint);
+      canvas.drawPath(path, outlinePaint);
+      return;
+    }
+
+    final box = boundingBox;
+    if (box == null || !box.isValid) return;
+
     final rect = Rect.fromLTWH(
-      dx + boundingBox.x * scale,
-      dy + boundingBox.y * scale,
-      boundingBox.width * scale,
-      boundingBox.height * scale,
+      dx + box.x * scale,
+      dy + box.y * scale,
+      box.width * scale,
+      box.height * scale,
     ).intersect(Offset.zero & size);
 
     if (rect.isEmpty) return;
 
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
-    final shadowPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 7
-      ..color = Colors.black.withValues(alpha: 0.45);
-    final outlinePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..color = _kAccent;
-    final glowPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 10
-      ..color = _kAccent.withValues(alpha: 0.18);
 
     canvas.drawRRect(rrect, glowPaint);
     canvas.drawRRect(rrect, shadowPaint);
@@ -1115,7 +1154,8 @@ class _DetectedObjectPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DetectedObjectPainter oldDelegate) {
     return oldDelegate.imageSize != imageSize ||
-        oldDelegate.boundingBox != boundingBox;
+        oldDelegate.boundingBox != boundingBox ||
+        oldDelegate.segmentation != segmentation;
   }
 }
 

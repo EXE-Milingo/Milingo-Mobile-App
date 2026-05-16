@@ -92,6 +92,70 @@ lib/
 
 ## Recent Work Done
 
+### Snap & Learn YOLO Segmentation Upgrade
+
+Snap & Learn now supports YOLOv8 segmentation outlines in addition to the
+existing bounding-box fallback.
+
+YOLO service changes in `C:\FPTU\SP26\EXE\milingo_be\milingo_yolo_service`:
+
+- `app/detector.py`
+  - Uses `yolov8n-seg.pt` instead of `yolov8n.pt`.
+  - Reads YOLO mask contours from `result.masks.xy`.
+  - Returns compact `segmentation.points` in original-image pixels, capped at
+    90 contour points per object.
+  - Keeps `boundingBox` and `croppedImageBase64` so existing crop/Gemini flow
+    still works.
+- `app/main.py`
+  - `/detect` response objects now include nullable:
+
+```json
+"segmentation": {
+  "points": [{ "x": 123, "y": 456 }]
+}
+```
+
+- `Dockerfile`
+  - Pre-downloads `yolov8n-seg.pt`.
+
+Backend contract changes in `C:\FPTU\SP26\EXE\milingo_be\Milingo.Backend`:
+
+- `Models/Yolo/DetectedObject.cs`
+  - Added `YoloSegmentation` / `YoloSegmentationPoint`.
+- `Models/SnapAnalysisResponse.cs`
+  - `SnapVocabItem` now serializes nullable `segmentation`.
+  - Added `SnapSegmentation` / `SnapSegmentationPoint`.
+- `Controller/SnapController.cs`
+  - Copies YOLO segmentation points into each returned `SnapVocabItem`.
+- `Services/FirestoreService.cs`
+  - Includes segmentation in stored detection details and cached snap response.
+
+Frontend changes:
+
+- `lib/core/network/milingo_models.dart`
+  - Added `SnapSegmentation` / `SnapSegmentationPoint`.
+  - `SnapVocabItem` parses `segmentation`.
+- `lib/features/snap_and_learn/models/milingo_result.dart`
+  - Added `ObjectSegmentation` / `ObjectSegmentationPoint`.
+  - `MilingoResult` carries optional `segmentation`.
+- `lib/features/snap_and_learn/providers/snap_provider.dart`
+  - Maps backend segmentation into UI models.
+- `lib/features/snap_and_learn/screens/snap_and_learn_screen.dart`
+  - `_DetectedObjectPainter` draws the segmentation path with orange glow/fill.
+  - If segmentation is unavailable, it falls back to the old bounding-box
+    rectangle.
+
+Verification run:
+
+- `python -m py_compile app\detector.py app\main.py` in the YOLO service passed.
+- `dotnet build -o C:\tmp\milingo-backend-build-check /p:UseAppHost=false` in
+  `Milingo.Backend` passed.
+- `dart format` ran on the modified Flutter files.
+- `flutter analyze --no-fatal-infos --no-fatal-warnings ...` on the modified
+  Flutter files completed, but still reports existing Snap screen warnings/info
+  such as unused `_kBg`, unused `_lang`, deprecated `withOpacity`, and
+  `prefer_const_constructors`.
+
 ### Snap & Learn YOLO Detection Fixes
 
 Recent issue investigated: Snap & Learn sometimes recognized the vocabulary word correctly but did not draw a border around the object, or selected a large background object such as `sofa` instead of the intended foreground object such as `cup`.

@@ -104,6 +104,46 @@ class SnapBoundingBox {
   bool get isValid => width > 0 && height > 0;
 }
 
+class SnapSegmentationPoint {
+  const SnapSegmentationPoint({
+    required this.x,
+    required this.y,
+  });
+
+  factory SnapSegmentationPoint.fromJson(Map<String, dynamic> json) {
+    return SnapSegmentationPoint(
+      x: (json['x'] as num?)?.toDouble() ?? 0,
+      y: (json['y'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final double x;
+  final double y;
+}
+
+class SnapSegmentation {
+  const SnapSegmentation({
+    required this.points,
+  });
+
+  factory SnapSegmentation.fromJson(Map<String, dynamic> json) {
+    final rawPoints = json['points'] as List<dynamic>? ?? const [];
+    final points = <SnapSegmentationPoint>[];
+    for (final raw in rawPoints) {
+      if (raw is Map) {
+        points.add(
+          SnapSegmentationPoint.fromJson(Map<String, dynamic>.from(raw)),
+        );
+      }
+    }
+    return SnapSegmentation(points: points);
+  }
+
+  final List<SnapSegmentationPoint> points;
+
+  bool get isValid => points.length >= 3;
+}
+
 class SnapVocabItem {
   const SnapVocabItem({
     required this.keyword,
@@ -113,6 +153,7 @@ class SnapVocabItem {
     this.detectionLabel,
     this.detectionConfidence,
     this.boundingBox,
+    this.segmentation,
     this.croppedImageBase64,
   });
 
@@ -125,6 +166,7 @@ class SnapVocabItem {
       detectionLabel: json['detection_label'] as String?,
       detectionConfidence: (json['detection_confidence'] as num?)?.toDouble(),
       boundingBox: _parseBoundingBox(json),
+      segmentation: _parseSegmentation(json),
       croppedImageBase64: json['cropped_image_base64'] as String?,
     );
   }
@@ -136,6 +178,15 @@ class SnapVocabItem {
     return box.isValid ? box : null;
   }
 
+  static SnapSegmentation? _parseSegmentation(Map<String, dynamic> json) {
+    final raw = json['segmentation'];
+    if (raw is! Map) return null;
+    final segmentation = SnapSegmentation.fromJson(
+      Map<String, dynamic>.from(raw),
+    );
+    return segmentation.isValid ? segmentation : null;
+  }
+
   final String keyword;
   final String translation;
   final String pronunciation;
@@ -143,6 +194,7 @@ class SnapVocabItem {
   final String? detectionLabel;
   final double? detectionConfidence;
   final SnapBoundingBox? boundingBox;
+  final SnapSegmentation? segmentation;
 
   /// Base64-encoded JPEG of the cropped object from YOLO detection.
   /// Null when fallback (full-image) was used.

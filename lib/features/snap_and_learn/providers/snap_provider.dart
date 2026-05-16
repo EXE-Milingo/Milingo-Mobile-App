@@ -94,6 +94,14 @@ MilingoResult _vocabItemToMilingoResult(SnapVocabItem item) {
             width: item.boundingBox!.width,
             height: item.boundingBox!.height,
           ),
+    segmentation: item.segmentation == null
+        ? null
+        : ObjectSegmentation(
+            points: [
+              for (final point in item.segmentation!.points)
+                ObjectSegmentationPoint(x: point.x, y: point.y),
+            ],
+          ),
     objectImageBase64: item.croppedImageBase64,
   );
 }
