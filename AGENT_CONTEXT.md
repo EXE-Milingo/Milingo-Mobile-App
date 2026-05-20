@@ -2,7 +2,7 @@
 
 Read this file before making code changes. Update it whenever project structure, navigation, backend contracts, state models, or coding conventions change.
 
-Last updated: 2026-05-15
+Last updated: 2026-05-17
 
 ## Project Summary
 
@@ -92,6 +92,76 @@ lib/
 ```
 
 ## Recent Work Done
+
+### Snap & Learn Detect-Confirm-Analyze Flow
+
+Snap & Learn now separates YOLO detection from AI vocabulary analysis.
+
+Backend changes in `C:\FPTU\SP26\EXE\milingo_be\Milingo.Backend`:
+
+- `POST /api/v1/snap/detect`
+  - Calls the YOLO segmentation service only.
+  - Returns detected objects with `label`, `confidence`, `bounding_box`,
+    optional `segmentation`, and `cropped_image_base64`.
+- `POST /api/v1/snap/analyze-detected`
+  - Accepts the user-approved detected object crops.
+  - Calls Gemini without re-running YOLO.
+  - Saves vocabularies, detection metadata, idempotency cache, and coins through
+    the existing Firestore snap flow.
+
+Frontend changes:
+
+- `MilingoApiService` now has `detectSnap(...)` and
+  `analyzeDetectedSnap(...)`.
+- `SnapController.analyzeFile(...)` is now detect-only for camera/gallery/crop.
+- `SnapController.confirmDetectionAndAnalyze()` runs the confirmed AI analysis.
+- The review phase shows the captured image with blurred background and a sharp
+  subject clipped by the YOLO segmentation path.
+- The post-analysis phase shows a full-screen result view inspired by the second
+  mockup. The "Xem câu ví dụ" action displays `example_sentence` from the
+  returned JSON.
+
+### Snap & Learn Review Confirmation Flow
+
+After backend YOLO/Gemini analysis succeeds, Snap & Learn now pauses on a
+full-screen object review step instead of immediately opening vocabulary
+bubbles/cards.
+
+Frontend changes:
+
+- `lib/features/snap_and_learn/screens/snap_and_learn_screen.dart`
+  - Removed the automatic `showVocab()` call when `result` first arrives.
+  - Shows the captured image with YOLO segmentation/bounding-box overlay and a
+    bottom review bar inspired by the provided mockup:
+    - X resets the Snap flow so the user can retake.
+    - Check calls `showVocab()` and continues to the vocabulary result view.
+    - Crop opens `image_cropper`, then re-analyzes the cropped image through the
+      existing backend `analyzeFile(...)` flow.
+  - Review bar styling was adjusted to match the MiLingo warm orange theme:
+    - Outer panel uses a warm cream surface with a subtle primary-color top
+      border and shadow.
+    - Main check button uses `AppTheme.primaryColor`.
+    - X and crop buttons use light surfaces with muted/primary icon colors.
+    - The earlier peach/orange inner pill background around the buttons was
+      removed per design feedback.
+- `lib/features/snap_and_learn/providers/snap_provider.dart`
+  - `analyzeFile(...)` starts from a fresh loading state for the new image so
+    crop/re-analysis does not briefly keep the old mask/result.
+  - Background cropped-image upload now updates state only if that analysis is
+    still current.
+- `android/app/src/main/AndroidManifest.xml`
+  - Added `com.yalantis.ucrop.UCropActivity`, required by `image_cropper` on
+    Android.
+
+Verification:
+
+- `dart format` ran on the modified Snap files.
+- `flutter analyze lib/features/snap_and_learn/screens/snap_and_learn_screen.dart lib/features/snap_and_learn/providers/snap_provider.dart`
+  still reports existing warnings/infos in `snap_and_learn_screen.dart`
+  (`_kBg`, `_lang`, deprecated `withOpacity`, and `prefer_const_constructors`),
+  but no new errors.
+- `flutter build apk --debug --no-pub` passed and produced
+  `build/app/outputs/flutter-apk/app-debug.apk`.
 
 ### Snap & Learn YOLO Segmentation Upgrade
 

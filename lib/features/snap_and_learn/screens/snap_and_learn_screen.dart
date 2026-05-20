@@ -8,7 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:milingo/core/constants/app_constants.dart';
+import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/snap_and_learn/providers/snap_provider.dart';
 import 'package:milingo/features/snap_and_learn/widgets/vocab_bubble.dart';
 import 'package:milingo/features/snap_and_learn/widgets/bottom_capture_bar.dart';
@@ -150,7 +152,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     );
   }
 
-  /// Take a picture from the embedded camera preview and analyze it.
+  /// Take a picture from the embedded camera preview and detect it.
   Future<void> _captureFromEmbeddedCamera() async {
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
       return;
@@ -171,6 +173,65 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _cropCapturedImageAndAnalyze(
+    SnapState snap,
+    SnapController ctrl,
+  ) async {
+    final image = snap.capturedImage;
+    if (image == null || snap.isLoading) return;
+
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 92,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Can chinh vat the',
+            toolbarColor: _kAccent,
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: _kAccent,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
+            aspectRatioPresets: const [
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Can chinh vat the',
+            doneButtonTitle: 'Xong',
+            cancelButtonTitle: 'Huy',
+            aspectRatioPresets: const [
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+          WebUiSettings(
+            context: context,
+            presentStyle: WebPresentStyle.dialog,
+            size: const CropperSize(width: 520, height: 520),
+          ),
+        ],
+      );
+
+      if (croppedFile == null || !mounted) return;
+      await ctrl.analyzeFile(File(croppedFile.path), snap.selectedLanguage);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Loi cat anh: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -197,18 +258,25 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
       if (next.isLoading && !(prev?.isLoading ?? false)) {
         _scanCtrl.repeat();
       }
-      // When result arrives → stop scan and immediately show vocabulary
+      // When result arrives, stop at review so user can approve/crop/retake.
       if (prev?.result == null && next.result != null) {
         _scanCtrl.stop();
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(snapControllerProvider.notifier).showVocab();
-        });
       }
       // When vocabulary view opens → trigger bubble animation
       if (!(prev?.showVocabulary ?? false) && next.showVocabulary) {
         _bubbleCtrl.forward(from: 0);
       }
     });
+
+    if (snap.showVocabulary && snap.result != null) {
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFECE8E2),
+          body: _buildResultScreen(snap, ctrl),
+        ),
+      );
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -226,19 +294,24 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             // ── Layer 2: Captured image overlay (after snap) ──
             if (snap.capturedImage != null)
               Positioned.fill(
-                child: Image.file(
-                  File(snap.capturedImage!.path),
-                  fit: BoxFit.cover,
-                ),
+                child: snap.currentDetectedObject == null
+                    ? Image.file(
+                        File(snap.capturedImage!.path),
+                        fit: BoxFit.cover,
+                      )
+                    : _FocusedObjectPreview(
+                        imageFile: File(snap.capturedImage!.path),
+                        boundingBox: snap.currentDetectedObject!.boundingBox,
+                        segmentation: snap.currentDetectedObject!.segmentation,
+                      ),
               ),
-            if ((snap.result?.segmentation != null ||
-                    snap.result?.boundingBox != null) &&
+            if (snap.currentDetectedObject != null &&
                 snap.capturedImage != null)
               Positioned.fill(
                 child: _DetectedObjectOverlay(
                   imageFile: File(snap.capturedImage!.path),
-                  boundingBox: snap.result!.boundingBox,
-                  segmentation: snap.result!.segmentation,
+                  boundingBox: snap.currentDetectedObject!.boundingBox,
+                  segmentation: snap.currentDetectedObject!.segmentation,
                 ),
               ),
 
@@ -275,6 +348,225 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   // ═══════════════════════════════════════════════════════════════
   // CAMERA LAYER
   // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildResultScreen(SnapState snap, SnapController ctrl) {
+    final result = snap.result!;
+    final objectBytes = result.objectImageBase64 == null
+        ? null
+        : base64Decode(result.objectImageBase64!);
+    final compact = MediaQuery.sizeOf(context).height < 760;
+    final objectHeight = compact ? 210.0 : 300.0;
+    final wordFontSize = compact ? 34.0 : 44.0;
+    final pronunciationFontSize = compact ? 22.0 : 28.0;
+    final translationFontSize = compact ? 26.0 : 32.0;
+    final actionSize = compact ? 70.0 : 82.0;
+    final confirmSize = compact ? 112.0 : 132.0;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 18, 28, 28),
+        child: Column(
+          children: [
+            Spacer(flex: compact ? 1 : 2),
+            SizedBox(
+              height: objectHeight,
+              child: Center(
+                child: objectBytes == null
+                    ? const Icon(
+                        Icons.image_not_supported_rounded,
+                        size: 96,
+                        color: Colors.black26,
+                      )
+                    : Image.memory(objectBytes, fit: BoxFit.contain),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      result.keyword,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: wordFontSize,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                        height: 0.95,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () => _speak(result.keyword, 'en'),
+                  child: const Icon(
+                    Icons.volume_up_rounded,
+                    color: Color(0xFF6F746E),
+                    size: 34,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              result.pronunciation.isEmpty ? '' : '/${result.pronunciation}/',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: pronunciationFontSize,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF646965),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              result.translation,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: translationFontSize,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF7E8580),
+                height: 1.15,
+              ),
+            ),
+            const SizedBox(height: 28),
+            GestureDetector(
+              onTap: () => _showExampleSentence(result),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: compact ? 15 : 19),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4EA5AC),
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4EA5AC).withValues(alpha: 0.22),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded,
+                        color: Colors.white, size: 24),
+                    const SizedBox(width: 14),
+                    Text(
+                      'Xem c\u00e2u v\u00ed d\u1ee5',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: compact ? 20 : 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Spacer(flex: compact ? 1 : 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _ReviewRoundButton(
+                  icon: Icons.photo_camera_outlined,
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF9C9C9C),
+                  size: actionSize,
+                  iconSize: compact ? 30 : 34,
+                  onTap: ctrl.reset,
+                ),
+                _ReviewRoundButton(
+                  icon: Icons.check_rounded,
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF2D9BA3),
+                  size: confirmSize,
+                  iconSize: compact ? 72 : 86,
+                  shadowColor: Colors.black.withValues(alpha: 0.08),
+                  onTap: () => _showSaveToFlashcard(
+                    context,
+                    FlashcardEntry(
+                      id: '${result.keyword}_${snap.selectedLanguage}',
+                      english: result.keyword,
+                      translation: result.translation,
+                      pronunciation: result.pronunciation,
+                      partOfSpeech: result.partOfSpeech,
+                      langCode: snap.selectedLanguage,
+                    ),
+                  ),
+                ),
+                _ReviewRoundButton(
+                  icon: Icons.close_rounded,
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF9C9C9C),
+                  size: actionSize,
+                  iconSize: compact ? 34 : 40,
+                  onTap: ctrl.reset,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showExampleSentence(MilingoResult result) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          22,
+          24,
+          MediaQuery.of(context).padding.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              result.sentence.isEmpty
+                  ? 'Ch\u01b0a c\u00f3 c\u00e2u v\u00ed d\u1ee5.'
+                  : result.sentence,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF2A2A2A),
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                height: 1.28,
+              ),
+            ),
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: () => _speak(result.sentence, 'en'),
+              child: const Icon(
+                Icons.volume_up_rounded,
+                color: Color(0xFF4EA5AC),
+                size: 34,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildCameraLayer(SnapState snap) {
     // If we have a captured image, camera isn't visible anyway
@@ -344,20 +636,22 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     final hasImage = snap.capturedImage != null;
     final isAnalyzing = snap.isLoading;
     final hasResult = snap.result != null;
+    final hasDetection = snap.currentDetectedObject != null;
     final showVocab = snap.showVocabulary;
+    final showReview = hasDetection && !isAnalyzing && !showVocab;
 
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
           // ── Top Bar ──
-          _buildTopBar(hasResult, ctrl),
+          _buildTopBar(hasResult || hasDetection, ctrl),
 
           // ── "Hoàn thành" chip (shown after capture) ──
           if (hasImage)
             Padding(
               padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: _HoanThanhChip(done: hasResult && !isAnalyzing),
+              child: _HoanThanhChip(done: hasDetection && !isAnalyzing),
             ),
 
           const Spacer(),
@@ -388,8 +682,10 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           if (showVocab && hasResult)
             _buildBottomVocabCard(snap.result!, snap.selectedLanguage),
 
-          // ── Bottom Capture Bar (always visible when not in vocab mode) ──
-          if (!showVocab)
+          // ── Review actions or fresh capture controls ──
+          if (showReview)
+            _buildReviewActionBar(snap, ctrl)
+          else if (!showVocab && !hasImage)
             BottomCaptureBar(
               onGallery: () => ctrl.pickFromGallery(snap.selectedLanguage),
               onCapture: _captureFromEmbeddedCamera,
@@ -402,6 +698,61 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════
+  Widget _buildReviewActionBar(SnapState snap, SnapController ctrl) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+      padding: const EdgeInsets.fromLTRB(34, 18, 34, 30),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8F4),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        border: Border(
+          top: BorderSide(
+            color: AppTheme.primaryColor.withValues(alpha: 0.10),
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, -8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _ReviewRoundButton(
+            icon: Icons.close_rounded,
+            backgroundColor: Colors.white,
+            foregroundColor: AppTheme.textSecondary,
+            borderColor: AppTheme.primaryColor.withValues(alpha: 0.12),
+            size: 66,
+            iconSize: 34,
+            onTap: ctrl.reset,
+          ),
+          _ReviewRoundButton(
+            icon: Icons.check_rounded,
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            shadowColor: AppTheme.primaryColor.withValues(alpha: 0.38),
+            size: 106,
+            iconSize: 72,
+            onTap: ctrl.confirmDetectionAndAnalyze,
+          ),
+          _ReviewRoundButton(
+            icon: Icons.crop_rounded,
+            backgroundColor: const Color(0xFFFFEFE8),
+            foregroundColor: AppTheme.primaryColor,
+            borderColor: AppTheme.primaryColor.withValues(alpha: 0.16),
+            size: 66,
+            iconSize: 34,
+            onTap: () => _cropCapturedImageAndAnalyze(snap, ctrl),
+          ),
+        ],
+      ),
+    );
+  }
+
   // TOP BAR
   // ═══════════════════════════════════════════════════════════════
 
@@ -962,6 +1313,57 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 // REUSABLE WIDGETS
 // ═══════════════════════════════════════════════════════════════════════
 
+class _ReviewRoundButton extends StatelessWidget {
+  const _ReviewRoundButton({
+    required this.icon,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.size,
+    required this.iconSize,
+    required this.onTap,
+    this.borderColor,
+    this.shadowColor,
+  });
+
+  final IconData icon;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final double size;
+  final double iconSize;
+  final VoidCallback onTap;
+  final Color? borderColor;
+  final Color? shadowColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            shape: BoxShape.circle,
+            border: borderColor == null
+                ? null
+                : Border.all(color: borderColor!, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: shadowColor ?? Colors.black.withValues(alpha: 0.08),
+                blurRadius: shadowColor == null ? 14 : 22,
+                offset: Offset(0, shadowColor == null ? 6 : 10),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: foregroundColor, size: iconSize),
+        ),
+      ),
+    );
+  }
+}
+
 /// "Hoàn thành" status chip
 class _HoanThanhChip extends StatelessWidget {
   const _HoanThanhChip({required this.done});
@@ -1002,6 +1404,133 @@ class _HoanThanhChip extends StatelessWidget {
 // BottomCaptureBar  → widgets/bottom_capture_bar.dart
 // VocabBubble       → widgets/vocab_bubble.dart
 // SaveFlashcardSheet→ widgets/save_flashcard_sheet.dart
+
+class _FocusedObjectPreview extends StatefulWidget {
+  const _FocusedObjectPreview({
+    required this.imageFile,
+    required this.boundingBox,
+    this.segmentation,
+  });
+
+  final File imageFile;
+  final ObjectBoundingBox boundingBox;
+  final ObjectSegmentation? segmentation;
+
+  @override
+  State<_FocusedObjectPreview> createState() => _FocusedObjectPreviewState();
+}
+
+class _FocusedObjectPreviewState extends State<_FocusedObjectPreview> {
+  late Future<Size> _imageSizeFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageSizeFuture = _loadImageSize(widget.imageFile);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FocusedObjectPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageFile.path != widget.imageFile.path) {
+      _imageSizeFuture = _loadImageSize(widget.imageFile);
+    }
+  }
+
+  Future<Size> _loadImageSize(File file) async {
+    final bytes = await file.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    final size = Size(image.width.toDouble(), image.height.toDouble());
+    image.dispose();
+    return size;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Size>(
+      future: _imageSizeFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Image.file(widget.imageFile, fit: BoxFit.cover);
+        }
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Image.file(widget.imageFile, fit: BoxFit.cover),
+            ),
+            Container(color: Colors.black.withValues(alpha: 0.08)),
+            ClipPath(
+              clipper: _DetectedObjectClipper(
+                imageSize: snapshot.data!,
+                boundingBox: widget.boundingBox,
+                segmentation: widget.segmentation,
+              ),
+              child: Image.file(widget.imageFile, fit: BoxFit.cover),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DetectedObjectClipper extends CustomClipper<Path> {
+  const _DetectedObjectClipper({
+    required this.imageSize,
+    required this.boundingBox,
+    this.segmentation,
+  });
+
+  final Size imageSize;
+  final ObjectBoundingBox boundingBox;
+  final ObjectSegmentation? segmentation;
+
+  @override
+  Path getClip(Size size) {
+    final scale = math.max(
+      size.width / imageSize.width,
+      size.height / imageSize.height,
+    );
+    final displayedWidth = imageSize.width * scale;
+    final displayedHeight = imageSize.height * scale;
+    final dx = (size.width - displayedWidth) / 2;
+    final dy = (size.height - displayedHeight) / 2;
+
+    final contour = segmentation;
+    if (contour != null && contour.isValid) {
+      final path = Path();
+      final first = contour.points.first;
+      path.moveTo(dx + first.x * scale, dy + first.y * scale);
+      for (final point in contour.points.skip(1)) {
+        path.lineTo(dx + point.x * scale, dy + point.y * scale);
+      }
+      path.close();
+      return path;
+    }
+
+    final rect = Rect.fromLTWH(
+      dx + boundingBox.x * scale,
+      dy + boundingBox.y * scale,
+      boundingBox.width * scale,
+      boundingBox.height * scale,
+    ).intersect(Offset.zero & size);
+
+    return Path()
+      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(18)));
+  }
+
+  @override
+  bool shouldReclip(covariant _DetectedObjectClipper oldClipper) {
+    return oldClipper.imageSize != imageSize ||
+        oldClipper.boundingBox != boundingBox ||
+        oldClipper.segmentation != segmentation;
+  }
+}
 
 class _DetectedObjectOverlay extends StatefulWidget {
   const _DetectedObjectOverlay({

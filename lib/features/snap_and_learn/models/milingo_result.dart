@@ -170,3 +170,19 @@ class ObjectSegmentation {
 
   bool get isValid => points.length >= 3;
 }
+
+class DetectedObjectResult {
+  const DetectedObjectResult({
+    required this.label,
+    required this.confidence,
+    required this.boundingBox,
+    required this.objectImageBase64,
+    this.segmentation,
+  });
+
+  final String label;
+  final double confidence;
+  final ObjectBoundingBox boundingBox;
+  final ObjectSegmentation? segmentation;
+  final String objectImageBase64;
+}

@@ -170,8 +170,7 @@ class MilingoApiService {
       return _unwrap(response, (data) {
         final list = data as List<dynamic>? ?? [];
         return list
-            .map((e) =>
-                SupportedLanguage.fromJson(e as Map<String, dynamic>))
+            .map((e) => SupportedLanguage.fromJson(e as Map<String, dynamic>))
             .toList();
       });
     } on DioException catch (e) {
@@ -179,7 +178,7 @@ class MilingoApiService {
     }
   }
 
-/// Lấy stats của user: coins, streak, totalPoints.
+  /// Lấy stats của user: coins, streak, totalPoints.
   Future<UserStatsResponse> getUserStats() async {
     try {
       final response = await _dio.get('/api/v1/users/stats');
@@ -210,6 +209,56 @@ class MilingoApiService {
   // Snap & Learn
   // ═══════════════════════════════════════════════════════
 
+  Future<SnapDetectionResponse> detectSnap(File imageFile) async {
+    try {
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: 'snap_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ),
+      });
+
+      final response = await _dio.post(
+        '/api/v1/snap/detect',
+        data: formData,
+        options: Options(
+          headers: {'Content-Type': 'multipart/form-data'},
+        ),
+      );
+
+      return _unwrap(
+        response,
+        (data) => SnapDetectionResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<SnapAnalysisResponse> analyzeDetectedSnap(
+    List<SnapDetectedObject> objects,
+  ) async {
+    final idempotencyKey = _uuid.v4();
+    try {
+      final response = await _dio.post(
+        '/api/v1/snap/analyze-detected',
+        data: {
+          'objects': objects.map((o) => o.toJson()).toList(),
+        },
+        options: Options(
+          headers: {'Idempotency-Key': idempotencyKey},
+        ),
+      );
+
+      return _unwrap(
+        response,
+        (data) => SnapAnalysisResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   Future<SnapAnalysisResponse> analyzeSnap(File imageFile) async {
     final idempotencyKey = _uuid.v4();
     try {
@@ -233,8 +282,7 @@ class MilingoApiService {
 
       return _unwrap(
         response,
-        (data) =>
-            SnapAnalysisResponse.fromJson(data as Map<String, dynamic>),
+        (data) => SnapAnalysisResponse.fromJson(data as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throw MilingoApiException(_userFriendlyError(e));

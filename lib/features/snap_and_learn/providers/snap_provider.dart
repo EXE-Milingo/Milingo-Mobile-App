@@ -25,6 +25,8 @@ class SnapState {
     this.allVocabItems = const [],
     this.currentVocabIndex = 0,
     this.coinsAwarded = 0,
+    this.detectedObjects = const [],
+    this.currentDetectedIndex = 0,
   });
 
   final bool isLoading;
@@ -44,6 +46,20 @@ class SnapState {
   /// Coins awarded by the backend for this snap.
   final int coinsAwarded;
 
+  /// YOLO-only detections waiting for user confirmation.
+  final List<DetectedObjectResult> detectedObjects;
+
+  final int currentDetectedIndex;
+
+  DetectedObjectResult? get currentDetectedObject {
+    if (detectedObjects.isEmpty) return null;
+    if (currentDetectedIndex < 0) return detectedObjects.first;
+    if (currentDetectedIndex >= detectedObjects.length) {
+      return detectedObjects.last;
+    }
+    return detectedObjects[currentDetectedIndex];
+  }
+
   SnapState copyWith({
     bool? isLoading,
     MilingoResult? result,
@@ -55,6 +71,8 @@ class SnapState {
     List<MilingoResult>? allVocabItems,
     int? currentVocabIndex,
     int? coinsAwarded,
+    List<DetectedObjectResult>? detectedObjects,
+    int? currentDetectedIndex,
   }) {
     return SnapState(
       isLoading: isLoading ?? this.isLoading,
@@ -67,6 +85,8 @@ class SnapState {
       allVocabItems: allVocabItems ?? this.allVocabItems,
       currentVocabIndex: currentVocabIndex ?? this.currentVocabIndex,
       coinsAwarded: coinsAwarded ?? this.coinsAwarded,
+      detectedObjects: detectedObjects ?? this.detectedObjects,
+      currentDetectedIndex: currentDetectedIndex ?? this.currentDetectedIndex,
     );
   }
 }
@@ -103,6 +123,50 @@ MilingoResult _vocabItemToMilingoResult(SnapVocabItem item) {
             ],
           ),
     objectImageBase64: item.croppedImageBase64,
+  );
+}
+
+DetectedObjectResult _detectedObjectToResult(SnapDetectedObject item) {
+  return DetectedObjectResult(
+    label: item.label,
+    confidence: item.confidence,
+    boundingBox: ObjectBoundingBox(
+      x: item.boundingBox.x,
+      y: item.boundingBox.y,
+      width: item.boundingBox.width,
+      height: item.boundingBox.height,
+    ),
+    segmentation: item.segmentation == null
+        ? null
+        : ObjectSegmentation(
+            points: [
+              for (final point in item.segmentation!.points)
+                ObjectSegmentationPoint(x: point.x, y: point.y),
+            ],
+          ),
+    objectImageBase64: item.croppedImageBase64,
+  );
+}
+
+SnapDetectedObject _resultToDetectedObject(DetectedObjectResult item) {
+  return SnapDetectedObject(
+    label: item.label,
+    confidence: item.confidence,
+    boundingBox: SnapBoundingBox(
+      x: item.boundingBox.x,
+      y: item.boundingBox.y,
+      width: item.boundingBox.width,
+      height: item.boundingBox.height,
+    ),
+    segmentation: item.segmentation == null
+        ? null
+        : SnapSegmentation(
+            points: [
+              for (final point in item.segmentation!.points)
+                SnapSegmentationPoint(x: point.x, y: point.y),
+            ],
+          ),
+    croppedImageBase64: item.objectImageBase64,
   );
 }
 
@@ -156,7 +220,7 @@ class SnapController extends StateNotifier<SnapState> {
         return;
       }
       state = state.copyWith(capturedImage: imageFile);
-      await _analyzeFile(imageFile);
+      await _detectFile(imageFile);
     } catch (e) {
       state = state.copyWith(
           isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
@@ -164,8 +228,12 @@ class SnapController extends StateNotifier<SnapState> {
   }
 
   Future<void> analyzeFile(File imageFile, String targetLanguage) async {
-    state =
-        state.copyWith(isLoading: true, error: null, capturedImage: imageFile);
+    final language = state.selectedLanguage;
+    state = SnapState(
+      isLoading: true,
+      capturedImage: imageFile,
+      selectedLanguage: language,
+    );
     try {
       if (!await ImageUtils.validateFileSize(
           imageFile, AppConstants.maxImageSizeBytes)) {
@@ -174,7 +242,7 @@ class SnapController extends StateNotifier<SnapState> {
             error: 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.');
         return;
       }
-      await _analyzeFile(imageFile);
+      await _detectFile(imageFile);
     } catch (e) {
       state = state.copyWith(
           isLoading: false, error: 'Lỗi khi chụp ảnh: ${e.toString()}');
@@ -202,7 +270,7 @@ class SnapController extends StateNotifier<SnapState> {
       } else {
         state = state.copyWith(capturedImage: file);
       }
-      await _analyzeFile(file);
+      await _detectFile(file);
     } catch (e) {
       state = state.copyWith(
           isLoading: false, error: 'Lỗi khi chọn ảnh: ${e.toString()}');
@@ -211,9 +279,48 @@ class SnapController extends StateNotifier<SnapState> {
 
   // ── Core analysis ──────────────────────────────────────
 
-  Future<void> _analyzeFile(File file) async {
+  Future<void> _detectFile(File file) async {
     try {
-      final snapResponse = await _api.analyzeSnap(file);
+      final detectionResponse = await _api.detectSnap(file);
+      final detectedObjects =
+          detectionResponse.objects.map(_detectedObjectToResult).toList();
+
+      if (detectedObjects.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Không nhận ra đối tượng nào. Vui lòng thử ảnh khác.',
+        );
+        return;
+      }
+
+      state = state.copyWith(
+        isLoading: false,
+        detectedObjects: detectedObjects,
+        currentDetectedIndex: 0,
+        allVocabItems: const [],
+        currentVocabIndex: 0,
+        coinsAwarded: 0,
+        showVocabulary: false,
+        error: null,
+      );
+    } on MilingoApiException catch (e) {
+      state = state.copyWith(isLoading: false, error: e.message);
+    } catch (e) {
+      state = state.copyWith(
+          isLoading: false, error: 'Lỗi phân tích ảnh: ${e.toString()}');
+    }
+  }
+
+  Future<void> confirmDetectionAndAnalyze() async {
+    if (state.detectedObjects.isEmpty || state.isLoading) return;
+
+    final detectedObjects = state.detectedObjects;
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final snapResponse = await _api.analyzeDetectedSnap(
+        detectedObjects.map(_resultToDetectedObject).toList(),
+      );
       final allResults =
           snapResponse.vocabItems.map(_vocabItemToMilingoResult).toList();
 
@@ -237,6 +344,7 @@ class SnapController extends StateNotifier<SnapState> {
         allVocabItems: allResults,
         currentVocabIndex: 0,
         coinsAwarded: snapResponse.coinsAwarded,
+        showVocabulary: true,
         error: null,
       );
 
@@ -246,7 +354,7 @@ class SnapController extends StateNotifier<SnapState> {
       state = state.copyWith(isLoading: false, error: e.message);
     } catch (e) {
       state = state.copyWith(
-          isLoading: false, error: 'Lỗi phân tích ảnh: ${e.toString()}');
+          isLoading: false, error: 'Lỗi tách vật thể: ${e.toString()}');
     }
   }
 
@@ -268,8 +376,10 @@ class SnapController extends StateNotifier<SnapState> {
         if (url != null) {
           item.objectImageUrl = url;
 
-          // Update state if this is the currently displayed item
-          if (state.currentVocabIndex == i) {
+          // Update state only if this analysis is still current.
+          if (state.allVocabItems.length > i &&
+              identical(state.allVocabItems[i], item) &&
+              state.currentVocabIndex == i) {
             state = state.copyWith(result: item);
           }
         }

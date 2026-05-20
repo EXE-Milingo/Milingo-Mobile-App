@@ -102,6 +102,15 @@ class SnapBoundingBox {
   final double height;
 
   bool get isValid => width > 0 && height > 0;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'x': x.round(),
+      'y': y.round(),
+      'width': width.round(),
+      'height': height.round(),
+    };
+  }
 }
 
 class SnapSegmentationPoint {
@@ -119,6 +128,13 @@ class SnapSegmentationPoint {
 
   final double x;
   final double y;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'x': x.round(),
+      'y': y.round(),
+    };
+  }
 }
 
 class SnapSegmentation {
@@ -142,6 +158,12 @@ class SnapSegmentation {
   final List<SnapSegmentationPoint> points;
 
   bool get isValid => points.length >= 3;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'points': points.map((p) => p.toJson()).toList(),
+    };
+  }
 }
 
 class SnapVocabItem {
@@ -199,6 +221,84 @@ class SnapVocabItem {
   /// Base64-encoded JPEG of the cropped object from YOLO detection.
   /// Null when fallback (full-image) was used.
   final String? croppedImageBase64;
+}
+
+class SnapDetectedObject {
+  const SnapDetectedObject({
+    required this.label,
+    required this.confidence,
+    required this.boundingBox,
+    required this.croppedImageBase64,
+    this.segmentation,
+  });
+
+  factory SnapDetectedObject.fromJson(Map<String, dynamic> json) {
+    final rawBox = json['bounding_box'] ?? json['boundingBox'];
+    final box = rawBox is Map
+        ? SnapBoundingBox.fromJson(Map<String, dynamic>.from(rawBox))
+        : const SnapBoundingBox(x: 0, y: 0, width: 0, height: 0);
+
+    return SnapDetectedObject(
+      label: (json['label'] ?? 'object').toString(),
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+      boundingBox: box,
+      segmentation: SnapVocabItem._parseSegmentation(json),
+      croppedImageBase64:
+          (json['cropped_image_base64'] ?? json['croppedImageBase64'] ?? '')
+              .toString(),
+    );
+  }
+
+  final String label;
+  final double confidence;
+  final SnapBoundingBox boundingBox;
+  final SnapSegmentation? segmentation;
+  final String croppedImageBase64;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'label': label,
+      'confidence': confidence,
+      'bounding_box': boundingBox.toJson(),
+      if (segmentation != null) 'segmentation': segmentation!.toJson(),
+      'cropped_image_base64': croppedImageBase64,
+    };
+  }
+}
+
+class SnapDetectionResponse {
+  const SnapDetectionResponse({
+    required this.objects,
+    required this.totalDetected,
+    required this.returnedCount,
+    required this.processingTimeMs,
+  });
+
+  factory SnapDetectionResponse.fromJson(Map<String, dynamic> json) {
+    final rawItems =
+        (json['objects'] ?? json['Objects']) as List<dynamic>? ?? const [];
+    final objects = rawItems
+        .whereType<Map>()
+        .map((e) => SnapDetectedObject.fromJson(Map<String, dynamic>.from(e)))
+        .where((e) => e.boundingBox.isValid && e.croppedImageBase64.isNotEmpty)
+        .toList();
+    final totalDetected = json['total_detected'] ?? json['totalDetected'];
+    final returnedCount = json['returned_count'] ?? json['returnedCount'];
+    final processingTime =
+        json['processing_time_ms'] ?? json['processingTimeMs'];
+
+    return SnapDetectionResponse(
+      objects: objects,
+      totalDetected: (totalDetected as num?)?.toInt() ?? objects.length,
+      returnedCount: (returnedCount as num?)?.toInt() ?? objects.length,
+      processingTimeMs: (processingTime as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final List<SnapDetectedObject> objects;
+  final int totalDetected;
+  final int returnedCount;
+  final double processingTimeMs;
 }
 
 class SnapAnalysisResponse {
