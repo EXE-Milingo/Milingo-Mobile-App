@@ -272,7 +272,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: Scaffold(
-          backgroundColor: const Color(0xFFECE8E2),
+          backgroundColor: AppTheme.backgroundColor,
           body: _buildResultScreen(snap, ctrl),
         ),
       );
@@ -355,7 +355,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         ? null
         : base64Decode(result.objectImageBase64!);
     final compact = MediaQuery.sizeOf(context).height < 760;
-    final objectHeight = compact ? 210.0 : 300.0;
+    final objectHeight = compact ? 230.0 : 300.0;
     final wordFontSize = compact ? 34.0 : 44.0;
     final pronunciationFontSize = compact ? 22.0 : 28.0;
     final translationFontSize = compact ? 26.0 : 32.0;
@@ -364,20 +364,16 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 18, 28, 28),
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
         child: Column(
           children: [
             Spacer(flex: compact ? 1 : 2),
             SizedBox(
               height: objectHeight,
-              child: Center(
-                child: objectBytes == null
-                    ? const Icon(
-                        Icons.image_not_supported_rounded,
-                        size: 96,
-                        color: Colors.black26,
-                      )
-                    : Image.memory(objectBytes, fit: BoxFit.contain),
+              child: _buildResultObjectPreview(
+                snap: snap,
+                result: result,
+                objectBytes: objectBytes,
               ),
             ),
             const SizedBox(height: 10),
@@ -394,7 +390,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                       style: TextStyle(
                         fontSize: wordFontSize,
                         fontWeight: FontWeight.w900,
-                        color: Colors.black,
+                        color: AppTheme.textPrimary,
                         height: 0.95,
                       ),
                     ),
@@ -403,10 +399,18 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 const SizedBox(width: 10),
                 GestureDetector(
                   onTap: () => _speak(result.keyword, 'en'),
-                  child: const Icon(
-                    Icons.volume_up_rounded,
-                    color: Color(0xFF6F746E),
-                    size: 34,
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.volume_up_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 25,
+                    ),
                   ),
                 ),
               ],
@@ -418,7 +422,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               style: TextStyle(
                 fontSize: pronunciationFontSize,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF646965),
+                color: AppTheme.textSecondary,
               ),
             ),
             const SizedBox(height: 10),
@@ -428,7 +432,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               style: TextStyle(
                 fontSize: translationFontSize,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF7E8580),
+                color: AppTheme.textSecondary,
                 height: 1.15,
               ),
             ),
@@ -439,11 +443,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(vertical: compact ? 15 : 19),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4EA5AC),
+                  color: AppTheme.primaryColor,
                   borderRadius: BorderRadius.circular(32),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF4EA5AC).withValues(alpha: 0.22),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.26),
                       blurRadius: 18,
                       offset: const Offset(0, 8),
                     ),
@@ -481,11 +485,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 ),
                 _ReviewRoundButton(
                   icon: Icons.check_rounded,
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2D9BA3),
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
                   size: confirmSize,
                   iconSize: compact ? 72 : 86,
-                  shadowColor: Colors.black.withValues(alpha: 0.08),
+                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.24),
                   onTap: () => _showSaveToFlashcard(
                     context,
                     FlashcardEntry(
@@ -511,6 +515,50 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildResultObjectPreview({
+    required SnapState snap,
+    required MilingoResult result,
+    required Uint8List? objectBytes,
+  }) {
+    final capturedImage = snap.capturedImage;
+    final boundingBox =
+        result.boundingBox ?? snap.currentDetectedObject?.boundingBox;
+    final segmentation =
+        result.segmentation ?? snap.currentDetectedObject?.segmentation;
+
+    Widget child;
+    if (capturedImage != null && boundingBox != null && boundingBox.isValid) {
+      child = _ObjectCutoutPreview(
+        imageFile: capturedImage,
+        boundingBox: boundingBox,
+        segmentation: segmentation,
+      );
+    } else if (objectBytes != null) {
+      child = Padding(
+        padding: const EdgeInsets.all(10),
+        child: Image.memory(objectBytes, fit: BoxFit.contain),
+      );
+    } else {
+      child = const Center(
+        child: Icon(
+          Icons.image_not_supported_rounded,
+          size: 96,
+          color: Colors.black26,
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 
@@ -1405,6 +1453,223 @@ class _HoanThanhChip extends StatelessWidget {
 // VocabBubble       → widgets/vocab_bubble.dart
 // SaveFlashcardSheet→ widgets/save_flashcard_sheet.dart
 
+class _ObjectCutoutPreview extends StatefulWidget {
+  const _ObjectCutoutPreview({
+    required this.imageFile,
+    required this.boundingBox,
+    this.segmentation,
+  });
+
+  final File imageFile;
+  final ObjectBoundingBox boundingBox;
+  final ObjectSegmentation? segmentation;
+
+  @override
+  State<_ObjectCutoutPreview> createState() => _ObjectCutoutPreviewState();
+}
+
+class _ObjectCutoutPreviewState extends State<_ObjectCutoutPreview> {
+  ui.Image? _image;
+  Object? _loadToken;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ObjectCutoutPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageFile.path != widget.imageFile.path) {
+      _loadImage();
+    }
+  }
+
+  Future<void> _loadImage() async {
+    final token = Object();
+    _loadToken = token;
+    final bytes = await widget.imageFile.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    if (!mounted || _loadToken != token) {
+      frame.image.dispose();
+      return;
+    }
+    final previous = _image;
+    setState(() => _image = frame.image);
+    previous?.dispose();
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _image;
+    if (image == null) {
+      return const SizedBox.expand();
+    }
+
+    return CustomPaint(
+      painter: _ObjectCutoutPainter(
+        image: image,
+        boundingBox: widget.boundingBox,
+        segmentation: widget.segmentation,
+      ),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+class _ObjectCutoutPainter extends CustomPainter {
+  const _ObjectCutoutPainter({
+    required this.image,
+    required this.boundingBox,
+    this.segmentation,
+  });
+
+  final ui.Image image;
+  final ObjectBoundingBox boundingBox;
+  final ObjectSegmentation? segmentation;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty || image.width <= 0 || image.height <= 0) return;
+
+    final imageRect = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    final sourceBounds = _sourceBounds().intersect(imageRect);
+    if (sourceBounds.isEmpty) return;
+
+    final padding = math.max(sourceBounds.width, sourceBounds.height) * 0.18;
+    final cropRect = Rect.fromLTRB(
+      (sourceBounds.left - padding).clamp(0.0, imageRect.right),
+      (sourceBounds.top - padding).clamp(0.0, imageRect.bottom),
+      (sourceBounds.right + padding).clamp(0.0, imageRect.right),
+      (sourceBounds.bottom + padding).clamp(0.0, imageRect.bottom),
+    );
+    if (cropRect.isEmpty) return;
+
+    final availableWidth = size.width * 0.86;
+    final availableHeight = size.height * 0.86;
+    final scale = math.min(
+      availableWidth / cropRect.width,
+      availableHeight / cropRect.height,
+    );
+    final drawSize = Size(cropRect.width * scale, cropRect.height * scale);
+    final drawRect = Rect.fromCenter(
+      center: size.center(Offset.zero),
+      width: drawSize.width,
+      height: drawSize.height,
+    );
+
+    Offset mapPoint(ObjectSegmentationPoint point) {
+      return Offset(
+        drawRect.left + (point.x - cropRect.left) * scale,
+        drawRect.top + (point.y - cropRect.top) * scale,
+      );
+    }
+
+    final path = _cutoutPath(drawRect, mapPoint);
+
+    final shadowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.black.withValues(alpha: 0.16)
+      ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 8);
+    final stickerPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.white;
+    final outlinePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.white;
+    final imagePaint = Paint()
+      ..filterQuality = FilterQuality.high
+      ..isAntiAlias = true;
+
+    canvas.drawPath(path, shadowPaint);
+    canvas.drawPath(path, stickerPaint);
+    canvas.save();
+    canvas.clipPath(path);
+    canvas.drawImageRect(image, cropRect, drawRect, imagePaint);
+    canvas.restore();
+    canvas.drawPath(path, outlinePaint);
+  }
+
+  Rect _sourceBounds() {
+    final contour = segmentation;
+    if (contour != null && contour.isValid) {
+      var left = contour.points.first.x;
+      var top = contour.points.first.y;
+      var right = contour.points.first.x;
+      var bottom = contour.points.first.y;
+
+      for (final point in contour.points.skip(1)) {
+        left = math.min(left, point.x);
+        top = math.min(top, point.y);
+        right = math.max(right, point.x);
+        bottom = math.max(bottom, point.y);
+      }
+
+      return Rect.fromLTRB(left, top, right, bottom);
+    }
+
+    return Rect.fromLTWH(
+      boundingBox.x,
+      boundingBox.y,
+      boundingBox.width,
+      boundingBox.height,
+    );
+  }
+
+  Path _cutoutPath(
+    Rect drawRect,
+    Offset Function(ObjectSegmentationPoint point) mapPoint,
+  ) {
+    final contour = segmentation;
+    if (contour != null && contour.isValid) {
+      final path = Path();
+      path.moveTo(
+        mapPoint(contour.points.first).dx,
+        mapPoint(contour.points.first).dy,
+      );
+      for (final point in contour.points.skip(1)) {
+        path.lineTo(mapPoint(point).dx, mapPoint(point).dy);
+      }
+      path.close();
+      return path;
+    }
+
+    return Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(drawRect, const Radius.circular(22)),
+      );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ObjectCutoutPainter oldDelegate) {
+    return oldDelegate.image != image ||
+        oldDelegate.boundingBox != boundingBox ||
+        oldDelegate.segmentation != segmentation;
+  }
+}
+
 class _FocusedObjectPreview extends StatefulWidget {
   const _FocusedObjectPreview({
     required this.imageFile,
@@ -1623,22 +1888,22 @@ class _DetectedObjectPainter extends CustomPainter {
 
     final glowPaint = Paint()
       ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.white.withValues(alpha: 0.32);
+    final shadowPaint = Paint()
+      ..style = PaintingStyle.stroke
       ..strokeWidth = 10
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round
-      ..color = _kAccent.withValues(alpha: 0.22);
-    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.34);
+    final outlinePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 7
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round
-      ..color = Colors.black.withValues(alpha: 0.50);
-    final outlinePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round
-      ..color = _kAccent;
+      ..color = Colors.white;
 
     final contour = segmentation;
     if (contour != null && contour.isValid) {
@@ -1652,7 +1917,7 @@ class _DetectedObjectPainter extends CustomPainter {
 
       final fillPaint = Paint()
         ..style = PaintingStyle.fill
-        ..color = _kAccent.withValues(alpha: 0.08);
+        ..color = Colors.white.withValues(alpha: 0.04);
 
       canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, glowPaint);
