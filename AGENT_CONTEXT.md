@@ -2,7 +2,7 @@
 
 Read this file before making code changes. Update it whenever project structure, navigation, backend contracts, state models, or coding conventions change.
 
-Last updated: 2026-05-17
+Last updated: 2026-05-23
 
 ## Project Summary
 
@@ -14,6 +14,8 @@ Current frontend stack:
 - Riverpod
 - GoRouter
 - Firebase Auth
+- Firebase App Check is initialized in `main.dart`; debug builds use the debug
+  provider, and release builds use Play Integrity on Android.
 - Dio-based Milingo backend API client
 - Camera/image picker
 - Flutter TTS
@@ -449,6 +451,10 @@ Current:
 
 - `flashcardProvider` loads decks from backend.
 - Supports optimistic add/update/delete for decks and cards.
+- Saved Snap cards can carry `imageUrl`; when a Snap result has only
+  `objectImageBase64`, `FlashcardNotifier.addCardToDeck` uploads a resized,
+  lower-quality JPEG to Firebase Storage through `StorageService` before
+  calling the backend card API.
 - `flashcards_screen.dart` is a library-style landing page with horizontal top tabs: "Tất cả bộ", "Tất cả từ vựng", "Từ vựng yêu thích", "Từ đã học", and "Từ chưa học".
 - The default "Tất cả bộ" tab is backed by the deck API and shows horizontal deck rows without category photos.
 - Deck rows navigate to `DeckScreen`, which loads cards for the selected deck and shows horizontal vocabulary rows.

@@ -32,7 +32,8 @@ class VocabDetailScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     tooltip: 'Quay lại',
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _kDark),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        size: 20, color: _kDark),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: 4),
@@ -76,11 +77,22 @@ class VocabDetailScreen extends StatelessWidget {
                           color: _kSoft,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          _iconForPartOfSpeech(entry.partOfSpeech),
-                          color: _kAccent,
-                          size: 34,
-                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: entry.imageUrl == null || entry.imageUrl!.isEmpty
+                            ? Icon(
+                                _iconForPartOfSpeech(entry.partOfSpeech),
+                                color: _kAccent,
+                                size: 34,
+                              )
+                            : Image.network(
+                                entry.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  _iconForPartOfSpeech(entry.partOfSpeech),
+                                  color: _kAccent,
+                                  size: 34,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 22),
@@ -114,7 +126,9 @@ class VocabDetailScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _DetailLine(
                       label: 'Loại từ',
-                      value: entry.partOfSpeech.trim().isEmpty ? 'Chưa phân loại' : entry.partOfSpeech,
+                      value: entry.partOfSpeech.trim().isEmpty
+                          ? 'Chưa phân loại'
+                          : entry.partOfSpeech,
                       icon: Icons.label_outline_rounded,
                     ),
                     const SizedBox(height: 12),

@@ -10,6 +10,8 @@ class FlashcardEntry {
     required this.pronunciation,
     this.partOfSpeech = '',
     this.langCode = 'en',
+    this.imageUrl,
+    this.objectImageBase64,
   });
 
   final String id;
@@ -18,6 +20,30 @@ class FlashcardEntry {
   final String pronunciation;
   final String partOfSpeech;
   final String langCode;
+  final String? imageUrl;
+  final String? objectImageBase64;
+
+  FlashcardEntry copyWith({
+    String? id,
+    String? english,
+    String? translation,
+    String? pronunciation,
+    String? partOfSpeech,
+    String? langCode,
+    String? imageUrl,
+    String? objectImageBase64,
+  }) {
+    return FlashcardEntry(
+      id: id ?? this.id,
+      english: english ?? this.english,
+      translation: translation ?? this.translation,
+      pronunciation: pronunciation ?? this.pronunciation,
+      partOfSpeech: partOfSpeech ?? this.partOfSpeech,
+      langCode: langCode ?? this.langCode,
+      imageUrl: imageUrl ?? this.imageUrl,
+      objectImageBase64: objectImageBase64 ?? this.objectImageBase64,
+    );
+  }
 }
 
 class DeckData {

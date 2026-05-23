@@ -389,6 +389,7 @@ class MilingoApiService {
     required String sourceLangCode,
     required String targetLangCode,
     String? sourceVocabId,
+    String? imageUrl,
   }) async {
     try {
       final response = await _dio.post(
@@ -401,6 +402,7 @@ class MilingoApiService {
           'sourceLangCode': sourceLangCode,
           'targetLangCode': targetLangCode,
           if (sourceVocabId != null) 'sourceVocabId': sourceVocabId,
+          if (imageUrl != null) 'imageUrl': imageUrl,
         },
       );
       return _unwrap(

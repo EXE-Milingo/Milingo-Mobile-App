@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
-import 'package:milingo/core/services/storage_service.dart';
 import 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 import 'package:milingo/shared/utils/image_utils.dart';
 import 'package:milingo/core/constants/app_constants.dart';
@@ -347,45 +346,11 @@ class SnapController extends StateNotifier<SnapState> {
         showVocabulary: true,
         error: null,
       );
-
-      // Upload cropped object images to Firebase Storage in background
-      _uploadCroppedImages(allResults);
     } on MilingoApiException catch (e) {
       state = state.copyWith(isLoading: false, error: e.message);
     } catch (e) {
       state = state.copyWith(
           isLoading: false, error: 'Lỗi tách vật thể: ${e.toString()}');
-    }
-  }
-
-  /// Uploads each cropped object image to Firebase Storage in background.
-  /// Updates the MilingoResult.objectImageUrl with the download URL.
-  Future<void> _uploadCroppedImages(List<MilingoResult> results) async {
-    final storage = _ref.read(storageServiceProvider);
-
-    for (int i = 0; i < results.length; i++) {
-      final item = results[i];
-      if (item.objectImageBase64 == null) continue;
-
-      try {
-        final url = await storage.uploadCroppedObjectImage(
-          base64Image: item.objectImageBase64!,
-          keyword: item.keyword,
-        );
-
-        if (url != null) {
-          item.objectImageUrl = url;
-
-          // Update state only if this analysis is still current.
-          if (state.allVocabItems.length > i &&
-              identical(state.allVocabItems[i], item) &&
-              state.currentVocabIndex == i) {
-            state = state.copyWith(result: item);
-          }
-        }
-      } catch (_) {
-        // Non-fatal: image display still works from base64
-      }
     }
   }
 

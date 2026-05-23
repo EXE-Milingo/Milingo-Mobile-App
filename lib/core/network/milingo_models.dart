@@ -50,6 +50,7 @@ class CardResponse {
     required this.targetLangCode,
     required this.createdAt,
     this.sourceVocabId,
+    this.imageUrl,
   });
 
   factory CardResponse.fromJson(Map<String, dynamic> json) {
@@ -63,6 +64,7 @@ class CardResponse {
       targetLangCode: (json['target_lang_code'] ?? 'en').toString(),
       createdAt: (json['created_at'] ?? '').toString(),
       sourceVocabId: json['source_vocab_id'] as String?,
+      imageUrl: json['image_url'] as String?,
     );
   }
 
@@ -75,6 +77,22 @@ class CardResponse {
   final String targetLangCode;
   final String createdAt;
   final String? sourceVocabId;
+  final String? imageUrl;
+
+  CardResponse copyWithImageUrl(String? value) {
+    return CardResponse(
+      id: id,
+      term: term,
+      translation: translation,
+      pronunciation: pronunciation,
+      partOfSpeech: partOfSpeech,
+      sourceLangCode: sourceLangCode,
+      targetLangCode: targetLangCode,
+      createdAt: createdAt,
+      sourceVocabId: sourceVocabId,
+      imageUrl: value,
+    );
+  }
 }
 
 // ── Snap Analysis ────────────────────────────────────────

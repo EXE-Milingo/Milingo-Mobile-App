@@ -23,7 +23,6 @@ import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 
 const _kAccent = Color(0xFFF25F36);
 const _kAccentLight = Color(0xFFFFF0EB);
-const _kBg = Color(0xFFFAF8F5);
 
 class _Lang {
   const _Lang(this.code, this.flag, this.name);
@@ -244,9 +243,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     super.dispose();
   }
 
-  _Lang _lang(String code) => _kLanguages.firstWhere((l) => l.code == code,
-      orElse: () => _kLanguages.first);
-
   @override
   Widget build(BuildContext context) {
     final snap = ref.watch(snapControllerProvider);
@@ -355,167 +351,290 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         ? null
         : base64Decode(result.objectImageBase64!);
     final compact = MediaQuery.sizeOf(context).height < 760;
-    final objectHeight = compact ? 230.0 : 300.0;
-    final wordFontSize = compact ? 34.0 : 44.0;
-    final pronunciationFontSize = compact ? 22.0 : 28.0;
-    final translationFontSize = compact ? 26.0 : 32.0;
-    final actionSize = compact ? 70.0 : 82.0;
-    final confirmSize = compact ? 112.0 : 132.0;
+    final objectHeight = compact ? 310.0 : 390.0;
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+      child: Container(
+        color: const Color(0xFFFFEFDA),
         child: Column(
           children: [
-            Spacer(flex: compact ? 1 : 2),
-            SizedBox(
-              height: objectHeight,
-              child: _buildResultObjectPreview(
-                snap: snap,
-                result: result,
-                objectBytes: objectBytes,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      result.keyword,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: wordFontSize,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.textPrimary,
-                        height: 0.95,
-                      ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  _SoftCircleButton(
+                    icon: Icons.arrow_back_rounded,
+                    onTap: ctrl.reset,
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: const [
+                        Text(
+                          'BÓC TÁCH VẬT THỂ',
+                          style: TextStyle(
+                            color: Color(0xFF806B58),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        _HoanThanhChip(done: true),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                GestureDetector(
-                  onTap: () => _speak(result.keyword, 'en'),
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.volume_up_rounded,
-                      color: AppTheme.primaryColor,
-                      size: 25,
+                  const SizedBox(width: 42),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  ..._buildObjectHaloBubbles(snap, result),
+                  SizedBox(
+                    height: objectHeight,
+                    width: double.infinity,
+                    child: _buildResultObjectPreview(
+                      snap: snap,
+                      result: result,
+                      objectBytes: objectBytes,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              result.pronunciation.isEmpty ? '' : '/${result.pronunciation}/',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: pronunciationFontSize,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textSecondary,
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              result.translation,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: translationFontSize,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textSecondary,
-                height: 1.15,
-              ),
-            ),
-            const SizedBox(height: 28),
-            GestureDetector(
-              onTap: () => _showExampleSentence(result),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: compact ? 15 : 19),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.26),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.auto_awesome_rounded,
-                        color: Colors.white, size: 24),
-                    const SizedBox(width: 14),
-                    Text(
-                      'Xem c\u00e2u v\u00ed d\u1ee5',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: compact ? 20 : 24,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Spacer(flex: compact ? 1 : 2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _ReviewRoundButton(
-                  icon: Icons.photo_camera_outlined,
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF9C9C9C),
-                  size: actionSize,
-                  iconSize: compact ? 30 : 34,
-                  onTap: ctrl.reset,
-                ),
-                _ReviewRoundButton(
-                  icon: Icons.check_rounded,
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  size: confirmSize,
-                  iconSize: compact ? 72 : 86,
-                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.24),
-                  onTap: () => _showSaveToFlashcard(
-                    context,
-                    FlashcardEntry(
-                      id: '${result.keyword}_${snap.selectedLanguage}',
-                      english: result.keyword,
-                      translation: result.translation,
-                      pronunciation: result.pronunciation,
-                      partOfSpeech: result.partOfSpeech,
-                      langCode: snap.selectedLanguage,
-                    ),
-                  ),
-                ),
-                _ReviewRoundButton(
-                  icon: Icons.close_rounded,
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF9C9C9C),
-                  size: actionSize,
-                  iconSize: compact ? 34 : 40,
-                  onTap: ctrl.reset,
-                ),
-              ],
-            ),
+            _buildResultVocabularyPanel(snap, ctrl, result),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildResultVocabularyPanel(
+    SnapState snap,
+    SnapController ctrl,
+    MilingoResult result,
+  ) {
+    final langCode = snap.selectedLanguage;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        18,
+        10,
+        18,
+        MediaQuery.of(context).padding.bottom + 14,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              _OrangePillButton(
+                label: 'Chọn ngôn ngữ khác',
+                onTap: () => _showLanguagePicker(ctrl, langCode),
+              ),
+              const Spacer(),
+              _OrangePillButton(
+                label: 'Xem câu ví dụ',
+                onTap: () => _showExampleSentence(result),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _MiniActionButton(
+                      icon: Icons.bookmark_add_outlined,
+                      onTap: () => _saveResultToFlashcard(result, langCode),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            result.keyword,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF2A2928),
+                              fontSize: 31,
+                              fontWeight: FontWeight.w900,
+                              height: 1.05,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            result.pronunciation.isEmpty
+                                ? ''
+                                : '/${result.pronunciation}/',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF77716B),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3EDE7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              result.partOfSpeech.trim().isEmpty
+                                  ? 'Noun'
+                                  : result.partOfSpeech,
+                              style: const TextStyle(
+                                color: Color(0xFF7B7168),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _MiniActionButton(
+                      icon: Icons.volume_up_rounded,
+                      onTap: () => _speak(result.translation, langCode),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            result.translation,
+                            textAlign: TextAlign.right,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF292725),
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              height: 1.06,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            result.pronunciation.toUpperCase(),
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF9B938B),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildObjectHaloBubbles(
+    SnapState snap,
+    MilingoResult result,
+  ) {
+    final haloItems = <({String label, String translation})>[
+      for (final word in result.relatedWords.take(4))
+        (label: word.english, translation: word.translation),
+    ];
+
+    if (haloItems.isEmpty) {
+      for (final item in snap.allVocabItems) {
+        if (item.keyword == result.keyword) continue;
+        haloItems.add((label: item.keyword, translation: item.translation));
+        if (haloItems.length == 4) break;
+      }
+    }
+
+    const positions = <Alignment>[
+      Alignment(-0.75, -0.72),
+      Alignment(0.72, -0.70),
+      Alignment(-0.88, -0.18),
+      Alignment(0.86, -0.18),
+    ];
+
+    return [
+      for (var i = 0; i < haloItems.length; i++)
+        Align(
+          alignment: positions[i % positions.length],
+          child: _HaloWordBubble(
+            label: haloItems[i].label,
+            translation: haloItems[i].translation,
+          ),
+        ),
+    ];
+  }
+
+  void _saveResultToFlashcard(MilingoResult result, String langCode) {
+    _showSaveToFlashcard(
+      context,
+      FlashcardEntry(
+        id: '${result.keyword}_$langCode',
+        english: result.keyword,
+        translation: result.translation,
+        pronunciation: result.pronunciation,
+        partOfSpeech: result.partOfSpeech,
+        langCode: langCode,
+        imageUrl: result.objectImageUrl,
+        objectImageBase64: result.objectImageBase64,
+      ),
+    );
+  }
+
+  List<String> _examplesForResult(MilingoResult result) {
+    final examples = <String>[];
+    if (result.sentence.trim().isNotEmpty) {
+      examples.add(result.sentence.trim());
+    }
+    if (result.sentenceTranslation.trim().isNotEmpty &&
+        result.sentenceTranslation.trim() != result.sentence.trim()) {
+      examples.add(result.sentenceTranslation.trim());
+    }
+    if (examples.isEmpty) {
+      examples.add('Chưa có câu ví dụ.');
+    }
+    return examples;
+  }
+
+  String _exampleReading(MilingoResult result, int index) {
+    if (index == 0 && result.pronunciation.trim().isNotEmpty) {
+      return result.pronunciation.trim();
+    }
+    return result.keyword;
   }
 
   Widget _buildResultObjectPreview({
@@ -563,54 +682,84 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   }
 
   void _showExampleSentence(MilingoResult result) {
+    final examples = _examplesForResult(result);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          color: Color(0xFFFFEFDA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
-        padding: EdgeInsets.fromLTRB(
-          24,
-          22,
-          24,
-          MediaQuery.of(context).padding.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 42,
-              height: 4,
+        child: ListView.separated(
+          shrinkWrap: true,
+          padding: EdgeInsets.fromLTRB(
+            18,
+            22,
+            18,
+            MediaQuery.of(context).padding.bottom + 18,
+          ),
+          itemCount: examples.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final example = examples[index];
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
               decoration: BoxDecoration(
-                color: Colors.black12,
-                borderRadius: BorderRadius.circular(99),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 22),
-            Text(
-              result.sentence.isEmpty
-                  ? 'Ch\u01b0a c\u00f3 c\u00e2u v\u00ed d\u1ee5.'
-                  : result.sentence,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF2A2A2A),
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                height: 1.28,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          example,
+                          style: const TextStyle(
+                            color: Color(0xFF30302F),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            height: 1.22,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _exampleReading(result, index),
+                          style: const TextStyle(
+                            color: Color(0xFF7D756E),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _MiniActionButton(
+                    icon: Icons.volume_up_rounded,
+                    onTap: () => _speak(example, 'vi'),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 18),
-            GestureDetector(
-              onTap: () => _speak(result.sentence, 'en'),
-              child: const Icon(
-                Icons.volume_up_rounded,
-                color: Color(0xFF4EA5AC),
-                size: 34,
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -1074,6 +1223,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                               pronunciation: r.pronunciation,
                               partOfSpeech: r.partOfSpeech,
                               langCode: langCode,
+                              imageUrl: r.objectImageUrl,
+                              objectImageBase64: r.objectImageBase64,
                             ),
                           ),
                         ),
@@ -1360,6 +1511,186 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 // ═══════════════════════════════════════════════════════════════════════
 // REUSABLE WIDGETS
 // ═══════════════════════════════════════════════════════════════════════
+
+class _SoftCircleButton extends StatelessWidget {
+  const _SoftCircleButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.76),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: const Color(0xFF5E554C), size: 21),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrangePillButton extends StatelessWidget {
+  const _OrangePillButton({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32, maxWidth: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          decoration: BoxDecoration(
+            color: _kAccent,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: _kAccent.withValues(alpha: 0.18),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniActionButton extends StatelessWidget {
+  const _MiniActionButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 31,
+          height: 31,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: _kAccent.withValues(alpha: 0.42)),
+          ),
+          child: Icon(icon, color: _kAccent, size: 17),
+        ),
+      ),
+    );
+  }
+}
+
+class _HaloWordBubble extends StatelessWidget {
+  const _HaloWordBubble({
+    required this.label,
+    required this.translation,
+  });
+
+  final String label;
+  final String translation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 86,
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(35),
+        boxShadow: [
+          BoxShadow(
+            color: _kAccent.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: _kAccent,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
+              const Icon(Icons.volume_up_rounded, color: _kAccent, size: 10),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            translation,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF605851),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              height: 1.08,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ReviewRoundButton extends StatelessWidget {
   const _ReviewRoundButton({

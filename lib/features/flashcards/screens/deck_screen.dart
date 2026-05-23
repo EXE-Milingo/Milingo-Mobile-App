@@ -106,7 +106,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   }
 
   DeckData? _findDeck(FlashcardState state) {
-    final matches = state.decks.where((deck) => deck.id == widget.deck.id).toList();
+    final matches =
+        state.decks.where((deck) => deck.id == widget.deck.id).toList();
     return matches.isEmpty ? null : matches.first;
   }
 
@@ -134,7 +135,8 @@ class _DeckHeader extends StatelessWidget {
         children: [
           IconButton(
             tooltip: 'Quay lại',
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _kDark),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 20, color: _kDark),
             onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 4),
@@ -200,14 +202,17 @@ class _SearchBox extends StatelessWidget {
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(color: _kDark, fontSize: 15, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: _kDark, fontSize: 15, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           hintText: 'Tìm kiếm từ trong bộ...',
           hintStyle: const TextStyle(color: Color(0xFFB8B3B0), fontSize: 15),
-          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFB8B3B0), size: 24),
+          prefixIcon: const Icon(Icons.search_rounded,
+              color: Color(0xFFB8B3B0), size: 24),
           filled: true,
           fillColor: _kSurface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: _kBorder),
@@ -266,7 +271,19 @@ class _VocabRow extends StatelessWidget {
                   color: _kSoft,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(_iconForPartOfSpeech(entry.partOfSpeech), color: _kAccent, size: 26),
+                clipBehavior: Clip.antiAlias,
+                child: entry.imageUrl == null || entry.imageUrl!.isEmpty
+                    ? Icon(_iconForPartOfSpeech(entry.partOfSpeech),
+                        color: _kAccent, size: 26)
+                    : Image.network(
+                        entry.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          _iconForPartOfSpeech(entry.partOfSpeech),
+                          color: _kAccent,
+                          size: 26,
+                        ),
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -299,7 +316,8 @@ class _VocabRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFFC4BFBC), size: 26),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFFC4BFBC), size: 26),
             ],
           ),
         ),

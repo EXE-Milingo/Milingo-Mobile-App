@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
+import 'package:milingo/core/services/storage_service.dart';
 import 'package:milingo/features/flashcards/models/flashcard_models.dart';
 
 export 'package:milingo/features/flashcards/models/flashcard_models.dart';
@@ -26,6 +27,7 @@ FlashcardEntry _cardResponseToEntry(CardResponse r) {
     pronunciation: r.pronunciation,
     partOfSpeech: r.partOfSpeech,
     langCode: r.targetLangCode,
+    imageUrl: r.imageUrl,
   );
 }
 
@@ -105,7 +107,8 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
     state = AsyncValue.data(state.value!.copyWith(decks: updatedDecks));
 
     try {
-      await _api.updateDeck(deckId, name: name, emoji: emoji, description: description);
+      await _api.updateDeck(deckId,
+          name: name, emoji: emoji, description: description);
     } catch (e) {
       state = previousState;
       rethrow;
@@ -156,7 +159,9 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
       final matchingDecks =
           latest?.decks.where((d) => d.id == deck.id).toList() ?? const [];
       final latestDeck = matchingDecks.isEmpty ? null : matchingDecks.first;
-      if (latestDeck == null || latestDeck.cards.isNotEmpty || latestDeck.total == 0) {
+      if (latestDeck == null ||
+          latestDeck.cards.isNotEmpty ||
+          latestDeck.total == 0) {
         continue;
       }
       await loadCardsForDeck(deck.id);
@@ -184,15 +189,95 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
     if (alreadyExists) return false;
 
     final previousState = state;
+    var cardToSave = card;
+    var imageUrl = card.imageUrl;
+
+    if ((imageUrl == null || imageUrl.isEmpty) &&
+        card.objectImageBase64 != null &&
+        card.objectImageBase64!.isNotEmpty) {
+      final uploadedUrl =
+          await ref.read(storageServiceProvider).uploadCroppedObjectImage(
+                base64Image: card.objectImageBase64!,
+                keyword: card.english,
+              );
+
+      if (uploadedUrl == null || uploadedUrl.isEmpty) {
+        throw Exception('Không thể lưu ảnh. Vui lòng thử lại.');
+      }
+
+      imageUrl = uploadedUrl;
+      cardToSave = card.copyWith(imageUrl: uploadedUrl);
+    }
+
     // Optimistic add
     final updatedDecks = state.value!.decks.map((d) {
       if (d.id != deckId) return d;
-      return d.copyWith(cards: [...d.cards, card]);
+      return d.copyWith(cards: [...d.cards, cardToSave]);
     }).toList();
     state = AsyncValue.data(state.value!.copyWith(decks: updatedDecks));
 
     try {
-      final created = await _api.addCard(
+      var created = await _createCardOnServer(
+        deckId: deckId,
+        card: card,
+        sourceLangCode: sourceLangCode,
+        sourceVocabId: sourceVocabId,
+        imageUrl: imageUrl,
+      );
+
+      if ((created.imageUrl == null || created.imageUrl!.isEmpty) &&
+          imageUrl != null &&
+          imageUrl.isNotEmpty) {
+        created = created.copyWithImageUrl(imageUrl);
+      }
+
+      // Replace temp card with server card (real id)
+      final serverEntry = FlashcardEntry(
+        id: created.id,
+        english: created.term,
+        translation: created.translation,
+        pronunciation: created.pronunciation,
+        partOfSpeech: created.partOfSpeech,
+        langCode: created.targetLangCode,
+        imageUrl: created.imageUrl ?? imageUrl,
+      );
+      final finalDecks = state.value!.decks.map((d) {
+        if (d.id != deckId) return d;
+        final cards =
+            d.cards.map((c) => c.id == card.id ? serverEntry : c).toList();
+        return d.copyWith(cards: cards);
+      }).toList();
+      state = AsyncValue.data(state.value!.copyWith(decks: finalDecks));
+      return true;
+    } catch (e) {
+      state = previousState;
+      rethrow;
+    }
+  }
+
+  Future<CardResponse> _createCardOnServer({
+    required String deckId,
+    required FlashcardEntry card,
+    required String sourceLangCode,
+    required String? sourceVocabId,
+    required String? imageUrl,
+  }) async {
+    try {
+      return await _api.addCard(
+        deckId,
+        term: card.english,
+        translation: card.translation,
+        pronunciation: card.pronunciation,
+        partOfSpeech: card.partOfSpeech,
+        sourceLangCode: sourceLangCode,
+        targetLangCode: card.langCode,
+        sourceVocabId: sourceVocabId,
+        imageUrl: imageUrl,
+      );
+    } on MilingoApiException {
+      if (imageUrl == null || imageUrl.isEmpty) rethrow;
+
+      return _api.addCard(
         deckId,
         term: card.english,
         translation: card.translation,
@@ -202,25 +287,6 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
         targetLangCode: card.langCode,
         sourceVocabId: sourceVocabId,
       );
-      // Replace temp card with server card (real id)
-      final serverEntry = FlashcardEntry(
-        id: created.id,
-        english: created.term,
-        translation: created.translation,
-        pronunciation: created.pronunciation,
-        partOfSpeech: created.partOfSpeech,
-        langCode: created.targetLangCode,
-      );
-      final finalDecks = state.value!.decks.map((d) {
-        if (d.id != deckId) return d;
-        final cards = d.cards.map((c) => c.id == card.id ? serverEntry : c).toList();
-        return d.copyWith(cards: cards);
-      }).toList();
-      state = AsyncValue.data(state.value!.copyWith(decks: finalDecks));
-      return true;
-    } catch (e) {
-      state = previousState;
-      rethrow;
     }
   }
 
@@ -245,10 +311,10 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
 
   bool isCardSavedAnywhere(String english, String langCode) {
     return state.value?.decks.any((d) => d.cards.any(
-          (c) =>
-              c.english.toLowerCase() == english.toLowerCase() &&
-              c.langCode == langCode,
-        )) ??
+              (c) =>
+                  c.english.toLowerCase() == english.toLowerCase() &&
+                  c.langCode == langCode,
+            )) ??
         false;
   }
 }
