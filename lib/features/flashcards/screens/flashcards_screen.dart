@@ -15,6 +15,7 @@ const _kDark = Color(0xFF1A1A1A);
 const _kMuted = Color(0xFF8F8F8F);
 const _kBorder = Color(0xFFE8E2DE);
 const _kSoft = Color(0xFFFFEDE7);
+const _kStar = Color(0xFFFFC84B);
 
 const _kTabs = [
   'Tất cả bộ',
@@ -66,11 +67,14 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
               _LibraryHeader(
                 selectedIndex: _tabIndex,
                 onTabSelected: _selectTab,
-                onCreateDeck: () => _showCreateDeckSheet(context, asyncState.hasValue),
+                onCreateDeck: () =>
+                    _showCreateDeckSheet(context, asyncState.hasValue),
               ),
               _SearchBox(
                 controller: _searchController,
-                hintText: _tabIndex == 0 ? 'Tìm kiếm bộ từ...' : 'Tìm kiếm từ vựng...',
+                hintText: _tabIndex == 0
+                    ? 'Tìm kiếm bộ từ...'
+                    : 'Tìm kiếm từ vựng...',
                 onChanged: (value) => setState(() => _query = value),
               ),
               const SizedBox(height: 8),
@@ -79,7 +83,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                   loading: () => const _LoadingState(),
                   error: (error, _) => _ErrorState(
                     message: error.toString(),
-                    onRetry: () => ref.read(flashcardProvider.notifier).refresh(),
+                    onRetry: () =>
+                        ref.read(flashcardProvider.notifier).refresh(),
                   ),
                   data: (data) => _FlashcardTabBody(
                     tabIndex: _tabIndex,
@@ -234,14 +239,17 @@ class _SearchBox extends StatelessWidget {
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(color: _kDark, fontSize: 15, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: _kDark, fontSize: 15, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(color: Color(0xFFB8B3B0), fontSize: 15),
-          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFB8B3B0), size: 24),
+          prefixIcon: const Icon(Icons.search_rounded,
+              color: Color(0xFFB8B3B0), size: 24),
           filled: true,
           fillColor: _kSurface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: _kBorder),
@@ -260,7 +268,7 @@ class _SearchBox extends StatelessWidget {
   }
 }
 
-class _FlashcardTabBody extends StatelessWidget {
+class _FlashcardTabBody extends ConsumerWidget {
   const _FlashcardTabBody({
     required this.tabIndex,
     required this.query,
@@ -272,7 +280,7 @@ class _FlashcardTabBody extends StatelessWidget {
   final FlashcardState state;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (tabIndex == 0) {
       final decks = _filteredDecks();
       if (decks.isEmpty) {
@@ -289,6 +297,7 @@ class _FlashcardTabBody extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) => _DeckLibraryRow(
           deck: decks[index],
+          onFavorite: () => _toggleDeckFavorite(context, ref, decks[index]),
           onTap: () => _openDeck(context, decks[index]),
         ),
       );
@@ -312,6 +321,8 @@ class _FlashcardTabBody extends StatelessWidget {
         return _VocabLibraryRow(
           entry: item.entry,
           deckName: item.deck.name,
+          onFavorite: () => _toggleCardFavorite(context, ref, item),
+          onDelete: () => _confirmDeleteCard(context, ref, item),
           onTap: () => context.push(
             AppConstants.vocabDetailRoute,
             extra: VocabDetailArg(
@@ -337,12 +348,13 @@ class _FlashcardTabBody extends StatelessWidget {
     final trimmed = query.trim().toLowerCase();
     final all = [
       for (final deck in state.decks)
-        for (final entry in deck.cards) _DeckVocabItem(deck: deck, entry: entry),
+        for (final entry in deck.cards)
+          _DeckVocabItem(deck: deck, entry: entry),
     ];
 
     final tabFiltered = switch (tabIndex) {
       1 => all,
-      2 => const <_DeckVocabItem>[],
+      2 => all.where((item) => item.entry.isFavorite).toList(),
       3 => const <_DeckVocabItem>[],
       4 => all,
       _ => all,
@@ -376,11 +388,90 @@ class _FlashcardTabBody extends StatelessWidget {
 
   String _emptyMessageForTab() {
     return switch (tabIndex) {
-      2 => 'Khi có dữ liệu yêu thích từ API, các từ sẽ xuất hiện ở đây.',
+      2 => 'Đánh dấu sao để gom các từ muốn ôn nhanh.',
       3 => 'Khi có tiến độ học từng từ từ API, các từ sẽ xuất hiện ở đây.',
       4 => 'Mở một bộ từ để tải danh sách từ vựng.',
       _ => 'Mở một bộ từ để tải danh sách từ vựng.',
     };
+  }
+
+  Future<void> _toggleDeckFavorite(
+    BuildContext context,
+    WidgetRef ref,
+    DeckData deck,
+  ) async {
+    try {
+      await ref
+          .read(flashcardProvider.notifier)
+          .setDeckFavorite(deck.id, !deck.isFavorite);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không cập nhật được yêu thích: $error')),
+      );
+    }
+  }
+
+  Future<void> _toggleCardFavorite(
+    BuildContext context,
+    WidgetRef ref,
+    _DeckVocabItem item,
+  ) async {
+    try {
+      await ref.read(flashcardProvider.notifier).setCardFavorite(
+            item.deck.id,
+            item.entry.id,
+            !item.entry.isFavorite,
+          );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không cập nhật được yêu thích: $error')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteCard(
+    BuildContext context,
+    WidgetRef ref,
+    _DeckVocabItem item,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa từ khỏi tất cả từ vựng?'),
+        content:
+            Text('Xóa "${item.entry.english}" khỏi deck ${item.deck.name}.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: _kAccent),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref
+          .read(flashcardProvider.notifier)
+          .deleteCard(item.deck.id, item.entry.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xóa từ.')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không xóa được từ: $error')),
+      );
+    }
   }
 
   void _openDeck(BuildContext context, DeckData deck) {
@@ -409,10 +500,12 @@ class _DeckLibraryRow extends StatelessWidget {
   const _DeckLibraryRow({
     required this.deck,
     required this.onTap,
+    required this.onFavorite,
   });
 
   final DeckData deck;
   final VoidCallback onTap;
+  final VoidCallback onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -477,7 +570,20 @@ class _DeckLibraryRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFFC4BFBC), size: 26),
+              IconButton(
+                tooltip: deck.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích deck',
+                visualDensity: VisualDensity.compact,
+                onPressed: onFavorite,
+                icon: Icon(
+                  deck.isFavorite
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: deck.isFavorite ? _kStar : _kMuted,
+                  size: 23,
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFFC4BFBC), size: 26),
             ],
           ),
         ),
@@ -491,11 +597,15 @@ class _VocabLibraryRow extends StatelessWidget {
     required this.entry,
     required this.deckName,
     required this.onTap,
+    required this.onFavorite,
+    required this.onDelete,
   });
 
   final FlashcardEntry entry;
   final String deckName;
   final VoidCallback onTap;
+  final VoidCallback onFavorite;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +632,18 @@ class _VocabLibraryRow extends StatelessWidget {
           child: Row(
             children: [
               _IconTile(
-                child: Icon(_iconForPartOfSpeech(entry.partOfSpeech), color: _kAccent, size: 26),
+                child: entry.imageUrl == null || entry.imageUrl!.isEmpty
+                    ? Icon(_iconForPartOfSpeech(entry.partOfSpeech),
+                        color: _kAccent, size: 26)
+                    : Image.network(
+                        entry.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          _iconForPartOfSpeech(entry.partOfSpeech),
+                          color: _kAccent,
+                          size: 26,
+                        ),
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -555,7 +676,30 @@ class _VocabLibraryRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFFC4BFBC), size: 26),
+              IconButton(
+                tooltip: entry.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích từ',
+                visualDensity: VisualDensity.compact,
+                onPressed: onFavorite,
+                icon: Icon(
+                  entry.isFavorite
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: entry.isFavorite ? _kStar : _kMuted,
+                  size: 23,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Xóa từ',
+                visualDensity: VisualDensity.compact,
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: _kMuted,
+                  size: 22,
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFFC4BFBC), size: 26),
             ],
           ),
         ),
@@ -578,6 +722,7 @@ class _IconTile extends StatelessWidget {
         color: _kSoft,
         borderRadius: BorderRadius.circular(13),
       ),
+      clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: child,
     );
@@ -614,7 +759,8 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 10),
             const Text(
               'Không tải được thư viện',
-              style: TextStyle(color: _kDark, fontSize: 17, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                  color: _kDark, fontSize: 17, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
@@ -659,20 +805,23 @@ class _EmptyState extends StatelessWidget {
             Container(
               width: 62,
               height: 62,
-              decoration: const BoxDecoration(color: _kSoft, shape: BoxShape.circle),
+              decoration:
+                  const BoxDecoration(color: _kSoft, shape: BoxShape.circle),
               child: Icon(icon, color: _kAccent, size: 32),
             ),
             const SizedBox(height: 12),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kDark, fontSize: 17, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                  color: _kDark, fontSize: 17, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 7),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kMuted, fontSize: 13, height: 1.35),
+              style:
+                  const TextStyle(color: _kMuted, fontSize: 13, height: 1.35),
             ),
           ],
         ),
@@ -768,7 +917,8 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
             const SizedBox(height: 18),
             const Text(
               'Tạo bộ từ',
-              style: TextStyle(color: _kDark, fontSize: 20, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                  color: _kDark, fontSize: 20, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -781,7 +931,9 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
                     selectedColor: _kSoft,
                     checkmarkColor: _kAccent,
                     side: BorderSide(
-                      color: _selectedEmoji == emoji ? _kAccent : const Color(0xFFE8E8E8),
+                      color: _selectedEmoji == emoji
+                          ? _kAccent
+                          : const Color(0xFFE8E8E8),
                     ),
                     onSelected: (_) => setState(() => _selectedEmoji = emoji),
                   ),
@@ -814,15 +966,18 @@ class _CreateDeckSheetState extends ConsumerState<_CreateDeckSheet> {
                 style: FilledButton.styleFrom(
                   backgroundColor: _kAccent,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _saving
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Tạo bộ từ', style: TextStyle(fontWeight: FontWeight.w800)),
+                    : const Text('Tạo bộ từ',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
           ],

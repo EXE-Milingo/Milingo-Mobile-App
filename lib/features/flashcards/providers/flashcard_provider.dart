@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/services/storage_service.dart';
@@ -16,6 +17,7 @@ DeckData _deckResponseToDeckData(DeckResponse r) {
     emoji: r.emoji.isEmpty ? '📚' : r.emoji,
     vocabCount: r.vocabCount,
     isDefault: r.isDefault,
+    isFavorite: r.isFavorite,
   );
 }
 
@@ -28,6 +30,7 @@ FlashcardEntry _cardResponseToEntry(CardResponse r) {
     partOfSpeech: r.partOfSpeech,
     langCode: r.targetLangCode,
     imageUrl: r.imageUrl,
+    isFavorite: r.isFavorite,
   );
 }
 
@@ -40,6 +43,12 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
 
   @override
   Future<FlashcardState> build() async {
+    final authUser = ref.watch(_flashcardAuthUserProvider).valueOrNull ??
+        FirebaseAuth.instance.currentUser;
+    if (authUser == null) {
+      return FlashcardState(decks: const []);
+    }
+
     _api = ref.watch(milingoApiServiceProvider);
     return _loadDecks();
   }
@@ -123,6 +132,39 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
 
     try {
       await _api.deleteDeck(deckId);
+    } catch (e) {
+      state = previousState;
+      rethrow;
+    }
+  }
+
+  Future<void> setDeckFavorite(String deckId, bool isFavorite) async {
+    final previousState = state;
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final optimisticDecks = current.decks.map((d) {
+      return d.id == deckId ? d.copyWith(isFavorite: isFavorite) : d;
+    }).toList();
+    state = AsyncValue.data(current.copyWith(decks: optimisticDecks));
+
+    try {
+      final updated =
+          await _api.setDeckFavorite(deckId, isFavorite: isFavorite);
+      final latest = state.valueOrNull;
+      if (latest == null) return;
+
+      final serverDecks = latest.decks.map((d) {
+        if (d.id != deckId) return d;
+        return d.copyWith(
+          name: updated.name,
+          emoji: updated.emoji.isEmpty ? d.emoji : updated.emoji,
+          vocabCount: updated.vocabCount,
+          isDefault: updated.isDefault,
+          isFavorite: updated.isFavorite,
+        );
+      }).toList();
+      state = AsyncValue.data(latest.copyWith(decks: serverDecks));
     } catch (e) {
       state = previousState;
       rethrow;
@@ -240,6 +282,7 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
         partOfSpeech: created.partOfSpeech,
         langCode: created.targetLangCode,
         imageUrl: created.imageUrl ?? imageUrl,
+        isFavorite: created.isFavorite,
       );
       final finalDecks = state.value!.decks.map((d) {
         if (d.id != deckId) return d;
@@ -295,7 +338,8 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
     // Optimistic remove
     final updatedDecks = state.value!.decks.map((d) {
       if (d.id != deckId) return d;
-      return d.copyWith(cards: d.cards.where((c) => c.id != cardId).toList());
+      final cards = d.cards.where((c) => c.id != cardId).toList();
+      return d.copyWith(cards: cards, vocabCount: cards.length);
     }).toList();
     state = AsyncValue.data(state.value!.copyWith(decks: updatedDecks));
 
@@ -308,6 +352,80 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
   }
 
   // ── Query helpers (kept for UI backward compat) ────────
+
+  Future<void> setCardFavorite(
+    String deckId,
+    String cardId,
+    bool isFavorite,
+  ) async {
+    final previousState = state;
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final optimisticDecks = current.decks.map((d) {
+      if (d.id != deckId) return d;
+      return d.copyWith(
+        cards: d.cards.map((c) {
+          return c.id == cardId ? c.copyWith(isFavorite: isFavorite) : c;
+        }).toList(),
+      );
+    }).toList();
+    state = AsyncValue.data(current.copyWith(decks: optimisticDecks));
+
+    try {
+      final updated = await _api.setCardFavorite(
+        deckId,
+        cardId,
+        isFavorite: isFavorite,
+      );
+      final serverEntry = _cardResponseToEntry(updated);
+      final latest = state.valueOrNull;
+      if (latest == null) return;
+
+      final serverDecks = latest.decks.map((d) {
+        if (d.id != deckId) return d;
+        return d.copyWith(
+          cards: d.cards.map((c) {
+            if (c.id != cardId) return c;
+            return serverEntry.copyWith(
+              imageUrl: serverEntry.imageUrl ?? c.imageUrl,
+              objectImageBase64: c.objectImageBase64,
+            );
+          }).toList(),
+        );
+      }).toList();
+      state = AsyncValue.data(latest.copyWith(decks: serverDecks));
+    } catch (e) {
+      state = previousState;
+      rethrow;
+    }
+  }
+
+  Future<int> deleteCardsEverywhere(String english, String langCode) async {
+    await loadCardsForAllDecks();
+    final current = state.valueOrNull;
+    if (current == null) return 0;
+
+    final normalizedTerm = english.trim().toLowerCase();
+    final normalizedLang = langCode.trim().toLowerCase();
+    final matches = <MapEntry<String, String>>[];
+
+    for (final deck in current.decks) {
+      for (final card in deck.cards) {
+        final sameTerm = card.english.trim().toLowerCase() == normalizedTerm;
+        final sameLang = card.langCode.trim().toLowerCase() == normalizedLang;
+        if (sameTerm && sameLang) {
+          matches.add(MapEntry(deck.id, card.id));
+        }
+      }
+    }
+
+    for (final match in matches) {
+      await deleteCard(match.key, match.value);
+    }
+
+    return matches.length;
+  }
 
   bool isCardSavedAnywhere(String english, String langCode) {
     return state.value?.decks.any((d) => d.cards.any(
@@ -327,6 +445,10 @@ final flashcardProvider =
     AsyncNotifierProvider<FlashcardNotifier, FlashcardState>(
   FlashcardNotifier.new,
 );
+
+final _flashcardAuthUserProvider = StreamProvider<User?>((ref) {
+  return FirebaseAuth.instance.authStateChanges();
+});
 
 // Convenience sync accessor — returns empty state while loading.
 // Existing widgets that call `ref.watch(flashcardProvider)` need

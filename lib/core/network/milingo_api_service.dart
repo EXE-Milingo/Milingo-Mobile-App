@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:milingo/core/constants/app_constants.dart';
@@ -103,7 +104,7 @@ class MilingoApiService {
         responseHeader: false,
         responseBody: false,
         error: true,
-        logPrint: (o) => print('[Milingo API] $o'),
+        logPrint: (o) => debugPrint('[Milingo API] $o'),
       ),
     );
 
@@ -362,6 +363,24 @@ class MilingoApiService {
     }
   }
 
+  Future<DeckResponse> setDeckFavorite(
+    String deckId, {
+    required bool isFavorite,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/decks/$deckId/favorite',
+        data: {'isFavorite': isFavorite},
+      );
+      return _unwrap(
+        response,
+        (data) => DeckResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   // ═══════════════════════════════════════════════════════
   // Cards
   // ═══════════════════════════════════════════════════════
@@ -384,10 +403,10 @@ class MilingoApiService {
     String deckId, {
     required String term,
     required String translation,
-    String pronunciation = '',
-    String partOfSpeech = '',
     required String sourceLangCode,
     required String targetLangCode,
+    String pronunciation = '',
+    String partOfSpeech = '',
     String? sourceVocabId,
     String? imageUrl,
   }) async {
@@ -417,6 +436,25 @@ class MilingoApiService {
   Future<void> deleteCard(String deckId, String cardId) async {
     try {
       await _dio.delete('/api/v1/decks/$deckId/cards/$cardId');
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<CardResponse> setCardFavorite(
+    String deckId,
+    String cardId, {
+    required bool isFavorite,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '/api/v1/decks/$deckId/cards/$cardId/favorite',
+        data: {'isFavorite': isFavorite},
+      );
+      return _unwrap(
+        response,
+        (data) => CardResponse.fromJson(data as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
       throw MilingoApiException(_userFriendlyError(e));
     }

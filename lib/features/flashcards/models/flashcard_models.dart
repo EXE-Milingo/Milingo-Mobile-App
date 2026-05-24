@@ -12,6 +12,7 @@ class FlashcardEntry {
     this.langCode = 'en',
     this.imageUrl,
     this.objectImageBase64,
+    this.isFavorite = false,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class FlashcardEntry {
   final String langCode;
   final String? imageUrl;
   final String? objectImageBase64;
+  final bool isFavorite;
 
   FlashcardEntry copyWith({
     String? id,
@@ -32,6 +34,7 @@ class FlashcardEntry {
     String? langCode,
     String? imageUrl,
     String? objectImageBase64,
+    bool? isFavorite,
   }) {
     return FlashcardEntry(
       id: id ?? this.id,
@@ -42,6 +45,7 @@ class FlashcardEntry {
       langCode: langCode ?? this.langCode,
       imageUrl: imageUrl ?? this.imageUrl,
       objectImageBase64: objectImageBase64 ?? this.objectImageBase64,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 }
@@ -54,6 +58,7 @@ class DeckData {
     List<FlashcardEntry>? cards,
     this.vocabCount = 0,
     this.isDefault = false,
+    this.isFavorite = false,
   }) : cards = List.unmodifiable(cards ?? const []);
 
   final String id;
@@ -64,6 +69,7 @@ class DeckData {
 
   /// True for decks that the backend marks as default (cannot be deleted).
   final bool isDefault;
+  final bool isFavorite;
 
   int get total => cards.isEmpty ? vocabCount : cards.length;
 
@@ -73,6 +79,7 @@ class DeckData {
     List<FlashcardEntry>? cards,
     int? vocabCount,
     bool? isDefault,
+    bool? isFavorite,
   }) =>
       DeckData(
         id: id,
@@ -81,6 +88,7 @@ class DeckData {
         cards: cards ?? List<FlashcardEntry>.from(this.cards),
         vocabCount: vocabCount ?? this.vocabCount,
         isDefault: isDefault ?? this.isDefault,
+        isFavorite: isFavorite ?? this.isFavorite,
       );
 }
 

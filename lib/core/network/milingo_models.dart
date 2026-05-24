@@ -13,6 +13,7 @@ class DeckResponse {
     required this.description,
     required this.vocabCount,
     required this.isDefault,
+    required this.isFavorite,
     required this.createdAt,
   });
 
@@ -24,6 +25,7 @@ class DeckResponse {
       description: (json['description'] ?? '').toString(),
       vocabCount: (json['vocab_count'] as num?)?.toInt() ?? 0,
       isDefault: json['is_default'] as bool? ?? false,
+      isFavorite: json['is_favorite'] as bool? ?? false,
       createdAt: (json['created_at'] ?? '').toString(),
     );
   }
@@ -34,6 +36,7 @@ class DeckResponse {
   final String description;
   final int vocabCount;
   final bool isDefault;
+  final bool isFavorite;
   final String createdAt;
 }
 
@@ -49,6 +52,7 @@ class CardResponse {
     required this.sourceLangCode,
     required this.targetLangCode,
     required this.createdAt,
+    required this.isFavorite,
     this.sourceVocabId,
     this.imageUrl,
   });
@@ -63,6 +67,7 @@ class CardResponse {
       sourceLangCode: (json['source_lang_code'] ?? 'en').toString(),
       targetLangCode: (json['target_lang_code'] ?? 'en').toString(),
       createdAt: (json['created_at'] ?? '').toString(),
+      isFavorite: json['is_favorite'] as bool? ?? false,
       sourceVocabId: json['source_vocab_id'] as String?,
       imageUrl: json['image_url'] as String?,
     );
@@ -76,6 +81,7 @@ class CardResponse {
   final String sourceLangCode;
   final String targetLangCode;
   final String createdAt;
+  final bool isFavorite;
   final String? sourceVocabId;
   final String? imageUrl;
 
@@ -89,6 +95,7 @@ class CardResponse {
       sourceLangCode: sourceLangCode,
       targetLangCode: targetLangCode,
       createdAt: createdAt,
+      isFavorite: isFavorite,
       sourceVocabId: sourceVocabId,
       imageUrl: value,
     );

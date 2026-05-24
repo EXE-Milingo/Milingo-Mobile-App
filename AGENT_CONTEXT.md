@@ -2,7 +2,7 @@
 
 Read this file before making code changes. Update it whenever project structure, navigation, backend contracts, state models, or coding conventions change.
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 ## Project Summary
 
@@ -321,6 +321,23 @@ The previous top-right dropdown plus button was removed from active tab screens.
 - Deck rows still navigate to `AppConstants.deckRoute` with `DeckArg`.
 - The "New set" card opens a small bottom sheet and creates decks through `flashcardProvider.addDeck(...)`.
 
+### Flashcard Favorites And Delete Actions
+
+Flashcard library now supports backend-backed favorites and card removal:
+
+- `DeckResponse`, `CardResponse`, `DeckData`, and `FlashcardEntry` carry
+  `isFavorite`.
+- `MilingoApiService` has `setDeckFavorite(...)` and `setCardFavorite(...)`.
+- `flashcardProvider` exposes optimistic `setDeckFavorite`,
+  `setCardFavorite`, and `deleteCardsEverywhere`.
+- `flashcards_screen.dart` shows favorite toggles for decks and vocabulary rows;
+  the "Từ vựng yêu thích" tab filters real favorite vocabulary.
+- `deck_screen.dart` supports favorite deck, favorite word, and delete word from
+  the current deck.
+- `vocab_detail_screen.dart` was redesigned so the saved vocabulary image is the
+  main hero visual. It also supports favorite word, favorite deck, delete from
+  current deck, and delete matching word from the whole vocabulary library.
+
 ## Navigation Rules
 
 Routes live in `AppConstants` and are wired in `app_router.dart`.
@@ -397,9 +414,11 @@ Important current API methods used by the app:
 - `createDeck(...)`
 - `updateDeck(...)`
 - `deleteDeck(...)`
+- `setDeckFavorite(...)`
 - `getCards(deckId)`
 - `addCard(...)`
 - `deleteCard(...)`
+- `setCardFavorite(...)`
 - `getUserStats()`
 - `recordFlashcardStudy()`
 
@@ -450,7 +469,13 @@ Follow:
 Current:
 
 - `flashcardProvider` loads decks from backend.
+- `flashcardProvider` watches `FirebaseAuth.authStateChanges()` and returns an
+  empty state when logged out, so deck/card cache is rebuilt per account and
+  does not leak between users after logout/login in the same app session.
 - Supports optimistic add/update/delete for decks and cards.
+- Supports optimistic favorite toggles for decks and cards.
+- Supports deleting a word from the current deck and deleting matching words
+  from the all-vocabulary library view.
 - Saved Snap cards can carry `imageUrl`; when a Snap result has only
   `objectImageBase64`, `FlashcardNotifier.addCardToDeck` uploads a resized,
   lower-quality JPEG to Firebase Storage through `StorageService` before
@@ -458,7 +483,8 @@ Current:
 - `flashcards_screen.dart` is a library-style landing page with horizontal top tabs: "Tất cả bộ", "Tất cả từ vựng", "Từ vựng yêu thích", "Từ đã học", and "Từ chưa học".
 - The default "Tất cả bộ" tab is backed by the deck API and shows horizontal deck rows without category photos.
 - Deck rows navigate to `DeckScreen`, which loads cards for the selected deck and shows horizontal vocabulary rows.
-- Vocabulary rows navigate to `VocabDetailScreen`, which displays the saved vocabulary detail.
+- Vocabulary rows navigate to `VocabDetailScreen`, which displays the saved
+  vocabulary detail with a large image-first layout.
 - `DeckData` keeps backend `vocabCount` so deck rows can show counts before cards are loaded.
 
 Known risk:

@@ -41,6 +41,7 @@ const _kLanguages = [
 ];
 
 const _kTtsLocales = {
+  'vi': 'vi-VN',
   'en': 'en-US',
   'ja': 'ja-JP',
   'ko': 'ko-KR',
@@ -138,8 +139,25 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   }
 
   Future<void> _speak(String text, String langCode) async {
+    final spokenText = text.trim();
+    if (spokenText.isEmpty) return;
     await _tts.setLanguage(_kTtsLocales[langCode] ?? 'en-US');
-    await _tts.speak(text);
+    await _tts.stop();
+    await _tts.speak(spokenText);
+  }
+
+  Future<void> _speakResultTerm(MilingoResult result, String langCode) {
+    return _speak(_speechTextForResult(result), langCode);
+  }
+
+  String _speechTextForResult(MilingoResult result) {
+    final keyword = result.keyword.trim();
+    return keyword.isNotEmpty ? keyword : result.translation.trim();
+  }
+
+  String _speechTextForRelatedWord(RelatedWord word) {
+    final keyword = word.english.trim();
+    return keyword.isNotEmpty ? keyword : word.translation.trim();
   }
 
   void _showSaveToFlashcard(BuildContext context, FlashcardEntry entry) {
@@ -454,17 +472,19 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   children: [
                     _MiniActionButton(
                       icon: Icons.bookmark_add_outlined,
-                      onTap: () => _saveResultToFlashcard(result, langCode),
+                      onTap: () {
+                        _saveResultToFlashcard(result, langCode);
+                      },
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            result.keyword,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          _AdaptiveResultText(
+                            text: result.keyword,
+                            maxLines: 3,
+                            minFontSize: 18,
                             style: const TextStyle(
                               color: Color(0xFF2A2928),
                               fontSize: 31,
@@ -473,12 +493,12 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            result.pronunciation.isEmpty
+                          _AdaptiveResultText(
+                            text: result.pronunciation.isEmpty
                                 ? ''
                                 : '/${result.pronunciation}/',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                            minFontSize: 10,
                             style: const TextStyle(
                               color: Color(0xFF77716B),
                               fontSize: 15,
@@ -519,18 +539,18 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   children: [
                     _MiniActionButton(
                       icon: Icons.volume_up_rounded,
-                      onTap: () => _speak(result.translation, langCode),
+                      onTap: () => _speakResultTerm(result, langCode),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            result.translation,
+                          _AdaptiveResultText(
+                            text: result.translation,
                             textAlign: TextAlign.right,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: 3,
+                            minFontSize: 17,
                             style: const TextStyle(
                               color: Color(0xFF292725),
                               fontSize: 28,
@@ -539,11 +559,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            result.pronunciation.toUpperCase(),
+                          _AdaptiveResultText(
+                            text: result.pronunciation.toUpperCase(),
                             textAlign: TextAlign.right,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                            minFontSize: 8,
                             style: const TextStyle(
                               color: Color(0xFF9B938B),
                               fontSize: 10,
@@ -599,7 +619,16 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     ];
   }
 
-  void _saveResultToFlashcard(MilingoResult result, String langCode) {
+  Future<void> _saveResultToFlashcard(
+    MilingoResult result,
+    String langCode,
+  ) async {
+    final snap = ref.read(snapControllerProvider);
+    final objectImageBase64 =
+        await _buildSoftObjectImageBase64(snap: snap, result: result) ??
+            result.objectImageBase64;
+    if (!mounted) return;
+
     _showSaveToFlashcard(
       context,
       FlashcardEntry(
@@ -610,9 +639,216 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         partOfSpeech: result.partOfSpeech,
         langCode: langCode,
         imageUrl: result.objectImageUrl,
-        objectImageBase64: result.objectImageBase64,
+        objectImageBase64: objectImageBase64,
       ),
     );
+  }
+
+  Future<String?> _buildSoftObjectImageBase64({
+    required SnapState snap,
+    required MilingoResult result,
+  }) async {
+    final capturedImage = snap.capturedImage;
+    final boundingBox =
+        result.boundingBox ?? snap.currentDetectedObject?.boundingBox;
+    final segmentation =
+        result.segmentation ?? snap.currentDetectedObject?.segmentation;
+
+    if (capturedImage == null || boundingBox == null || !boundingBox.isValid) {
+      return null;
+    }
+
+    try {
+      return await _renderSoftObjectStickerBase64(
+        imageFile: capturedImage,
+        boundingBox: boundingBox,
+        segmentation: segmentation,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _renderSoftObjectStickerBase64({
+    required File imageFile,
+    required ObjectBoundingBox boundingBox,
+    required ObjectSegmentation? segmentation,
+  }) async {
+    final bytes = await imageFile.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    try {
+      const outputSide = 768.0;
+      final imageRect = Rect.fromLTWH(
+        0,
+        0,
+        image.width.toDouble(),
+        image.height.toDouble(),
+      );
+      final sourceBounds = _objectSourceBounds(
+        boundingBox: boundingBox,
+        segmentation: segmentation,
+      ).intersect(imageRect);
+      if (sourceBounds.isEmpty) return null;
+
+      final padding = math.max(sourceBounds.width, sourceBounds.height) * 0.22;
+      final cropRect = Rect.fromLTRB(
+        (sourceBounds.left - padding).clamp(0.0, imageRect.right),
+        (sourceBounds.top - padding).clamp(0.0, imageRect.bottom),
+        (sourceBounds.right + padding).clamp(0.0, imageRect.right),
+        (sourceBounds.bottom + padding).clamp(0.0, imageRect.bottom),
+      );
+      if (cropRect.isEmpty) return null;
+
+      const available = outputSide * 0.72;
+      final scale =
+          math.min(available / cropRect.width, available / cropRect.height);
+      final drawSize = Size(cropRect.width * scale, cropRect.height * scale);
+      final drawRect = Rect.fromCenter(
+        center: const Offset(outputSide / 2, outputSide / 2),
+        width: drawSize.width,
+        height: drawSize.height,
+      );
+
+      Offset mapPoint(ObjectSegmentationPoint point) {
+        return Offset(
+          drawRect.left + (point.x - cropRect.left) * scale,
+          drawRect.top + (point.y - cropRect.top) * scale,
+        );
+      }
+
+      final path = _objectStickerPath(drawRect, segmentation, mapPoint);
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(
+        recorder,
+        const Rect.fromLTWH(0, 0, outputSide, outputSide),
+      );
+
+      canvas.drawRect(
+        const Rect.fromLTWH(0, 0, outputSide, outputSide),
+        Paint()..color = const Color(0xFFFFF9F5),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(28, 28, outputSide - 56, outputSide - 56),
+          const Radius.circular(64),
+        ),
+        Paint()..color = const Color(0xFFFFF1EA),
+      );
+
+      final shadowPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 34
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..color = Colors.black.withValues(alpha: 0.10)
+        ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 16);
+      final softBorderPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 44
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..color = Colors.white.withValues(alpha: 0.86)
+        ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 13);
+      final stickerPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 28
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..color = Colors.white.withValues(alpha: 0.98);
+      final edgePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 8
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..color = Colors.white;
+      final imagePaint = Paint()
+        ..filterQuality = FilterQuality.high
+        ..isAntiAlias = true;
+
+      canvas.save();
+      canvas.translate(0, 14);
+      canvas.drawPath(path, shadowPaint);
+      canvas.restore();
+      canvas.drawPath(path, softBorderPaint);
+      canvas.drawPath(path, stickerPaint);
+      canvas.save();
+      canvas.clipPath(path, doAntiAlias: true);
+      canvas.drawImageRect(image, cropRect, drawRect, imagePaint);
+      canvas.restore();
+      canvas.drawPath(path, edgePaint);
+
+      final picture = recorder.endRecording();
+      final outputImage = await picture.toImage(
+        outputSide.toInt(),
+        outputSide.toInt(),
+      );
+      final byteData = await outputImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      picture.dispose();
+      outputImage.dispose();
+      if (byteData == null) return null;
+      return base64Encode(byteData.buffer.asUint8List());
+    } finally {
+      image.dispose();
+    }
+  }
+
+  Rect _objectSourceBounds({
+    required ObjectBoundingBox boundingBox,
+    required ObjectSegmentation? segmentation,
+  }) {
+    final contour = segmentation;
+    if (contour != null && contour.isValid) {
+      var left = contour.points.first.x;
+      var top = contour.points.first.y;
+      var right = contour.points.first.x;
+      var bottom = contour.points.first.y;
+
+      for (final point in contour.points.skip(1)) {
+        left = math.min(left, point.x);
+        top = math.min(top, point.y);
+        right = math.max(right, point.x);
+        bottom = math.max(bottom, point.y);
+      }
+
+      return Rect.fromLTRB(left, top, right, bottom);
+    }
+
+    return Rect.fromLTWH(
+      boundingBox.x,
+      boundingBox.y,
+      boundingBox.width,
+      boundingBox.height,
+    );
+  }
+
+  Path _objectStickerPath(
+    Rect drawRect,
+    ObjectSegmentation? segmentation,
+    Offset Function(ObjectSegmentationPoint point) mapPoint,
+  ) {
+    final contour = segmentation;
+    if (contour != null && contour.isValid) {
+      final path = Path();
+      path.moveTo(
+        mapPoint(contour.points.first).dx,
+        mapPoint(contour.points.first).dy,
+      );
+      for (final point in contour.points.skip(1)) {
+        path.lineTo(mapPoint(point).dx, mapPoint(point).dy);
+      }
+      path.close();
+      return path;
+    }
+
+    return Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(drawRect, const Radius.circular(42)),
+      );
   }
 
   List<String> _examplesForResult(MilingoResult result) {
@@ -683,6 +919,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 
   void _showExampleSentence(MilingoResult result) {
     final examples = _examplesForResult(result);
+    final langCode = ref.read(snapControllerProvider).selectedLanguage;
 
     showModalBottomSheet(
       context: context,
@@ -754,7 +991,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   const SizedBox(width: 10),
                   _MiniActionButton(
                     icon: Icons.volume_up_rounded,
-                    onTap: () => _speak(example, 'vi'),
+                    onTap: () => _speak(example, index == 0 ? langCode : 'vi'),
                   ),
                 ],
               ),
@@ -1082,7 +1319,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             english: word.english,
             translation: word.translation,
             pronunciation: word.pronunciation,
-            onSpeak: () => _speak(word.translation, langCode),
+            onSpeak: () => _speak(_speechTextForRelatedWord(word), langCode),
             onSave: () => _showSaveToFlashcard(
               context,
               FlashcardEntry(
@@ -1209,43 +1446,44 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                         const SizedBox(width: 8),
                         _SmallIconBtn(
                           icon: Icons.volume_up_rounded,
-                          onTap: () => _speak(r.translation, langCode),
+                          onTap: () => _speakResultTerm(r, langCode),
                         ),
                         const SizedBox(width: 8),
                         _SmallIconBtn(
                           icon: Icons.bookmark_add_rounded,
-                          onTap: () => _showSaveToFlashcard(
-                            context,
-                            FlashcardEntry(
-                              id: '${r.keyword}_$langCode',
-                              english: r.keyword,
-                              translation: r.translation,
-                              pronunciation: r.pronunciation,
-                              partOfSpeech: r.partOfSpeech,
-                              langCode: langCode,
-                              imageUrl: r.objectImageUrl,
-                              objectImageBase64: r.objectImageBase64,
-                            ),
-                          ),
+                          onTap: () {
+                            _saveResultToFlashcard(r, langCode);
+                          },
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
 
                     // Keyword (English)
-                    Text(r.keyword,
-                        style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF222222))),
+                    _AdaptiveResultText(
+                      text: r.keyword,
+                      maxLines: 3,
+                      minFontSize: 16,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF222222),
+                        height: 1.08,
+                      ),
+                    ),
                     const SizedBox(height: 2),
 
                     // Pronunciation
-                    Text('/${r.pronunciation}/',
-                        style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.grey[500],
-                            fontStyle: FontStyle.italic)),
+                    _AdaptiveResultText(
+                      text: '/${r.pronunciation}/',
+                      maxLines: 2,
+                      minFontSize: 10,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey[500],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                     const SizedBox(height: 6),
 
                     // Part of speech
@@ -1275,10 +1513,12 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   children: [
                     const SizedBox(height: 24),
                     GestureDetector(
-                      onTap: () => _speak(r.translation, langCode),
-                      child: Text(
-                        r.translation,
+                      onTap: () => _speakResultTerm(r, langCode),
+                      child: _AdaptiveResultText(
+                        text: r.translation,
                         textAlign: TextAlign.right,
+                        maxLines: 3,
+                        minFontSize: 17,
                         style: const TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w800,
@@ -1288,9 +1528,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      r.pronunciation.toUpperCase(),
+                    _AdaptiveResultText(
+                      text: r.pronunciation.toUpperCase(),
                       textAlign: TextAlign.right,
+                      maxLines: 2,
+                      minFontSize: 8,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -1511,6 +1753,108 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 // ═══════════════════════════════════════════════════════════════════════
 // REUSABLE WIDGETS
 // ═══════════════════════════════════════════════════════════════════════
+
+class _AdaptiveResultText extends StatelessWidget {
+  const _AdaptiveResultText({
+    required this.text,
+    required this.style,
+    this.textAlign = TextAlign.start,
+    this.maxLines = 2,
+    this.minFontSize = 12,
+  });
+
+  final String text;
+  final TextStyle style;
+  final TextAlign textAlign;
+  final int maxLines;
+  final double minFontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayText = _insertSoftBreaks(text);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth =
+            constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                ? constraints.maxWidth
+                : MediaQuery.sizeOf(context).width;
+        final baseFontSize = style.fontSize ??
+            DefaultTextStyle.of(context).style.fontSize ??
+            14.0;
+        final direction = Directionality.of(context);
+
+        bool fits(double fontSize, int? lineLimit) {
+          final painter = TextPainter(
+            text: TextSpan(
+              text: displayText,
+              style: style.copyWith(fontSize: fontSize),
+            ),
+            textAlign: textAlign,
+            textDirection: direction,
+            maxLines: lineLimit,
+          )..layout(maxWidth: maxWidth);
+          return !painter.didExceedMaxLines && painter.width <= maxWidth + 0.1;
+        }
+
+        var fontSize = baseFontSize;
+        int? lineLimit = maxLines;
+
+        if (!fits(fontSize, lineLimit)) {
+          var low = math.min(minFontSize, baseFontSize);
+          var high = baseFontSize;
+
+          for (var i = 0; i < 8; i++) {
+            final mid = (low + high) / 2;
+            if (fits(mid, lineLimit)) {
+              low = mid;
+            } else {
+              high = mid;
+            }
+          }
+
+          fontSize = low;
+          if (!fits(fontSize, lineLimit)) {
+            lineLimit = null;
+          }
+        }
+
+        return Text(
+          displayText,
+          textAlign: textAlign,
+          softWrap: true,
+          maxLines: lineLimit,
+          overflow: TextOverflow.visible,
+          style: style.copyWith(fontSize: fontSize),
+        );
+      },
+    );
+  }
+
+  static String _insertSoftBreaks(String value) {
+    final softBreak = String.fromCharCode(0x200B);
+
+    return value.splitMapJoin(
+      RegExp(r'\S+'),
+      onMatch: (match) {
+        final token = match.group(0)!;
+        if (token.runes.length < 14) return token;
+
+        final buffer = StringBuffer();
+        var count = 0;
+        for (final rune in token.runes) {
+          if (count > 0 && count % 8 == 0) {
+            buffer.write(softBreak);
+          }
+          buffer.writeCharCode(rune);
+          count++;
+        }
+        return buffer.toString();
+      },
+      onNonMatch: (part) => part,
+    );
+  }
+}
 
 class _SoftCircleButton extends StatelessWidget {
   const _SoftCircleButton({

@@ -15,6 +15,7 @@ const _kDark = Color(0xFF1A1A1A);
 const _kMuted = Color(0xFF8F8F8F);
 const _kBorder = Color(0xFFE8E2DE);
 const _kSoft = Color(0xFFFFEDE7);
+const _kStar = Color(0xFFFFC84B);
 
 class DeckScreen extends ConsumerStatefulWidget {
   const DeckScreen({required this.deck, super.key});
@@ -47,6 +48,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(flashcardProvider);
+    final liveDeck = asyncState.valueOrNull == null
+        ? null
+        : _findDeck(asyncState.valueOrNull!);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -56,7 +60,13 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _DeckHeader(deck: widget.deck),
+              _DeckHeader(
+                deck: widget.deck,
+                liveDeck: liveDeck,
+                onFavorite: liveDeck == null
+                    ? null
+                    : () => _toggleDeckFavorite(liveDeck),
+              ),
               _SearchBox(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _query = value),
@@ -84,11 +94,19 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                         final entry = entries[index];
                         return _VocabRow(
                           entry: entry,
+                          onFavorite: () => _toggleCardFavorite(
+                            widget.deck.id,
+                            entry,
+                          ),
+                          onDelete: () => _confirmDeleteCard(
+                            widget.deck.id,
+                            entry,
+                          ),
                           onTap: () => context.push(
                             AppConstants.vocabDetailRoute,
                             extra: VocabDetailArg(
                               deckId: widget.deck.id,
-                              deckName: widget.deck.name,
+                              deckName: deck?.name ?? widget.deck.name,
                               entry: entry,
                             ),
                           ),
@@ -120,23 +138,105 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           entry.pronunciation.toLowerCase().contains(trimmed);
     }).toList();
   }
+
+  Future<void> _toggleDeckFavorite(DeckData deck) async {
+    try {
+      await ref
+          .read(flashcardProvider.notifier)
+          .setDeckFavorite(deck.id, !deck.isFavorite);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không cập nhật được yêu thích: $error')),
+      );
+    }
+  }
+
+  Future<void> _toggleCardFavorite(
+    String deckId,
+    FlashcardEntry entry,
+  ) async {
+    try {
+      await ref
+          .read(flashcardProvider.notifier)
+          .setCardFavorite(deckId, entry.id, !entry.isFavorite);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không cập nhật được yêu thích: $error')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteCard(
+    String deckId,
+    FlashcardEntry entry,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa từ khỏi deck?'),
+        content: Text('Xóa "${entry.english}" khỏi deck này.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: _kAccent),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(flashcardProvider.notifier).deleteCard(deckId, entry.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xóa từ khỏi deck.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không xóa được từ: $error')),
+      );
+    }
+  }
 }
 
 class _DeckHeader extends StatelessWidget {
-  const _DeckHeader({required this.deck});
+  const _DeckHeader({
+    required this.deck,
+    required this.liveDeck,
+    required this.onFavorite,
+  });
 
   final DeckArg deck;
+  final DeckData? liveDeck;
+  final VoidCallback? onFavorite;
 
   @override
   Widget build(BuildContext context) {
+    final name = liveDeck?.name ?? deck.name;
+    final emoji = liveDeck?.emoji ?? deck.emoji;
+    final count = liveDeck?.total ?? deck.total;
+    final isFavorite = liveDeck?.isFavorite ?? false;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 12, 18, 10),
+      padding: const EdgeInsets.fromLTRB(8, 12, 12, 10),
       child: Row(
         children: [
           IconButton(
             tooltip: 'Quay lại',
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 20, color: _kDark),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 20,
+              color: _kDark,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 4),
@@ -149,7 +249,7 @@ class _DeckHeader extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: Text(
-              deck.emoji.isEmpty ? '📚' : deck.emoji,
+              emoji.isEmpty ? '📚' : emoji,
               style: const TextStyle(fontSize: 22),
             ),
           ),
@@ -159,7 +259,7 @@ class _DeckHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  deck.name,
+                  name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -170,7 +270,7 @@ class _DeckHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${deck.total} thuật ngữ',
+                  '$count thuật ngữ',
                   style: const TextStyle(
                     color: _kMuted,
                     fontSize: 13,
@@ -178,6 +278,15 @@ class _DeckHeader extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          IconButton(
+            tooltip: isFavorite ? 'Bỏ yêu thích' : 'Yêu thích deck',
+            onPressed: onFavorite,
+            icon: Icon(
+              isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+              color: isFavorite ? _kStar : _kMuted,
+              size: 28,
             ),
           ),
         ],
@@ -203,12 +312,18 @@ class _SearchBox extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         style: const TextStyle(
-            color: _kDark, fontSize: 15, fontWeight: FontWeight.w600),
+          color: _kDark,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
         decoration: InputDecoration(
           hintText: 'Tìm kiếm từ trong bộ...',
           hintStyle: const TextStyle(color: Color(0xFFB8B3B0), fontSize: 15),
-          prefixIcon: const Icon(Icons.search_rounded,
-              color: Color(0xFFB8B3B0), size: 24),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFFB8B3B0),
+            size: 24,
+          ),
           filled: true,
           fillColor: _kSurface,
           contentPadding:
@@ -235,10 +350,14 @@ class _VocabRow extends StatelessWidget {
   const _VocabRow({
     required this.entry,
     required this.onTap,
+    required this.onFavorite,
+    required this.onDelete,
   });
 
   final FlashcardEntry entry;
   final VoidCallback onTap;
+  final VoidCallback onFavorite;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +369,7 @@ class _VocabRow extends StatelessWidget {
         onTap: onTap,
         child: Container(
           constraints: const BoxConstraints(minHeight: 82),
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: _kBorder),
@@ -265,16 +384,19 @@ class _VocabRow extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 54,
-                height: 54,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: _kSoft,
                   borderRadius: BorderRadius.circular(13),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: entry.imageUrl == null || entry.imageUrl!.isEmpty
-                    ? Icon(_iconForPartOfSpeech(entry.partOfSpeech),
-                        color: _kAccent, size: 26)
+                    ? Icon(
+                        _iconForPartOfSpeech(entry.partOfSpeech),
+                        color: _kAccent,
+                        size: 26,
+                      )
                     : Image.network(
                         entry.imageUrl!,
                         fit: BoxFit.cover,
@@ -315,9 +437,33 @@ class _VocabRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFFC4BFBC), size: 26),
+              IconButton(
+                tooltip: entry.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích từ',
+                visualDensity: VisualDensity.compact,
+                onPressed: onFavorite,
+                icon: Icon(
+                  entry.isFavorite
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: entry.isFavorite ? _kStar : _kMuted,
+                  size: 23,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Xóa khỏi deck',
+                visualDensity: VisualDensity.compact,
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: _kMuted,
+                  size: 22,
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFC4BFBC),
+                size: 24,
+              ),
             ],
           ),
         ),
