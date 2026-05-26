@@ -11,10 +11,9 @@ class AppConstants {
   static String get openaiApiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
 
   // Milingo Backend API
-//   static const String milingoBaseUrl = 'http://10.0.2.2:5098'; //Emulator
-    static const String milingoBaseUrl = 'https://api.milingo.vn';
+  static const String milingoBaseUrl = 'http://10.0.2.2:5098'; //Emulator
+//   static const String milingoBaseUrl = 'https://api.milingo.vn';
 // static const String milingoBaseUrl = 'http://192.168.2.9:5098'; // IP máy tính của bạn -- test trên đt
-
 
   // PayOS Configuration
   static const String payOSBaseUrl = 'https://api-merchant.payos.vn';
@@ -48,6 +47,7 @@ class AppConstants {
   static const String splashRoute = '/';
   static const String authRoute = '/auth';
   static const String registerRoute = '/register';
+  static const String forgotPasswordRoute = '/forgot-password';
   static const String chooseLanguageRoute = '/choose-language';
   static const String homeRoute = '/home';
   static const String snapAndLearnRoute = '/snap-and-learn';
