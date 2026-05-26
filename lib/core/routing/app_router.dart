@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/auth/screens/choose_language_screen.dart';
+import 'package:milingo/features/auth/screens/forgot_password_screen.dart';
 import 'package:milingo/features/auth/screens/login_screen.dart';
 import 'package:milingo/features/auth/screens/register_screen.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
@@ -25,6 +26,7 @@ const _publicRoutes = {
   AppConstants.splashRoute,
   AppConstants.authRoute,
   AppConstants.registerRoute,
+  AppConstants.forgotPasswordRoute,
 };
 
 @riverpod
@@ -47,6 +49,11 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.registerRoute,
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.forgotPasswordRoute,
+        name: 'forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: AppConstants.chooseLanguageRoute,

@@ -125,7 +125,11 @@ class _LoginScreenState extends State<LoginScreen> {
               vertical: isSmall ? 12 : 20,
             ),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom - (isSmall ? 24 : 40)),
+              constraints: BoxConstraints(
+                  minHeight: size.height -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom -
+                      (isSmall ? 24 : 40)),
               child: IntrinsicHeight(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,7 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const _FieldLabel(text: 'Mật khẩu'),
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () =>
+                              context.push(AppConstants.forgotPasswordRoute),
                           child: const Text(
                             'Quên mật khẩu?',
                             style: TextStyle(
@@ -192,7 +197,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Nhập mật khẩu',
                       obscureText: _obscurePassword,
                       suffixIcon: GestureDetector(
-                        onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onTap: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
                         child: Icon(
                           _obscurePassword
                               ? Icons.visibility_outlined
@@ -246,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         GestureDetector(
                           onTap: () => context.push(AppConstants.registerRoute),
-                          child: Text(
+                          child: const Text(
                             'Đăng ký',
                             style: TextStyle(
                               fontSize: 14,
@@ -346,14 +352,16 @@ class _InputField extends StatelessWidget {
         ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         suffixIcon: suffixIcon != null
             ? Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: suffixIcon,
               )
             : null,
-        suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 44, minHeight: 44),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
@@ -364,7 +372,10 @@ class _InputField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.primaryColor, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppTheme.primaryColor,
+            width: 1.5,
+          ),
         ),
       ),
     );
@@ -384,7 +395,7 @@ class _LoginButton extends StatelessWidget {
         onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
-          disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.7),
+          disabledBackgroundColor: AppTheme.primaryColor.withValues(alpha: 0.7),
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -418,13 +429,13 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       children: [
-        const Expanded(
+        Expanded(
           child: Divider(color: Color(0xFFE0D0CA), thickness: 1),
         ),
-        const SizedBox(width: 12),
-        const Text(
+        SizedBox(width: 12),
+        Text(
           'HOẶC TIẾP TỤC VỚI',
           style: TextStyle(
             fontSize: 11,
@@ -433,8 +444,8 @@ class _OrDivider extends StatelessWidget {
             letterSpacing: 0.8,
           ),
         ),
-        const SizedBox(width: 12),
-        const Expanded(
+        SizedBox(width: 12),
+        Expanded(
           child: Divider(color: Color(0xFFE0D0CA), thickness: 1),
         ),
       ],

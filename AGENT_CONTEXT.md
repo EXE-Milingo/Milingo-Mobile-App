@@ -54,6 +54,7 @@ lib/
 |   |   |-- models/user_model.dart
 |   |   |-- providers/auth_provider.dart
 |   |   |-- screens/choose_language_screen.dart
+|   |   |-- screens/forgot_password_screen.dart
 |   |   |-- screens/login_screen.dart
 |   |   |-- screens/register_screen.dart
 |   |   `-- widgets/social_buttons.dart
@@ -439,10 +440,11 @@ Current:
 - Login uses Firebase email/password.
 - Register uses Firebase account creation.
 - Choose Language fetches backend supported languages and calls profile initialization.
+- Forgot password uses Firebase Auth password reset email through
+  `FirebaseAuth.instance.sendPasswordResetEmail(...)`.
 
 Known gaps:
 
-- Forgot password is not implemented.
 - Social login buttons are mostly visual unless individually wired.
 
 ### Snap & Learn
