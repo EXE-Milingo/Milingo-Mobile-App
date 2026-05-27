@@ -8,7 +8,9 @@ import 'package:milingo/core/network/milingo_models.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/widgets/account_settings_view.dart';
+import 'package:milingo/features/profile/widgets/language_goal_view.dart';
 import 'package:milingo/features/profile/widgets/payment_method_view.dart';
+import 'package:milingo/features/profile/widgets/purchase_management_view.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -78,6 +80,8 @@ class _ProfileContent extends ConsumerWidget {
           const SizedBox(height: 25),
           _SettingsCard(
             onAccountTap: () => _openAccountSettings(context, user),
+            onLanguageGoalTap: () => _openLanguageGoals(context),
+            onPurchaseTap: () => _openPurchaseManagement(context, user),
           ),
           const SizedBox(height: 32),
           const _LogoutButton(),
@@ -120,6 +124,135 @@ class _ProfileContent extends ConsumerWidget {
       email: email == null || email.isEmpty ? 'user@example.com' : email,
       firstName: firstName,
       lastName: lastName,
+    );
+  }
+
+  static void _openLanguageGoals(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LanguageGoalView(
+          data: _languageGoalData(),
+        ),
+      ),
+    );
+  }
+
+  static LanguageGoalData _languageGoalData() {
+    return const LanguageGoalData(
+      activeLanguageName: 'Tiếng Anh',
+      activeLanguageFlag: 'assets/images/uk.png',
+      vocabularyCountLabel: '1.2k',
+      languages: [
+        LanguageGoalOption(
+          code: 'fr',
+          label: 'PHÁP',
+          flag: 'assets/images/france.png',
+        ),
+        LanguageGoalOption(
+          code: 'en',
+          label: 'ANH (Đang\nhọc)',
+          flag: 'assets/images/uk.png',
+          selected: true,
+        ),
+        LanguageGoalOption(
+          code: 'jp',
+          label: 'NHẬT',
+          flag: 'assets/images/jp.png',
+        ),
+      ],
+      goals: [
+        WeeklyLanguageGoal(
+          title: 'Học 50 từ mới',
+          progressLabel: '42 / 50 từ',
+          progress: 0.84,
+          icon: Icons.volume_up_rounded,
+          iconBackground: Color(0xFFFFD8CB),
+          iconColor: Color(0xFFF25F36),
+          completed: true,
+        ),
+        WeeklyLanguageGoal(
+          title: 'Hoàn thành 3 AR scans',
+          progressLabel: '1 / 3 scans',
+          progress: 0.33,
+          icon: Icons.center_focus_strong_rounded,
+          iconBackground: Color(0xFFDDF1FF),
+          iconColor: Color(0xFF177BC6),
+        ),
+      ],
+    );
+  }
+
+  static void _openPurchaseManagement(BuildContext context, User? user) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PurchaseManagementView(
+          data: _purchaseManagementData(user),
+        ),
+      ),
+    );
+  }
+
+  static PurchaseManagementData _purchaseManagementData(User? user) {
+    final createdAt = user?.metadata.creationTime;
+    final memberSince = createdAt == null
+        ? 'Tháng 8,\n2023'
+        : 'Tháng ${createdAt.month},\n${createdAt.year}';
+
+    return PurchaseManagementData(
+      plan: const CurrentPurchasePlan(
+        name: 'Gói Premium\nNăm',
+        statusLabel: 'ĐANG HOẠT\nĐỘNG',
+        expiryDate: '15 Tháng 12, 2024',
+        nextPaymentAmount: '1.200.000đ',
+        daysRemainingLabel: 'Còn lại 124 ngày',
+        progress: 0.63,
+      ),
+      benefits: const [
+        PurchaseBenefit(
+          icon: Icons.scanner_rounded,
+          title: 'Lượt quét không giới hạn',
+          description: 'Phân tích vật thể AR liên tục',
+        ),
+        PurchaseBenefit(
+          icon: Icons.workspace_premium_rounded,
+          title: 'Học cùng AI chuyên sâu',
+          description: 'Lộ trình cá nhân hóa 1:1',
+        ),
+        PurchaseBenefit(
+          icon: Icons.block_rounded,
+          title: 'Trải nghiệm không quảng cáo',
+          description: 'Tập trung hoàn toàn vào việc học tập',
+        ),
+      ],
+      memberSince: PurchaseInfoMetric(
+        icon: Icons.verified_user_outlined,
+        label: 'THÀNH VIÊN TỪ',
+        value: memberSince,
+      ),
+      monthlyProgress: const PurchaseProgressMetric(
+        icon: Icons.bolt_rounded,
+        label: 'TIẾN ĐỘ THÁNG',
+        value: '84%',
+        progress: 0.84,
+      ),
+      actions: const [
+        PurchaseAccountAction(
+          icon: Icons.swap_horiz_rounded,
+          title: 'Thay đổi gói cước',
+        ),
+        PurchaseAccountAction(
+          icon: Icons.receipt_long_outlined,
+          title: 'Lịch sử thanh toán',
+        ),
+        PurchaseAccountAction(
+          icon: Icons.payment_rounded,
+          title: 'Phương thức thanh toán',
+          subtitle: 'Google Pay **** 9210',
+        ),
+      ],
+      cancelTitle: 'Hủy đăng ký Milingo Premium',
+      cancelDescription:
+          'Khi hủy, các đặc quyền của bạn vẫn sẽ duy trì cho đến hết kỳ hạn thanh toán hiện tại.',
     );
   }
 }
@@ -442,9 +575,15 @@ class _PremiumBadge extends StatelessWidget {
 }
 
 class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({required this.onAccountTap});
+  const _SettingsCard({
+    required this.onAccountTap,
+    required this.onLanguageGoalTap,
+    required this.onPurchaseTap,
+  });
 
   final VoidCallback onAccountTap;
+  final VoidCallback onLanguageGoalTap;
+  final VoidCallback onPurchaseTap;
 
   @override
   Widget build(BuildContext context) {
@@ -467,17 +606,19 @@ class _SettingsCard extends StatelessWidget {
             label: 'Cài đặt tài khoản',
             onTap: onAccountTap,
           ),
-          const _SettingsItem(
+          _SettingsItem(
             icon: Icons.flag_outlined,
             label: 'Mục tiêu ngôn ngữ',
+            onTap: onLanguageGoalTap,
           ),
           const _SettingsItem(
             icon: Icons.palette_outlined,
             label: 'Giao diện ứng dụng',
           ),
-          const _SettingsItem(
+          _SettingsItem(
             icon: Icons.receipt_long_outlined,
             label: 'Quản lý gói mua',
+            onTap: onPurchaseTap,
           ),
         ],
       ),
