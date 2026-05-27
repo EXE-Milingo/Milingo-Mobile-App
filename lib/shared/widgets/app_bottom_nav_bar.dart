@@ -48,7 +48,7 @@ class AppBottomNavBar extends StatelessWidget {
       ),
       _BottomNavItem(
         label: 'Snap',
-        assetPath: 'assets/svg/camera.svg',
+        assetPath: 'assets/svg/Camera Icon.svg',
         isCenter: true,
       ),
       _BottomNavItem(
@@ -125,6 +125,53 @@ class _BottomNavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppTheme.primaryColor : const Color(0xFF9E9E9E);
+
+    if (item.isCenter) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Center(
+            child: Transform.translate(
+              offset: const Offset(0, -20),
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFC58F),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.28),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFFF7A00),
+                    ),
+                    child: Center(
+                      child: SvgPicture.asset(
+                        item.assetPath!,
+                        width: 32,
+                        height: 32,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Material(
       color: Colors.transparent,
