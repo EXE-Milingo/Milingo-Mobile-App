@@ -44,7 +44,7 @@ class AppBottomNavBar extends StatelessWidget {
       ),
       _BottomNavItem(
         label: 'Vocabulary',
-        assetPath: 'assets/svg/review.svg',
+        assetPath: 'assets/svg/menu_book.svg',
       ),
       _BottomNavItem(
         label: 'Snap',
@@ -134,10 +134,10 @@ class _BottomNavTile extends StatelessWidget {
           customBorder: const CircleBorder(),
           child: Center(
             child: Transform.translate(
-              offset: const Offset(0, -20),
+              offset: const Offset(0, -15),
               child: Container(
-                width: 72,
-                height: 72,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFFFFC58F),
@@ -151,8 +151,8 @@ class _BottomNavTile extends StatelessWidget {
                 ),
                 child: Center(
                   child: Container(
-                    width: 58,
-                    height: 58,
+                    width: 52,
+                    height: 52,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Color(0xFFFF7A00),
@@ -160,8 +160,8 @@ class _BottomNavTile extends StatelessWidget {
                     child: Center(
                       child: SvgPicture.asset(
                         item.assetPath!,
-                        width: 32,
-                        height: 32,
+                        width: 26,
+                        height: 26,
                       ),
                     ),
                   ),
