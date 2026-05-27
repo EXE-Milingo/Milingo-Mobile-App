@@ -7,6 +7,8 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/network/milingo_models.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
+import 'package:milingo/features/profile/widgets/account_settings_view.dart';
+import 'package:milingo/features/profile/widgets/payment_method_view.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -74,7 +76,9 @@ class _ProfileContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 25),
-          const _SettingsCard(),
+          _SettingsCard(
+            onAccountTap: () => _openAccountSettings(context, user),
+          ),
           const SizedBox(height: 32),
           const _LogoutButton(),
         ],
@@ -92,6 +96,31 @@ class _ProfileContent extends ConsumerWidget {
     final createdAt = user?.metadata.creationTime;
     final year = createdAt?.year ?? DateTime.now().year;
     return 'Thành viên từ $year';
+  }
+
+  static void _openAccountSettings(BuildContext context, User? user) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AccountSettingsView(
+          profile: _accountProfileFor(user),
+        ),
+      ),
+    );
+  }
+
+  static AccountSettingsProfile _accountProfileFor(User? user) {
+    final displayName = _displayNameFor(user);
+    final email = user?.email?.trim();
+    final parts = displayName.split(RegExp(r'\s+'));
+    final firstName = parts.isEmpty ? displayName : parts.first;
+    final lastName = parts.length <= 1 ? '' : parts.sublist(1).join(' ');
+
+    return AccountSettingsProfile(
+      displayName: displayName,
+      email: email == null || email.isEmpty ? 'user@example.com' : email,
+      firstName: firstName,
+      lastName: lastName,
+    );
   }
 }
 
@@ -413,7 +442,9 @@ class _PremiumBadge extends StatelessWidget {
 }
 
 class _SettingsCard extends StatelessWidget {
-  const _SettingsCard();
+  const _SettingsCard({required this.onAccountTap});
+
+  final VoidCallback onAccountTap;
 
   @override
   Widget build(BuildContext context) {
@@ -429,21 +460,22 @@ class _SettingsCard extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         children: [
           _SettingsItem(
             icon: Icons.manage_accounts_outlined,
             label: 'Cài đặt tài khoản',
+            onTap: onAccountTap,
           ),
-          _SettingsItem(
+          const _SettingsItem(
             icon: Icons.flag_outlined,
             label: 'Mục tiêu ngôn ngữ',
           ),
-          _SettingsItem(
+          const _SettingsItem(
             icon: Icons.palette_outlined,
             label: 'Giao diện ứng dụng',
           ),
-          _SettingsItem(
+          const _SettingsItem(
             icon: Icons.receipt_long_outlined,
             label: 'Quản lý gói mua',
           ),
@@ -457,17 +489,19 @@ class _SettingsItem extends StatelessWidget {
   const _SettingsItem({
     required this.icon,
     required this.label,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap ?? () {},
         borderRadius: BorderRadius.circular(22),
         child: SizedBox(
           height: 53,
@@ -606,65 +640,129 @@ class _LogoutButtonState extends ConsumerState<_LogoutButton> {
   }
 }
 
-class _UpgradeModal extends StatelessWidget {
+class _UpgradeModal extends StatefulWidget {
   const _UpgradeModal();
 
   @override
+  State<_UpgradeModal> createState() => _UpgradeModalState();
+}
+
+class _UpgradeModalState extends State<_UpgradeModal> {
+  bool _yearly = false;
+  bool _showTerms = false;
+  PaymentPlanSummary? _paymentPlan;
+
+  static const _paymentMethods = [
+    PaymentMethodOption(
+      id: 'apple_pay',
+      title: 'Apple Pay',
+      icon: Icons.phone_iphone_rounded,
+    ),
+    PaymentMethodOption(
+      id: 'card',
+      title: 'Thẻ Visa/Mastercard',
+      subtitle: '**** **** **** 4242',
+      icon: Icons.credit_card_rounded,
+    ),
+    PaymentMethodOption(
+      id: 'momo',
+      title: 'Ví MoMo',
+      icon: Icons.account_balance_wallet_outlined,
+    ),
+    PaymentMethodOption(
+      id: 'bank_qr',
+      title: 'QR Ngân hàng',
+      icon: Icons.qr_code_2_rounded,
+    ),
+  ];
+
+  @override
   Widget build(BuildContext context) {
+    if (_showTerms) {
+      return _TermsOfServiceView(
+        onBack: () => setState(() => _showTerms = false),
+      );
+    }
+
+    final paymentPlan = _paymentPlan;
+    if (paymentPlan != null) {
+      return PaymentMethodView(
+        plan: paymentPlan,
+        methods: _paymentMethods,
+        initialMethodId: 'card',
+        onClose: () => setState(() => _paymentPlan = null),
+        onChangePlan: () => setState(() => _paymentPlan = null),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(22, 12, 22, 30),
+      height: MediaQuery.sizeOf(context).height,
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        color: _ProfileColors.background,
       ),
       child: SafeArea(
-        top: false,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 38,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE7DAD4),
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const _PremiumBadge(),
-            const SizedBox(height: 14),
-            const Text(
-              'Nâng cấp Premium',
-              style: TextStyle(
-                color: _ProfileColors.text,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Mở khóa nhiều lượt quét hơn và tiếp tục học không gián đoạn.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _ProfileColors.mutedText,
-                fontSize: 13,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: _ProfileColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+            _UpgradeTopBar(onClose: () => Navigator.of(context).pop()),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  children: [
+                    const _UpgradeHero(),
+                    const SizedBox(height: 22),
+                    _BillingToggle(
+                      yearly: _yearly,
+                      onChanged: (value) => setState(() => _yearly = value),
+                    ),
+                    const SizedBox(height: 26),
+                    _PlanCard(
+                      title: 'Gói Plus',
+                      price: _yearly ? '79.000đ' : '99.000đ',
+                      suffix: '/tháng',
+                      cta: 'Chọn gói Plus',
+                      onCtaTap: () => setState(
+                        () => _paymentPlan = _buildPaymentPlan(
+                          planName: 'Milingo Plus',
+                          monthlyPrice: _yearly ? 79000 : 99000,
+                        ),
+                      ),
+                      features: const [
+                        'Quét 100 vật thể/ngày',
+                        'AI Tutor cơ bản',
+                        'Không quảng cáo',
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                    _PlanCard(
+                      title: _yearly ? 'Gói Pro ✪' : 'Gói Pro',
+                      price: _yearly ? '111.000đ' : '139.000đ',
+                      suffix: '/tháng',
+                      cta: null,
+                      highlighted: true,
+                      badge: _yearly ? 'PHỔ BIẾN NHẤT' : 'PHỔ BIẾN',
+                      features: const [
+                        'Quét không giới hạn',
+                        'AI Tutor cá nhân hóa 24/7',
+                        'Phân tích phát âm chuyên sâu',
+                        'Chờ đội ngoại tuyến',
+                      ],
+                    ),
+                    const SizedBox(height: 50),
+                    _StartNowButton(
+                      onTap: () => setState(
+                        () => _paymentPlan = _buildPaymentPlan(
+                          planName: 'Milingo Premium',
+                          monthlyPrice: _yearly ? 111000 : 139000,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _UpgradeLinks(
+                      onTermsTap: () => setState(() => _showTerms = true),
+                    ),
+                  ],
                 ),
-                child: const Text('Tiếp tục'),
               ),
             ),
           ],
@@ -672,6 +770,827 @@ class _UpgradeModal extends StatelessWidget {
       ),
     );
   }
+
+  PaymentPlanSummary _buildPaymentPlan({
+    required String planName,
+    required int monthlyPrice,
+  }) {
+    final months = _yearly ? 12 : 1;
+    final total = monthlyPrice * months;
+    final durationLabel = _yearly ? '12 Tháng' : '1 Tháng';
+    final totalLabel = NumberFormat.decimalPattern('en_US').format(total);
+
+    return PaymentPlanSummary(
+      planLabel: '$planName - $durationLabel',
+      totalLabel: '$totalLabel đ',
+      buttonTotalLabel: '$totalLabel đ',
+    );
+  }
+}
+
+class _UpgradeTopBar extends StatelessWidget {
+  const _UpgradeTopBar({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: onClose,
+              icon: const Icon(Icons.close_rounded),
+              color: const Color(0xFF7B5E55),
+              iconSize: 20,
+            ),
+          ),
+          const Text(
+            'Nâng cấp Premium',
+            style: TextStyle(
+              color: _ProfileColors.text,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UpgradeHero extends StatelessWidget {
+  const _UpgradeHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        _UpgradeMedal(),
+        SizedBox(height: 20),
+        Text(
+          'Nâng cấp Premium',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _ProfileColors.text,
+            fontSize: 25,
+            fontWeight: FontWeight.w900,
+            height: 1.1,
+          ),
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Mở khóa toàn bộ tiềm năng học tập\ncùng Milingo AI.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _ProfileColors.text,
+            fontSize: 13,
+            height: 1.55,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UpgradeMedal extends StatelessWidget {
+  const _UpgradeMedal();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEEE9),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: _ProfileColors.primary.withValues(alpha: 0.16),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: const BoxDecoration(
+            color: _ProfileColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.workspace_premium_rounded,
+            color: Colors.white,
+            size: 15,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BillingToggle extends StatelessWidget {
+  const _BillingToggle({
+    required this.yearly,
+    required this.onChanged,
+  });
+
+  final bool yearly;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFDDD4),
+        borderRadius: BorderRadius.circular(27),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: [
+          Expanded(
+            child: _BillingOption(
+              label: 'Hàng\ntháng',
+              selected: !yearly,
+              onTap: () => onChanged(false),
+            ),
+          ),
+          Expanded(
+            child: _BillingOption(
+              label: 'Hàng\nnăm',
+              selected: yearly,
+              onTap: () => onChanged(true),
+            ),
+          ),
+          Container(
+            height: 25,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _ProfileColors.primary,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Text(
+              'TIẾT KIỆM 20%',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _BillingOption extends StatelessWidget {
+  const _BillingOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: double.infinity,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: _ProfileColors.text,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            height: 1.05,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({
+    required this.title,
+    required this.price,
+    required this.suffix,
+    required this.features,
+    this.cta,
+    this.onCtaTap,
+    this.highlighted = false,
+    this.badge,
+  });
+
+  final String title;
+  final String price;
+  final String suffix;
+  final List<String> features;
+  final String? cta;
+  final VoidCallback? onCtaTap;
+  final bool highlighted;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+          decoration: BoxDecoration(
+            color: highlighted ? _ProfileColors.background : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: highlighted
+                ? Border.all(color: _ProfileColors.primary, width: 2)
+                : null,
+            boxShadow: highlighted
+                ? [
+                    BoxShadow(
+                      color: _ProfileColors.primary.withValues(alpha: 0.12),
+                      blurRadius: 22,
+                      offset: const Offset(0, 12),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color:
+                      highlighted ? _ProfileColors.primary : _ProfileColors.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      color: _ProfileColors.text,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 3, bottom: 2),
+                    child: Text(
+                      suffix,
+                      style: const TextStyle(
+                        color: _ProfileColors.text,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              for (final feature in features) ...[
+                _PlanFeature(text: feature),
+                const SizedBox(height: 11),
+              ],
+              if (cta != null) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: onCtaTap,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFD8CF),
+                      foregroundColor: _ProfileColors.text,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    child: Text(cta!),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (badge != null)
+          Positioned(
+            top: -1,
+            right: 0,
+            child: Container(
+              height: 27,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: _ProfileColors.primary,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(5),
+                  topRight: Radius.circular(5),
+                ),
+              ),
+              child: Text(
+                badge!,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PlanFeature extends StatelessWidget {
+  const _PlanFeature({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(
+          Icons.check_circle_rounded,
+          color: _ProfileColors.primary,
+          size: 14,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: _ProfileColors.text,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StartNowButton extends StatelessWidget {
+  const _StartNowButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: _ProfileColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+          ),
+          elevation: 9,
+          shadowColor: _ProfileColors.primary.withValues(alpha: 0.28),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Bắt đầu ngay'),
+            SizedBox(width: 8),
+            Icon(Icons.arrow_forward_rounded, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UpgradeLinks extends StatelessWidget {
+  const _UpgradeLinks({required this.onTermsTap});
+
+  final VoidCallback onTermsTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          'Khôi phục gói mua',
+          style: TextStyle(
+            color: _ProfileColors.primaryDark,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 24),
+        GestureDetector(
+          onTap: onTermsTap,
+          child: const Text(
+            'Điều khoản dịch vụ',
+            style: TextStyle(
+              color: _ProfileColors.primaryDark,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TermsOfServiceView extends StatelessWidget {
+  const _TermsOfServiceView({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.sizeOf(context).height,
+      color: _ProfileColors.background,
+      child: SafeArea(
+        child: Column(
+          children: [
+            _TermsHeader(onBack: onBack),
+            const Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(14, 32, 14, 28),
+                child: _TermsCard(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TermsHeader extends StatelessWidget {
+  const _TermsHeader({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 48,
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFFFC8B8), width: 1),
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: _ProfileColors.primary,
+              iconSize: 22,
+            ),
+          ),
+          const Text(
+            'Điều khoản dịch vụ',
+            style: TextStyle(
+              color: _ProfileColors.primaryDark,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TermsCard extends StatelessWidget {
+  const _TermsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFBFAF), width: 1),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CẬP NHẬT LẦN CUỐI: 30/06/2026',
+            style: TextStyle(
+              color: _ProfileColors.primaryDark,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Chào mừng bạn đến với\nnền tảng của chúng tôi',
+            style: TextStyle(
+              color: _ProfileColors.text,
+              fontSize: 23,
+              fontWeight: FontWeight.w900,
+              height: 1.15,
+            ),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Vui lòng đọc kỹ Điều khoản Dịch vụ này trước khi truy cập hoặc sử dụng dịch vụ của chúng tôi. Bằng cách sử dụng nền tảng của chúng tôi, bạn đồng ý bị ràng buộc bởi các điều khoản này, thiết lập một môi trường công nghệ tiên tiến, đáng tin cậy cho tất cả người dùng.',
+            style: _TermsTextStyles.body,
+          ),
+          SizedBox(height: 22),
+          Divider(color: Color(0xFFFFC8B8), height: 1),
+          SizedBox(height: 26),
+          _TermsSection(
+            icon: Icons.verified_user_outlined,
+            title: '1. Chấp nhận các điều khoản',
+            child: _TermsInsetBox(
+              children: [
+                Text(
+                  'Bằng cách đăng ký và/hoặc sử dụng Dịch vụ theo bất kỳ cách nào, bao gồm nhưng không giới hạn ở việc truy cập hoặc duyệt Trang web, bạn đồng ý với các Điều khoản Dịch vụ này và tất cả các quy tắc, chính sách và thủ tục hoạt động khác mà chúng tôi có thể công bố theo thời gian trên Trang web.',
+                  style: _TermsTextStyles.body,
+                ),
+                SizedBox(height: 14),
+                Text(
+                  'Các Điều khoản Dịch vụ này áp dụng cho tất cả người dùng Dịch vụ, bao gồm cả người dùng đồng thời là người đóng góp nội dung, thông tin và các tài liệu hoặc dịch vụ khác, dù đã đăng ký hay chưa.',
+                  style: _TermsTextStyles.body,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 28),
+          _TermsSection(
+            icon: Icons.note_add_outlined,
+            title: '2. Nội dung người dùng',
+            child: _TermsTimelineText(),
+          ),
+          SizedBox(height: 28),
+          _TermsSection(
+            icon: Icons.gpp_good_outlined,
+            title: '3. Chính sách bảo mật',
+            child: _PrivacyPolicyText(),
+          ),
+          SizedBox(height: 30),
+          _TermsSupportBox(),
+        ],
+      ),
+    );
+  }
+}
+
+class _TermsSection extends StatelessWidget {
+  const _TermsSection({
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, color: _ProfileColors.primary, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: _ProfileColors.text,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                  height: 1.15,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        child,
+      ],
+    );
+  }
+}
+
+class _TermsInsetBox extends StatelessWidget {
+  const _TermsInsetBox({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF6F2),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFFFD2C6), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _TermsTimelineText extends StatelessWidget {
+  const _TermsTimelineText();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 2),
+      padding: const EdgeInsets.only(left: 28),
+      decoration: const BoxDecoration(
+        border: Border(
+          left: BorderSide(color: Color(0xFFFFC8B8), width: 1),
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tất cả nội dung được người dùng thêm vào, tạo ra, tải lên, gửi đi, phân phối hoặc đăng tải lên Dịch vụ, cho dù được đăng công khai hay truyền tải riêng tư, đều thuộc trách nhiệm duy nhất của người đã tạo ra Nội dung Người dùng đó.',
+            style: _TermsTextStyles.body,
+          ),
+          SizedBox(height: 22),
+          Text(
+            'Bạn vẫn giữ quyền sở hữu hoàn toàn đối với tài sản trí tuệ của mình.',
+            style: _TermsTextStyles.body,
+          ),
+          SizedBox(height: 22),
+          Text(
+            'Chúng tôi yêu cầu giấy phép để lưu trữ và hiển thị nội dung của bạn một cách an toàn.',
+            style: _TermsTextStyles.body,
+          ),
+          SizedBox(height: 22),
+          Text(
+            'Nội dung không được vi phạm bất kỳ quy định bảo vệ dữ liệu quốc tế nào.',
+            style: _TermsTextStyles.body,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrivacyPolicyText extends StatelessWidget {
+  const _PrivacyPolicyText();
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      text: const TextSpan(
+        style: _TermsTextStyles.body,
+        children: [
+          TextSpan(
+            text:
+                'Để biết thông tin về cách chúng tôi thu thập, sử dụng và tiết lộ thông tin cá nhân của bạn, vui lòng xem lại ',
+          ),
+          TextSpan(
+            text: 'Chính sách Bảo mật toàn diện',
+            style: TextStyle(
+              color: _ProfileColors.primary,
+              fontWeight: FontWeight.w900,
+              decoration: TextDecoration.underline,
+              decorationColor: _ProfileColors.primary,
+            ),
+          ),
+          TextSpan(
+            text:
+                ' của chúng tôi. Việc bạn sử dụng Dịch vụ cho thấy bạn đồng ý với các hoạt động dữ liệu được nêu trong Chính sách Bảo mật.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TermsSupportBox extends StatelessWidget {
+  const _TermsSupportBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEDE7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Bạn cần hỗ trợ?',
+            style: TextStyle(
+              color: _ProfileColors.text,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Vui lòng liên hệ với đội ngũ pháp lý của chúng tôi để được làm rõ bất kỳ điều khoản nào.',
+            style: TextStyle(
+              color: _ProfileColors.mutedText,
+              fontSize: 12,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 22),
+          Center(
+            child: SizedBox(
+              width: 150,
+              height: 36,
+              child: FilledButton(
+                onPressed: () {},
+                style: FilledButton.styleFrom(
+                  backgroundColor: _ProfileColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                child: const Text('Liên hệ bộ phận hỗ trợ'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TermsTextStyles {
+  static const body = TextStyle(
+    color: Color(0xFF6F5148),
+    fontSize: 15,
+    height: 1.45,
+    fontWeight: FontWeight.w500,
+  );
 }
 
 class _ProfileColors {

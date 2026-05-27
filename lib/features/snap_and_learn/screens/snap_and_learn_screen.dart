@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -434,36 +435,46 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     MilingoResult result,
   ) {
     final langCode = snap.selectedLanguage;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Container(
+      height: 218 + bottomInset,
+      constraints: const BoxConstraints(minHeight: 212),
       padding: EdgeInsets.fromLTRB(
         18,
-        10,
+        12,
         18,
-        MediaQuery.of(context).padding.bottom + 14,
+        bottomInset + 10,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEFDA),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        border: Border.all(color: Colors.white, width: 1.5),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Row(
             children: [
               const Spacer(),
-              _OrangePillButton(
+              _ExampleAssetButton(
                 label: 'Xem câu ví dụ',
                 onTap: () => _showExampleSentence(result),
+                child: SvgPicture.asset(
+                  'assets/svg/Overlay+Border.svg',
+                  width: 131,
+                  height: 24,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 34),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Column(
                 children: [
+                  const SizedBox(height: 34),
                   _MiniActionButton(
                     icon: Icons.bookmark_add_outlined,
                     onTap: () {
@@ -489,10 +500,10 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                           _AdaptiveResultText(
                             text: result.keyword,
                             maxLines: 3,
-                            minFontSize: 18,
+                            minFontSize: 14,
                             style: const TextStyle(
                               color: Color(0xFF2A2928),
-                              fontSize: 31,
+                              fontSize: 25,
                               fontWeight: FontWeight.w900,
                               height: 1.05,
                             ),
@@ -503,10 +514,10 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                                 ? ''
                                 : '/${result.pronunciation}/',
                             maxLines: 2,
-                            minFontSize: 10,
+                            minFontSize: 11,
                             style: const TextStyle(
                               color: Color(0xFF77716B),
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -514,7 +525,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 9,
-                              vertical: 4,
+                              vertical: 5,
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF3EDE7),
@@ -526,7 +537,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                                   : result.partOfSpeech,
                               style: const TextStyle(
                                 color: Color(0xFF7B7168),
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -537,7 +548,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                   ],
                 ),
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 14),
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,10 +561,10 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                             text: result.translation,
                             textAlign: TextAlign.left,
                             maxLines: 3,
-                            minFontSize: 17,
+                            minFontSize: 14,
                             style: const TextStyle(
                               color: Color(0xFF292725),
-                              fontSize: 28,
+                              fontSize: 24,
                               fontWeight: FontWeight.w900,
                               height: 1.06,
                             ),
@@ -563,10 +574,10 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                             text: result.pronunciation.toUpperCase(),
                             textAlign: TextAlign.left,
                             maxLines: 2,
-                            minFontSize: 8,
+                            minFontSize: 9,
                             style: const TextStyle(
                               color: Color(0xFF9B938B),
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -1892,6 +1903,7 @@ class _SoftCircleButton extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _OrangePillButton extends StatelessWidget {
   const _OrangePillButton({
     required this.label,
@@ -1933,6 +1945,30 @@ class _OrangePillButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ExampleAssetButton extends StatelessWidget {
+  const _ExampleAssetButton({
+    required this.label,
+    required this.onTap,
+    required this.child,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: child,
       ),
     );
   }
