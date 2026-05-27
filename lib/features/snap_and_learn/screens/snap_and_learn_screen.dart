@@ -451,10 +451,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         children: [
           Row(
             children: [
-              _OrangePillButton(
-                label: 'Chọn ngôn ngữ khác',
-                onTap: () => _showLanguagePicker(ctrl, langCode),
-              ),
               const Spacer(),
               _OrangePillButton(
                 label: 'Xem câu ví dụ',
@@ -466,17 +462,26 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Column(
+                children: [
+                  _MiniActionButton(
+                    icon: Icons.bookmark_add_outlined,
+                    onTap: () {
+                      _saveResultToFlashcard(result, langCode);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _MiniActionButton(
+                    icon: Icons.volume_up_rounded,
+                    onTap: () => _speakResultTerm(result, langCode),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 18),
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _MiniActionButton(
-                      icon: Icons.bookmark_add_outlined,
-                      onTap: () {
-                        _saveResultToFlashcard(result, langCode);
-                      },
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,18 +542,13 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _MiniActionButton(
-                      icon: Icons.volume_up_rounded,
-                      onTap: () => _speakResultTerm(result, langCode),
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _AdaptiveResultText(
                             text: result.translation,
-                            textAlign: TextAlign.right,
+                            textAlign: TextAlign.left,
                             maxLines: 3,
                             minFontSize: 17,
                             style: const TextStyle(
@@ -561,7 +561,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                           const SizedBox(height: 8),
                           _AdaptiveResultText(
                             text: result.pronunciation.toUpperCase(),
-                            textAlign: TextAlign.right,
+                            textAlign: TextAlign.left,
                             maxLines: 2,
                             minFontSize: 8,
                             style: const TextStyle(
