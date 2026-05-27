@@ -1,302 +1,168 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
-class SimpleHomeScreen extends ConsumerStatefulWidget {
+class SimpleHomeScreen extends ConsumerWidget {
   const SimpleHomeScreen({super.key});
+
   @override
-  ConsumerState<SimpleHomeScreen> createState() => _SimpleHomeScreenState();
-}
-class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(userStatsValueProvider);
+    final user = FirebaseAuth.instance.currentUser;
+    final name = _displayNameFor(user);
+    final scanCount = NumberFormat.decimalPattern('en_US')
+        .format(stats.totalPoints == 0 ? 450 : stats.totalPoints);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F4),
+      backgroundColor: _HomeColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildWeeklyStreak()),
-            SliverToBoxAdapter(child: _buildDailyBanner()),
-            SliverToBoxAdapter(child: _buildSectionTitle('Tính năng chính')),
-            SliverToBoxAdapter(
-              child: _FeatureCard(
-                emoji: '📸',
-                emojiBackground: const Color(0xFFFFEDE8),
-                title: 'Snap & Learn',
-                subtitle: 'Chụp ảnh và học từ vựng với AI',
-                buttonLabel: 'Bắt đầu',
-                buttonColor: AppTheme.primaryColor,
-                onTap: () => context.push(AppConstants.snapAndLearnRoute),
-                onButtonTap: () =>
-                    context.push(AppConstants.snapAndLearnRoute),
-                isHighlighted: true,
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _HomeHeader(
+                name: name,
+                streak: stats.currentStreak == 0 ? 12 : stats.currentStreak,
               ),
-            ),
-            SliverToBoxAdapter(
-              child:             _FeatureCard(
-                emoji: '🃏',
-                emojiBackground: const Color(0xFFFFEDE8),
-                title: 'Flashcards',
-                subtitle: 'Ôn tập từ vựng theo cách hiệu quả nhất',
-                buttonLabel: 'Ôn tập',
-                buttonColor: AppTheme.secondaryColor,
-                onTap: () => context.go(AppConstants.flashcardsRoute),
-                onButtonTap: () => context.go(AppConstants.flashcardsRoute),
+              const SizedBox(height: 18),
+              _AiPracticeCard(
+                onTap: () => context.go(AppConstants.snapAndLearnRoute),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: _FeatureCard(
-                emoji: '🏆',
-                emojiBackground: const Color(0xFFFFF3E0),
-                title: 'Gamification',
-                subtitle: 'Streaks, điểm số và bảng xếp hạng',
-                buttonLabel: 'Khám phá',
-                buttonColor: AppTheme.accentColor,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gamification – Coming soon!')),
-                ),
-                onButtonTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gamification – Coming soon!')),
-                ),
+              const SizedBox(height: 12),
+              _StatsMascotBlock(scanCount: scanCount),
+              const SizedBox(height: 12),
+              _VocabularyHeader(
+                onSeeAll: () => context.go(AppConstants.flashcardsRoute),
               ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
+              const SizedBox(height: 28),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: const AppBottomNavBar(currentIndex: 0),
     );
   }
 
-  // ── Header ────────────────────────────────────────────────
-  Widget _buildHeader() {
-      // Lấy stats thật từ provider
-      final stats = ref.watch(userStatsValueProvider);
-
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-        child: Row(
-          children: [
-            SvgPicture.asset('assets/svg/milingo-logo.svg', width: 32, height: 32),
-            const SizedBox(width: 8),
-            Text(
-              'MiLingo',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-            const Spacer(),
-            _StatChip(
-              icon: Icons.local_fire_department_rounded,
-              value: stats.currentStreak.toString(),
-              color: const Color(0xFFFF6B35),
-            ),
-            const SizedBox(width: 8),
-            _StatChip(
-              icon: Icons.diamond_rounded,
-              value: stats.coins.toString(),
-              color: const Color(0xFF7C5CBF),
-            ),
-            const SizedBox(width: 8),
-            _StatChip(
-              icon: Icons.emoji_events_rounded,
-              value: stats.totalPoints.toString(),
-              color: const Color(0xFFFFC107),
-            ),
-          ],
-        ),
-      );
-    }
-
-  // ── Weekly streak row ──────────────────────────────────────
-  Widget _buildWeeklyStreak() {
-      final stats = ref.watch(userStatsValueProvider);
-      final today = DateTime.now().weekday; // 1=Mon … 7=Sun
-      const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-
-      // Tính ngày học gần nhất từ backend
-      DateTime? lastStudy;
-      if (stats.lastStudyDate != null) {
-        lastStudy = DateTime.tryParse(stats.lastStudyDate!);
-      }
-
-      final todayDate = DateTime.now();
-      final todayOnly = DateTime(todayDate.year, todayDate.month, todayDate.day);
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withOpacity(0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (i) {
-              final isToday = i + 1 == today;
-
-              // isPast = ngày đó trong tuần này đã qua VÀ user có streak chứng tỏ đã học
-              // Logic đơn giản: nếu có streak >= N thì N ngày gần nhất đều "đã học"
-              final dayOfWeek = i + 1; // 1=Mon
-              final daysAgoFromToday = today - dayOfWeek; // số ngày trước hôm nay
-              bool isPast = false;
-
-              if (daysAgoFromToday > 0 && stats.currentStreak > 0) {
-                // Ngày đó trong quá khứ tuần này và streak đủ dài
-                isPast = daysAgoFromToday <= stats.currentStreak;
-              } else if (daysAgoFromToday == 0 && lastStudy != null) {
-                // Hôm nay — check xem đã học chưa
-                final lastStudyOnly = DateTime(lastStudy.year, lastStudy.month, lastStudy.day);
-                isPast = lastStudyOnly == todayOnly;
-              }
-
-              return _DayCircle(
-                label: days[i],
-                isToday: isToday,
-                isPast: isPast,
-              );
-            }),
-          ),
-        ),
-      );
-    }
-
-  // ── Daily banner ───────────────────────────────────────────
-  Widget _buildDailyBanner() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.primaryColor.withOpacity(0.85),
-              AppTheme.primaryColor,
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryColor.withOpacity(0.35),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '0/2 bài học miễn phí hôm nay',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Text(
-                        'Nâng cấp',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'ngay',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const Text('🌍', style: TextStyle(fontSize: 44)),
-          ],
-        ),
-      ),
-    );
+  static String _displayNameFor(User? user) {
+    final name = user?.displayName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final email = user?.email?.split('@').first.trim();
+    if (email != null && email.isNotEmpty) return email;
+    return '2DEV';
   }
-
-  // ── Section title ──────────────────────────────────────────
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1A1A1A),
-        ),
-      ),
-    );
-  }
-
 }
 
-// ─────────────────────────────────────────────────────────
-// Stat chip in header
-// ─────────────────────────────────────────────────────────
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({
-    required this.icon,
-    required this.value,
-    required this.color,
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({
+    required this.name,
+    required this.streak,
   });
-  final IconData icon;
-  final String value;
-  final Color color;
+
+  final String name;
+  final int streak;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_greeting()}, $name!',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _HomeColors.subtleBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Tiếp tục hành trình',
+                  style: TextStyle(
+                    color: _HomeColors.text,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    height: 1.05,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        _StreakCard(streak: streak),
+      ],
+    );
+  }
+
+  static String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 11) return 'Chào buổi sáng';
+    if (hour < 18) return 'Chào buổi chiều';
+    return 'Chào buổi tối';
+  }
+}
+
+class _StreakCard extends StatelessWidget {
+  const _StreakCard({required this.streak});
+
+  final int streak;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      width: 94,
+      height: 56,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFFFFF3E8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFDCC8), width: 1),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 4),
-          Text(
-            value,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.local_fire_department_rounded,
+                color: _HomeColors.primary,
+                size: 18,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                streak.toString(),
+                style: const TextStyle(
+                  color: _HomeColors.primary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'NGÀY LIÊN TIẾP',
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: color,
+              color: _HomeColors.primary,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -305,65 +171,284 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// Day circle for weekly streak
-// ─────────────────────────────────────────────────────────
+class _AiPracticeCard extends StatelessWidget {
+  const _AiPracticeCard({required this.onTap});
 
-class _DayCircle extends StatelessWidget {
-  const _DayCircle({
-    required this.label,
-    required this.isToday,
-    required this.isPast,
-  });
-  final String label;
-  final bool isToday;
-  final bool isPast;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isToday
-                ? AppTheme.primaryColor
-                : isPast
-                    ? AppTheme.primaryColor.withOpacity(0.15)
-                    : const Color(0xFFF5F5F5),
-            border: isToday
-                ? null
-                : Border.all(
-                    color: isPast
-                        ? AppTheme.primaryColor.withOpacity(0.3)
-                        : const Color(0xFFE8E8E8),
-                    width: 1.5,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 84,
+        padding: const EdgeInsets.fromLTRB(16, 13, 14, 13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF1E9),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFFFD7C8), width: 1),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0DF15F36),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const _MilingoMark(),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Trò chuyện cùng AI',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: _HomeColors.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-          ),
-          child: Center(
-            child: Icon(
-              isPast || isToday
-                  ? Icons.local_fire_department_rounded
-                  : Icons.water_drop_outlined,
-              size: 18,
-              color: isToday
-                  ? Colors.white
-                  : isPast
-                      ? AppTheme.primaryColor
-                      : const Color(0xFFBDBDBD),
+                  SizedBox(height: 4),
+                  Text(
+                    'Sẵn sàng luyện tập!',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: _HomeColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: _HomeColors.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: _HomeColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 14,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MilingoMark extends StatelessWidget {
+  const _MilingoMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Center(
+        child: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFFFFA32A), _HomeColors.primary],
+          ).createShader(bounds),
+          child: const Text(
+            'M',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 38,
+              fontWeight: FontWeight.w900,
+              height: 0.8,
             ),
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isToday ? FontWeight.bold : FontWeight.w400,
-            color: isToday ? AppTheme.primaryColor : const Color(0xFF9E9E9E),
+      ),
+    );
+  }
+}
+
+class _StatsMascotBlock extends StatelessWidget {
+  const _StatsMascotBlock({required this.scanCount});
+
+  final String scanCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 142,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            child: _ScanStatCard(scanCount: scanCount),
+          ),
+          Positioned(
+            right: 18,
+            top: 0,
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: const BoxDecoration(
+                color: Color(0x33FFFFFF),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 32,
+            top: 8,
+            child: Image.asset(
+              'assets/images/limabo.png',
+              width: 138,
+              height: 138,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScanStatCard extends StatelessWidget {
+  const _ScanStatCard({required this.scanCount});
+
+  final String scanCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 140,
+      height: 122,
+      padding: const EdgeInsets.fromLTRB(16, 17, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF4E1D9), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 31,
+            height: 31,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF0EC),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                'assets/svg/camera-homescreen.svg',
+                width: 20,
+                height: 20,
+              ),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            scanCount,
+            style: const TextStyle(
+              color: _HomeColors.text,
+              fontSize: 29,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Từ đã quét',
+            style: TextStyle(
+              color: _HomeColors.mutedText,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VocabularyHeader extends StatelessWidget {
+  const _VocabularyHeader({required this.onSeeAll});
+
+  final VoidCallback onSeeAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Khám phá từ vựng',
+                style: TextStyle(
+                  color: _HomeColors.text,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                ),
+              ),
+              SizedBox(height: 9),
+              Text(
+                'Học qua hình ảnh thực tế',
+                style: TextStyle(
+                  color: _HomeColors.mutedText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: onSeeAll,
+          child: const Padding(
+            padding: EdgeInsets.only(bottom: 1),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Xem tất cả',
+                  style: TextStyle(
+                    color: _HomeColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(width: 3),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: _HomeColors.primary,
+                  size: 15,
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -371,126 +456,10 @@ class _DayCircle extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// Feature card (Coach card style)
-// ─────────────────────────────────────────────────────────
-
-class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({
-    required this.emoji,
-    required this.emojiBackground,
-    required this.title,
-    required this.subtitle,
-    required this.buttonLabel,
-    required this.buttonColor,
-    required this.onTap,
-    required this.onButtonTap,
-    this.isHighlighted = false,
-  });
-
-  final String emoji;
-  final Color emojiBackground;
-  final String title;
-  final String subtitle;
-  final String buttonLabel;
-  final Color buttonColor;
-  final VoidCallback onTap;
-  final VoidCallback onButtonTap;
-  final bool isHighlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: isHighlighted
-                ? Border.all(color: AppTheme.primaryColor.withOpacity(0.4), width: 1.5)
-                : null,
-            boxShadow: [
-              BoxShadow(
-                color: isHighlighted
-                    ? AppTheme.primaryColor.withOpacity(0.12)
-                    : Colors.black.withOpacity(0.05),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Text content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF9E9E9E),
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    // CTA button
-                    GestureDetector(
-                      onTap: onButtonTap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 9),
-                        decoration: BoxDecoration(
-                          color: buttonColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          buttonLabel,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Emoji illustration
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: emojiBackground,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    emoji,
-                    style: const TextStyle(fontSize: 38),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class _HomeColors {
+  static const background = Color(0xFFFFF8F4);
+  static const primary = AppTheme.primaryColor;
+  static const text = Color(0xFF20243A);
+  static const mutedText = Color(0xFF8D8791);
+  static const subtleBlue = Color(0xFF63708F);
 }
