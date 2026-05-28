@@ -11,6 +11,7 @@ import 'package:milingo/features/profile/widgets/account_settings_view.dart';
 import 'package:milingo/features/profile/widgets/language_goal_view.dart';
 import 'package:milingo/features/profile/widgets/payment_method_view.dart';
 import 'package:milingo/features/profile/widgets/purchase_management_view.dart';
+import 'package:milingo/features/profile/widgets/restore_purchase_flow.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -791,6 +792,7 @@ class _UpgradeModal extends StatefulWidget {
 class _UpgradeModalState extends State<_UpgradeModal> {
   bool _yearly = false;
   bool _showTerms = false;
+  bool _showRestore = false;
   PaymentPlanSummary? _paymentPlan;
 
   static const _paymentMethods = [
@@ -817,8 +819,31 @@ class _UpgradeModalState extends State<_UpgradeModal> {
     ),
   ];
 
+  static const _restorePackages = [
+    RestorePurchasePackage(
+      name: 'Gói Pro Năm',
+      expiryLabel: 'Hết hạn: 24/12/2024',
+      status: RestorePurchaseStatus.restorable,
+      storeLabel: 'Google Play',
+    ),
+    RestorePurchasePackage(
+      name: 'Gói Plus Tháng',
+      expiryLabel: 'Hết hạn: 15/08/2023',
+      status: RestorePurchaseStatus.expired,
+      storeLabel: 'Google Play',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    if (_showRestore) {
+      return RestorePurchaseFlow(
+        packages: _restorePackages,
+        onBack: () => setState(() => _showRestore = false),
+        onManageAccount: () => Navigator.of(context).pop(),
+      );
+    }
+
     if (_showTerms) {
       return _TermsOfServiceView(
         onBack: () => setState(() => _showTerms = false),
@@ -900,6 +925,7 @@ class _UpgradeModalState extends State<_UpgradeModal> {
                     ),
                     const SizedBox(height: 18),
                     _UpgradeLinks(
+                      onRestoreTap: () => setState(() => _showRestore = true),
                       onTermsTap: () => setState(() => _showTerms = true),
                     ),
                   ],
@@ -1346,8 +1372,12 @@ class _StartNowButton extends StatelessWidget {
 }
 
 class _UpgradeLinks extends StatelessWidget {
-  const _UpgradeLinks({required this.onTermsTap});
+  const _UpgradeLinks({
+    required this.onRestoreTap,
+    required this.onTermsTap,
+  });
 
+  final VoidCallback onRestoreTap;
   final VoidCallback onTermsTap;
 
   @override
@@ -1355,12 +1385,15 @@ class _UpgradeLinks extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'Khôi phục gói mua',
-          style: TextStyle(
-            color: _ProfileColors.primaryDark,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
+        GestureDetector(
+          onTap: onRestoreTap,
+          child: const Text(
+            'Khôi phục gói mua',
+            style: TextStyle(
+              color: _ProfileColors.primaryDark,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const SizedBox(width: 24),
