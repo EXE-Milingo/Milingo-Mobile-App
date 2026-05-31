@@ -77,16 +77,20 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   List<StudyCard> get _cards => _session?.cards ?? const [];
   StudyCard get _card => _cards[_current];
   bool get _isLast => _current >= _cards.length - 1;
+  bool get _isDailySession =>
+      widget.deckId.trim().isEmpty || widget.deckId.trim() == 'all';
+
+  String get _sessionTitle {
+    if (_isDailySession) return 'Ôn tập hôm nay';
+    return widget.deckName.isEmpty ? 'Ôn tập' : widget.deckName;
+  }
+
+  String get _modeLabel {
+    if (_card.isMcq) return 'Trắc nghiệm';
+    return _card.isFirstReview ? 'Thẻ học lần đầu' : 'Thẻ học';
+  }
 
   Future<void> _loadSession() async {
-    if (widget.deckId.isEmpty) {
-      setState(() {
-        _loading = false;
-        _error = 'Khong tim thay bo tu de bat dau bai kiem tra.';
-      });
-      return;
-    }
-
     setState(() {
       _loading = true;
       _error = null;
@@ -101,9 +105,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     });
 
     try {
-      final session = await ref
-          .read(milingoApiServiceProvider)
-          .getStudySession(widget.deckId, limit: 20);
+      final api = ref.read(milingoApiServiceProvider);
+      final session = _isDailySession
+          ? await api.getDailyStudySession(limit: 30)
+          : await api.getStudySession(widget.deckId, limit: 20);
       if (!mounted) return;
       setState(() {
         _session = session;
@@ -224,7 +229,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
 
   void _showError(Object error) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Khong gui duoc cau tra loi: $error')),
+      SnackBar(content: Text('Không gửi được câu trả lời: $error')),
     );
   }
 
@@ -241,7 +246,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                   ? _ErrorView(message: _error!, onRetry: _loadSession)
                   : _cards.isEmpty
                       ? _EmptyDueView(
-                          deckName: widget.deckName, onRetry: _loadSession)
+                          deckName: _sessionTitle, onRetry: _loadSession)
                       : Column(
                           children: [
                             _buildTopBar(),
@@ -276,7 +281,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Thoat',
+            tooltip: 'Thoát',
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded, color: _kMuted),
           ),
@@ -284,7 +289,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
             child: Column(
               children: [
                 Text(
-                  widget.deckName,
+                  _sessionTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -296,7 +301,9 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _card.isMcq ? 'Multiple choice' : 'Flashcard',
+                  _modeLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: _kMuted,
                     fontSize: 11,
@@ -336,7 +343,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
           Row(
             children: [
               Text(
-                'Cau ${_current + 1}',
+                'Câu ${_current + 1}',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -352,10 +359,12 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                 ),
               ),
               const Spacer(),
-              _ModeChip(label: _card.srsState),
+              _ModeChip(label: _srsLabel(_card.srsState)),
             ],
           ),
           const SizedBox(height: 9),
+          _SrsStudyLine(card: _card),
+          const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
             child: TweenAnimationBuilder<double>(
@@ -445,7 +454,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Chon tu dung',
+          'Chọn từ đúng',
           style: TextStyle(
             color: _kDark,
             fontSize: 18,
@@ -454,7 +463,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
         ),
         const SizedBox(height: 6),
         const Text(
-          'Dua vao hinh anh hoac nghia goi y o tren.',
+          'Dựa vào hình ảnh hoặc nghĩa gợi ý ở trên.',
           style: TextStyle(
             color: _kMuted,
             fontSize: 13,
@@ -479,7 +488,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Ban nho tu nay den muc nao?',
+          'Bạn nhớ từ này đến mức nào?',
           style: TextStyle(
             color: _kDark,
             fontSize: 18,
@@ -500,7 +509,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Mat sau',
+                'Mặt sau',
                 style: TextStyle(
                   color: _kMuted,
                   fontSize: 12,
@@ -509,7 +518,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                _revealed ? _card.translation : 'Nhan de xem nghia',
+                _revealed ? _card.translation : 'Nhấn để xem nghĩa',
                 style: TextStyle(
                   color: _revealed ? _kDark : _kMuted,
                   fontSize: _revealed ? 24 : 18,
@@ -545,7 +554,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                           ? null
                           : () => setState(() => _revealed = true),
                       style: FilledButton.styleFrom(backgroundColor: _kDark),
-                      child: const Text('Lat the'),
+                      child: const Text('Lật thẻ'),
                     ),
                   ),
                 ],
@@ -561,10 +570,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
 
   Widget _buildGradeButtons() {
     const grades = [
-      (0, 'Again', _kDanger),
-      (2, 'Hard', Color(0xFFE1A43B)),
-      (4, 'Good', _kSuccess),
-      (5, 'Easy', _kAccent),
+      (0, 'Lại', _kDanger),
+      (2, 'Khó', Color(0xFFE1A43B)),
+      (4, 'Tốt', _kSuccess),
+      (5, 'Dễ', _kAccent),
     ];
 
     return GridView.count(
@@ -615,7 +624,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                   ),
                 )
               : Text(
-                  _isLast ? 'Xem ket qua' : 'Cau tiep theo',
+                  _isLast ? 'Xem kết quả' : 'Câu tiếp theo',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -747,6 +756,103 @@ class _GradeButton extends StatelessWidget {
   }
 }
 
+class _SrsStudyLine extends StatelessWidget {
+  const _SrsStudyLine({required this.card});
+
+  final StudyCard card;
+
+  @override
+  Widget build(BuildContext context) {
+    final nextInterval = card.srsIntervalDays <= 0
+        ? 'đến hạn'
+        : 'chu kỳ ${card.srsIntervalDays} ngày';
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _MiniStudyBadge(
+          icon: _srsIcon(card.srsState),
+          label: _srsLabel(card.srsState),
+        ),
+        _MiniStudyBadge(
+          icon: Icons.repeat_rounded,
+          label: '${card.srsRepetitions} lần ôn',
+        ),
+        _MiniStudyBadge(
+          icon: Icons.schedule_rounded,
+          label: nextInterval,
+        ),
+        if (card.deckName.isNotEmpty)
+          _MiniStudyBadge(
+            icon: Icons.folder_rounded,
+            label: card.deckName,
+          ),
+      ],
+    );
+  }
+}
+
+class _MiniStudyBadge extends StatelessWidget {
+  const _MiniStudyBadge({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: _kAccent, size: 14),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _kMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _srsLabel(String state) {
+  return switch (state) {
+    'learning' => 'Đang học',
+    'review' => 'Ôn tập',
+    'mastered' => 'Đã vững',
+    _ => 'Mới',
+  };
+}
+
+IconData _srsIcon(String state) {
+  return switch (state) {
+    'learning' => Icons.sync_rounded,
+    'review' => Icons.event_available_rounded,
+    'mastered' => Icons.verified_rounded,
+    _ => Icons.bolt_rounded,
+  };
+}
+
 class _ModeChip extends StatelessWidget {
   const _ModeChip({required this.label});
 
@@ -816,9 +922,9 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return _CenteredState(
       icon: Icons.error_outline_rounded,
-      title: 'Khong tai duoc bai kiem tra',
+      title: 'Không tải được phiên ôn tập',
       message: message,
-      actionLabel: 'Thu lai',
+      actionLabel: 'Thử lại',
       onAction: onRetry,
     );
   }
@@ -834,9 +940,9 @@ class _EmptyDueView extends StatelessWidget {
   Widget build(BuildContext context) {
     return _CenteredState(
       icon: Icons.check_circle_outline_rounded,
-      title: 'Hom nay da xong',
-      message: 'Khong con tu nao den han trong "$deckName".',
-      actionLabel: 'Tai lai',
+      title: 'Hôm nay đã xong',
+      message: 'Không còn từ nào đến hạn trong "$deckName".',
+      actionLabel: 'Tải lại',
       onAction: onRetry,
     );
   }
@@ -928,10 +1034,10 @@ class _ResultDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final ratio = total == 0 ? 0.0 : correct / total;
     final title = ratio >= 0.85
-        ? 'Qua tot'
+        ? 'Quá tốt'
         : ratio >= 0.55
-            ? 'On dinh roi'
-            : 'Cu tiep tuc nhe';
+            ? 'Ổn định rồi'
+            : 'Cứ tiếp tục nhé';
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
@@ -978,7 +1084,7 @@ class _ResultDialog extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '$correct / $total cau tot · +$coins coins',
+              '$correct / $total câu tốt · +$coins xu',
               style: const TextStyle(
                 color: _kMuted,
                 fontSize: 14,
@@ -996,7 +1102,7 @@ class _ResultDialog extends StatelessWidget {
                       side: const BorderSide(color: _kAccent),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Thoat'),
+                    child: const Text('Thoát'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1007,7 +1113,7 @@ class _ResultDialog extends StatelessWidget {
                       backgroundColor: _kAccent,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Lam tiep'),
+                    child: const Text('Làm tiếp'),
                   ),
                 ),
               ],

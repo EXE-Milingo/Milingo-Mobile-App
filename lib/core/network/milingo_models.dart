@@ -56,6 +56,8 @@ class CardResponse {
     this.srsState = 'new',
     this.srsRepetitions = 0,
     this.srsIntervalDays = 0,
+    this.srsEasinessFactor = 2.5,
+    this.srsNextReviewAt,
     this.sourceVocabId,
     this.imageUrl,
   });
@@ -74,6 +76,9 @@ class CardResponse {
       srsState: (json['srs_state'] ?? 'new').toString(),
       srsRepetitions: (json['srs_repetitions'] as num?)?.toInt() ?? 0,
       srsIntervalDays: (json['srs_interval_days'] as num?)?.toInt() ?? 0,
+      srsEasinessFactor:
+          (json['srs_easiness_factor'] as num?)?.toDouble() ?? 2.5,
+      srsNextReviewAt: json['srs_next_review_at'] as String?,
       sourceVocabId: json['source_vocab_id'] as String?,
       imageUrl: json['image_url'] as String?,
     );
@@ -91,6 +96,8 @@ class CardResponse {
   final String srsState;
   final int srsRepetitions;
   final int srsIntervalDays;
+  final double srsEasinessFactor;
+  final String? srsNextReviewAt;
   final String? sourceVocabId;
   final String? imageUrl;
 
@@ -108,6 +115,8 @@ class CardResponse {
       srsState: srsState,
       srsRepetitions: srsRepetitions,
       srsIntervalDays: srsIntervalDays,
+      srsEasinessFactor: srsEasinessFactor,
+      srsNextReviewAt: srsNextReviewAt,
       sourceVocabId: sourceVocabId,
       imageUrl: value,
     );
@@ -140,6 +149,7 @@ class StudyCard {
   const StudyCard({
     required this.cardId,
     required this.deckId,
+    required this.deckName,
     required this.term,
     required this.translation,
     required this.pronunciation,
@@ -147,6 +157,7 @@ class StudyCard {
     required this.srsState,
     required this.srsRepetitions,
     required this.srsIntervalDays,
+    required this.isFirstReview,
     required this.suggestedMode,
     required this.options,
     this.imageUrl,
@@ -154,17 +165,20 @@ class StudyCard {
 
   factory StudyCard.fromJson(Map<String, dynamic> json) {
     final rawOptions = json['options'] as List<dynamic>?;
+    final repetitions = (json['srs_repetitions'] as num?)?.toInt() ?? 0;
     return StudyCard(
       cardId: (json['card_id'] ?? '').toString(),
       deckId: (json['deck_id'] ?? '').toString(),
+      deckName: (json['deck_name'] ?? '').toString(),
       term: (json['term'] ?? '').toString(),
       translation: (json['translation'] ?? '').toString(),
       pronunciation: (json['pronunciation'] ?? '').toString(),
       exampleSentence: (json['example_sentence'] ?? '').toString(),
       imageUrl: json['image_url'] as String?,
       srsState: (json['srs_state'] ?? 'new').toString(),
-      srsRepetitions: (json['srs_repetitions'] as num?)?.toInt() ?? 0,
+      srsRepetitions: repetitions,
       srsIntervalDays: (json['srs_interval_days'] as num?)?.toInt() ?? 0,
+      isFirstReview: json['is_first_review'] as bool? ?? repetitions <= 0,
       suggestedMode: (json['suggested_mode'] ?? 'flashcard').toString(),
       options: rawOptions
           ?.whereType<Map>()
@@ -175,6 +189,7 @@ class StudyCard {
 
   final String cardId;
   final String deckId;
+  final String deckName;
   final String term;
   final String translation;
   final String pronunciation;
@@ -183,6 +198,7 @@ class StudyCard {
   final String srsState;
   final int srsRepetitions;
   final int srsIntervalDays;
+  final bool isFirstReview;
   final String suggestedMode;
   final List<StudyOption>? options;
 

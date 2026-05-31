@@ -13,6 +13,10 @@ class FlashcardEntry {
     this.imageUrl,
     this.objectImageBase64,
     this.isFavorite = false,
+    this.srsState = 'new',
+    this.srsRepetitions = 0,
+    this.srsIntervalDays = 0,
+    this.srsNextReviewAt,
   });
 
   final String id;
@@ -24,6 +28,15 @@ class FlashcardEntry {
   final String? imageUrl;
   final String? objectImageBase64;
   final bool isFavorite;
+  final String srsState;
+  final int srsRepetitions;
+  final int srsIntervalDays;
+  final String? srsNextReviewAt;
+
+  bool get isNewForStudy => srsState == 'new' || srsRepetitions == 0;
+  bool get isLearning => srsState == 'learning';
+  bool get isReviewing => srsState == 'review';
+  bool get isMastered => srsState == 'mastered';
 
   FlashcardEntry copyWith({
     String? id,
@@ -35,6 +48,10 @@ class FlashcardEntry {
     String? imageUrl,
     String? objectImageBase64,
     bool? isFavorite,
+    String? srsState,
+    int? srsRepetitions,
+    int? srsIntervalDays,
+    String? srsNextReviewAt,
   }) {
     return FlashcardEntry(
       id: id ?? this.id,
@@ -46,6 +63,10 @@ class FlashcardEntry {
       imageUrl: imageUrl ?? this.imageUrl,
       objectImageBase64: objectImageBase64 ?? this.objectImageBase64,
       isFavorite: isFavorite ?? this.isFavorite,
+      srsState: srsState ?? this.srsState,
+      srsRepetitions: srsRepetitions ?? this.srsRepetitions,
+      srsIntervalDays: srsIntervalDays ?? this.srsIntervalDays,
+      srsNextReviewAt: srsNextReviewAt ?? this.srsNextReviewAt,
     );
   }
 }

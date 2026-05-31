@@ -594,6 +594,21 @@ class MilingoApiService {
     }
   }
 
+  Future<StudySessionResponse> getDailyStudySession({int limit = 30}) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/study/daily-session',
+        queryParameters: {'limit': limit},
+      );
+      return _unwrap(
+        response,
+        (data) => StudySessionResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   Future<SubmitStudyAnswerResponse> submitStudyAnswer({
     required String deckId,
     required String cardId,

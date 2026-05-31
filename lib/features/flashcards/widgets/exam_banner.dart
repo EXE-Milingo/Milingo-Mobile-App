@@ -49,7 +49,7 @@ class ExamBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'On tap thong minh',
+                    'Ôn tập thông minh',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -58,7 +58,7 @@ class ExamBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 3),
                   Text(
-                    'Flashcard va cau hoi theo lich SRS',
+                    'Thẻ mới và câu hỏi theo lịch SRS',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Colors.white70, fontSize: 12),
@@ -73,7 +73,7 @@ class ExamBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
-                'Bat dau',
+                'Bắt đầu',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,

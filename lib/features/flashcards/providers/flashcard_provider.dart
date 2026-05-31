@@ -31,6 +31,10 @@ FlashcardEntry _cardResponseToEntry(CardResponse r) {
     langCode: r.targetLangCode,
     imageUrl: r.imageUrl,
     isFavorite: r.isFavorite,
+    srsState: r.srsState,
+    srsRepetitions: r.srsRepetitions,
+    srsIntervalDays: r.srsIntervalDays,
+    srsNextReviewAt: r.srsNextReviewAt,
   );
 }
 
@@ -283,6 +287,10 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
         langCode: created.targetLangCode,
         imageUrl: created.imageUrl ?? imageUrl,
         isFavorite: created.isFavorite,
+        srsState: created.srsState,
+        srsRepetitions: created.srsRepetitions,
+        srsIntervalDays: created.srsIntervalDays,
+        srsNextReviewAt: created.srsNextReviewAt,
       );
       final finalDecks = state.value!.decks.map((d) {
         if (d.id != deckId) return d;

@@ -61,10 +61,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     final totalDecks = data?.decks.length ?? 0;
     final totalWords =
         data?.decks.fold<int>(0, (sum, deck) => sum + deck.total) ?? 0;
-    final favoriteWords = data?.decks.fold<int>(
+    final dueWords = data?.decks.fold<int>(
           0,
           (sum, deck) =>
-              sum + deck.cards.where((entry) => entry.isFavorite).length,
+              sum + deck.cards.where((entry) => entry.isNewForStudy).length,
         ) ??
         0;
 
@@ -80,7 +80,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                 selectedIndex: _tabIndex,
                 totalDecks: totalDecks,
                 totalWords: totalWords,
-                favoriteWords: favoriteWords,
+                dueWords: dueWords,
                 isLoading: asyncState.isLoading && data == null,
                 onTabSelected: _selectTab,
                 onCreateDeck: () =>
@@ -143,7 +143,7 @@ class _LibraryHeader extends StatelessWidget {
     required this.selectedIndex,
     required this.totalDecks,
     required this.totalWords,
-    required this.favoriteWords,
+    required this.dueWords,
     required this.isLoading,
     required this.onTabSelected,
     required this.onCreateDeck,
@@ -152,7 +152,7 @@ class _LibraryHeader extends StatelessWidget {
   final int selectedIndex;
   final int totalDecks;
   final int totalWords;
-  final int favoriteWords;
+  final int dueWords;
   final bool isLoading;
   final ValueChanged<int> onTabSelected;
   final VoidCallback onCreateDeck;
@@ -204,7 +204,7 @@ class _LibraryHeader extends StatelessWidget {
             selectedIndex: selectedIndex,
             totalDecks: totalDecks,
             totalWords: totalWords,
-            favoriteWords: favoriteWords,
+            dueWords: dueWords,
             isLoading: isLoading,
           ),
           const SizedBox(height: 16),
@@ -217,7 +217,7 @@ class _LibraryHeader extends StatelessWidget {
               itemBuilder: (context, index) {
                 final selected = index == selectedIndex;
                 return _TabPill(
-                  label: _kTabs[index],
+                  label: _tabLabel(index),
                   selected: selected,
                   onTap: () => onTabSelected(index),
                 );
@@ -267,19 +267,30 @@ class _CreateDeckButton extends StatelessWidget {
   }
 }
 
+String _tabLabel(int index) {
+  return switch (index) {
+    0 => 'Bộ từ',
+    1 => 'Tất cả từ',
+    2 => 'Đến hạn',
+    3 => 'Đang học',
+    4 => 'Đã vững',
+    _ => 'Từ vựng',
+  };
+}
+
 class _LibraryStatsStrip extends StatelessWidget {
   const _LibraryStatsStrip({
     required this.selectedIndex,
     required this.totalDecks,
     required this.totalWords,
-    required this.favoriteWords,
+    required this.dueWords,
     required this.isLoading,
   });
 
   final int selectedIndex;
   final int totalDecks;
   final int totalWords;
-  final int favoriteWords;
+  final int dueWords;
   final bool isLoading;
 
   @override
@@ -313,14 +324,14 @@ class _LibraryStatsStrip extends StatelessWidget {
               icon: Icons.menu_book_rounded,
               label: 'Từ vựng',
               value: isLoading ? '-' : '$totalWords',
-              selected: selectedIndex == 1 || selectedIndex > 2,
+              selected: selectedIndex == 1,
             ),
           ),
           Expanded(
             child: _StatPill(
-              icon: Icons.star_rounded,
+              icon: Icons.bolt_rounded,
               label: 'Yêu thích',
-              value: isLoading ? '-' : '$favoriteWords',
+              value: isLoading ? '-' : '$dueWords',
               selected: selectedIndex == 2,
             ),
           ),
@@ -386,7 +397,7 @@ class _StatPill extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  label,
+                  _statLabel(icon, label),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -403,6 +414,13 @@ class _StatPill extends StatelessWidget {
       ),
     );
   }
+}
+
+String _statLabel(IconData icon, String fallback) {
+  if (icon == Icons.folder_copy_rounded) return 'Bộ';
+  if (icon == Icons.menu_book_rounded) return 'Từ';
+  if (icon == Icons.bolt_rounded) return 'Đến hạn';
+  return fallback;
 }
 
 class _TabPill extends StatelessWidget {
@@ -472,8 +490,8 @@ class _SearchBox extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(color: Color(0xFFB8B3B0), fontSize: 15),
-          prefixIcon: const Icon(Icons.search_rounded,
-              color: _kSubtle, size: 23),
+          prefixIcon:
+              const Icon(Icons.search_rounded, color: _kSubtle, size: 23),
           suffixIcon: controller.text.isEmpty
               ? null
               : IconButton(
@@ -546,8 +564,8 @@ class _FlashcardTabBody extends ConsumerWidget {
     if (vocabItems.isEmpty) {
       return _EmptyState(
         icon: _emptyIconForTab(),
-        title: _emptyTitleForTab(),
-        message: _emptyMessageForTab(),
+        title: _emptyTitleForSrsTab(tabIndex),
+        message: _emptyMessageForSrsTab(tabIndex),
       );
     }
 
@@ -593,9 +611,11 @@ class _FlashcardTabBody extends ConsumerWidget {
 
     final tabFiltered = switch (tabIndex) {
       1 => all,
-      2 => all.where((item) => item.entry.isFavorite).toList(),
-      3 => const <_DeckVocabItem>[],
-      4 => all,
+      2 => all.where((item) => item.entry.isNewForStudy).toList(),
+      3 => all.where((item) => item.entry.isLearning).toList(),
+      4 => all
+          .where((item) => item.entry.isReviewing || item.entry.isMastered)
+          .toList(),
       _ => all,
     };
 
@@ -613,24 +633,6 @@ class _FlashcardTabBody extends ConsumerWidget {
       3 => Icons.check_circle_outline_rounded,
       4 => Icons.school_outlined,
       _ => Icons.menu_book_rounded,
-    };
-  }
-
-  String _emptyTitleForTab() {
-    return switch (tabIndex) {
-      2 => 'Chưa có từ yêu thích',
-      3 => 'Chưa có từ đã học',
-      4 => 'Chưa có từ chưa học',
-      _ => 'Chưa có từ vựng',
-    };
-  }
-
-  String _emptyMessageForTab() {
-    return switch (tabIndex) {
-      2 => 'Đánh dấu sao để gom các từ muốn ôn nhanh.',
-      3 => 'Khi có tiến độ học từng từ từ API, các từ sẽ xuất hiện ở đây.',
-      4 => 'Mở một bộ từ để tải danh sách từ vựng.',
-      _ => 'Mở một bộ từ để tải danh sách từ vựng.',
     };
   }
 
@@ -733,6 +735,24 @@ class _DeckVocabItem {
 
   final DeckData deck;
   final FlashcardEntry entry;
+}
+
+String _emptyTitleForSrsTab(int tabIndex) {
+  return switch (tabIndex) {
+    2 => 'Chưa có từ đến hạn',
+    3 => 'Chưa có từ đang học',
+    4 => 'Chưa có từ đã ôn',
+    _ => 'Chưa có từ vựng',
+  };
+}
+
+String _emptyMessageForSrsTab(int tabIndex) {
+  return switch (tabIndex) {
+    2 => 'Các thẻ mới hoặc đến lịch ôn sẽ xuất hiện ở đây.',
+    3 => 'Những thẻ đang củng cố sẽ xuất hiện ở đây.',
+    4 => 'Những thẻ ôn tập và đã vững sẽ xuất hiện ở đây.',
+    _ => 'Mở một bộ từ hoặc lưu từ từ Chụp để bắt đầu.',
+  };
 }
 
 class _DeckLibraryRow extends StatelessWidget {
@@ -939,6 +959,7 @@ class _VocabLibraryRow extends StatelessWidget {
                           icon: Icons.collections_bookmark_rounded,
                           label: deckName,
                         ),
+                        _SrsMetaChip(entry: entry),
                         if (partOfSpeech.isNotEmpty)
                           _MetaChip(
                             icon: _iconForPartOfSpeech(partOfSpeech),
@@ -1014,6 +1035,55 @@ class _MetaChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SrsMetaChip extends StatelessWidget {
+  const _SrsMetaChip({required this.entry});
+
+  final FlashcardEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, color) = _srsChipData(entry);
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.11),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+(String, IconData, Color) _srsChipData(FlashcardEntry entry) {
+  return switch (entry.srsState) {
+    'learning' => ('Đang học', Icons.sync_rounded, const Color(0xFFE19A2B)),
+    'review' => ('Ôn tập', Icons.event_available_rounded, _kAccent),
+    'mastered' => ('Đã vững', Icons.verified_rounded, const Color(0xFF2EAD62)),
+    _ => ('Mới', Icons.bolt_rounded, _kAccent),
+  };
 }
 
 class _RoundIconAction extends StatelessWidget {

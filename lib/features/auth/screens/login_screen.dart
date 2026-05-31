@@ -46,9 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
       final token = await credential.user?.getIdToken(true);
-      debugPrint('========== FIREBASE ID TOKEN ==========');
+      debugPrint('======= TOKEN ======');
       debugPrint(token);
-      debugPrint('========== END FIREBASE ID TOKEN ==========');
+      debugPrint('======= TOKEN ======');
 
       // Login successful → navigate to main app
       if (mounted) {

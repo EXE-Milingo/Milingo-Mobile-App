@@ -38,26 +38,26 @@ class AppBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = [
       _BottomNavItem(
-        label: 'Home',
+        label: 'Trang chủ',
         icon: Icons.home_outlined,
         activeIcon: Icons.home_rounded,
       ),
       _BottomNavItem(
-        label: 'Vocabulary',
+        label: 'Từ vựng',
         assetPath: 'assets/svg/menu_book.svg',
       ),
       _BottomNavItem(
-        label: 'Snap',
+        label: 'Chụp',
         assetPath: 'assets/svg/Camera Icon.svg',
         isCenter: true,
       ),
       _BottomNavItem(
-        label: 'Progress',
-        icon: Icons.trending_up_rounded,
-        activeIcon: Icons.trending_up_rounded,
+        label: 'Ôn tập',
+        icon: Icons.school_outlined,
+        activeIcon: Icons.school_rounded,
       ),
       _BottomNavItem(
-        label: 'Profile',
+        label: 'Hồ sơ',
         assetPath: 'assets/svg/personalize.svg',
       ),
     ];
@@ -211,12 +211,15 @@ class _BottomNavTile extends StatelessWidget {
                       color: selected
                           ? AppTheme.primaryColor.withValues(alpha: 0.12)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(item.isCenter ? 18 : 12),
+                      borderRadius:
+                          BorderRadius.circular(item.isCenter ? 18 : 12),
                     ),
                     child: Center(
                       child: item.assetPath == null
                           ? Icon(
-                              selected ? (item.activeIcon ?? item.icon) : item.icon,
+                              selected
+                                  ? (item.activeIcon ?? item.icon)
+                                  : item.icon,
                               color: color,
                               size: item.isCenter ? 26 : 24,
                             )
