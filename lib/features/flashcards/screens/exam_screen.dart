@@ -1,128 +1,190 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 
-// ── Question model ────────────────────────────────────────
+const _kBg = Color(0xFFFFF8F4);
+const _kSurface = Colors.white;
+const _kAccent = AppTheme.primaryColor;
+const _kDark = Color(0xFF1F1B18);
+const _kMuted = Color(0xFF8E817A);
+const _kBorder = Color(0xFFF0E4DE);
+const _kSoft = Color(0xFFFFEDE7);
+const _kSuccess = Color(0xFF2EAD62);
+const _kDanger = Color(0xFFE14E43);
 
-class _Question {
-  const _Question({
-    required this.wordVi,
-    required this.emoji,
-    required this.correctAnswer,
-    required this.options,
-    required this.langCode,
-  });
-  final String wordVi;
-  final String emoji;
-  final String correctAnswer;
-  final List<String> options;
-  final String langCode;
-}
-
-// ── Question bank (keyed by target-language code) ────────
-// Each entry: (Vietnamese word, emoji, correct answer, wrong answers x3)
-
-const _kRawQuestions = <(String, String, Map<String, String>, Map<String, List<String>>)>[
-  ('Cà phê', '☕', {'en': 'Coffee', 'ja': 'コーヒー', 'ko': '커피', 'zh': '咖啡', 'fr': 'Café', 'es': 'Café', 'de': 'Kaffee'},
-      {'en': ['Tea', 'Water', 'Milk'], 'ja': ['お茶', '水', '牛乳'], 'ko': ['차', '물', '우유'], 'zh': ['茶', '水', '牛奶'], 'fr': ['Thé', 'Eau', 'Lait'], 'es': ['Té', 'Agua', 'Leche'], 'de': ['Tee', 'Wasser', 'Milch']}),
-  ('Sách', '📖', {'en': 'Book', 'ja': '本', 'ko': '책', 'zh': '书', 'fr': 'Livre', 'es': 'Libro', 'de': 'Buch'},
-      {'en': ['Pen', 'Table', 'Chair'], 'ja': ['ペン', 'テーブル', '椅子'], 'ko': ['펜', '테이블', '의자'], 'zh': ['笔', '桌子', '椅子'], 'fr': ['Stylo', 'Table', 'Chaise'], 'es': ['Bolígrafo', 'Mesa', 'Silla'], 'de': ['Stift', 'Tisch', 'Stuhl']}),
-  ('Mèo', '🐱', {'en': 'Cat', 'ja': '猫', 'ko': '고양이', 'zh': '猫', 'fr': 'Chat', 'es': 'Gato', 'de': 'Katze'},
-      {'en': ['Dog', 'Bird', 'Fish'], 'ja': ['犬', '鳥', '魚'], 'ko': ['개', '새', '물고기'], 'zh': ['狗', '鸟', '鱼'], 'fr': ['Chien', 'Oiseau', 'Poisson'], 'es': ['Perro', 'Pájaro', 'Pez'], 'de': ['Hund', 'Vogel', 'Fisch']}),
-  ('Nhà', '🏠', {'en': 'House', 'ja': '家', 'ko': '집', 'zh': '房子', 'fr': 'Maison', 'es': 'Casa', 'de': 'Haus'},
-      {'en': ['School', 'Park', 'Shop'], 'ja': ['学校', '公園', '店'], 'ko': ['학교', '공원', '가게'], 'zh': ['学校', '公园', '商店'], 'fr': ['École', 'Parc', 'Magasin'], 'es': ['Escuela', 'Parque', 'Tienda'], 'de': ['Schule', 'Park', 'Laden']}),
-  ('Ô tô', '🚗', {'en': 'Car', 'ja': '車', 'ko': '자동차', 'zh': '汽车', 'fr': 'Voiture', 'es': 'Coche', 'de': 'Auto'},
-      {'en': ['Bus', 'Bike', 'Train'], 'ja': ['バス', '自転車', '電車'], 'ko': ['버스', '자전거', '기차'], 'zh': ['公共汽车', '自行车', '火车'], 'fr': ['Bus', 'Vélo', 'Train'], 'es': ['Autobús', 'Bicicleta', 'Tren'], 'de': ['Bus', 'Fahrrad', 'Zug']}),
-  ('Táo', '🍎', {'en': 'Apple', 'ja': 'りんご', 'ko': '사과', 'zh': '苹果', 'fr': 'Pomme', 'es': 'Manzana', 'de': 'Apfel'},
-      {'en': ['Orange', 'Banana', 'Grape'], 'ja': ['オレンジ', 'バナナ', 'ぶどう'], 'ko': ['오렌지', '바나나', '포도'], 'zh': ['橙子', '香蕉', '葡萄'], 'fr': ['Orange', 'Banane', 'Raisin'], 'es': ['Naranja', 'Plátano', 'Uva'], 'de': ['Orange', 'Banane', 'Traube']}),
-  ('Mặt trời', '☀️', {'en': 'Sun', 'ja': '太陽', 'ko': '태양', 'zh': '太阳', 'fr': 'Soleil', 'es': 'Sol', 'de': 'Sonne'},
-      {'en': ['Moon', 'Star', 'Cloud'], 'ja': ['月', '星', '雲'], 'ko': ['달', '별', '구름'], 'zh': ['月亮', '星星', '云'], 'fr': ['Lune', 'Étoile', 'Nuage'], 'es': ['Luna', 'Estrella', 'Nube'], 'de': ['Mond', 'Stern', 'Wolke']}),
-  ('Nước', '💧', {'en': 'Water', 'ja': '水', 'ko': '물', 'zh': '水', 'fr': 'Eau', 'es': 'Agua', 'de': 'Wasser'},
-      {'en': ['Juice', 'Milk', 'Tea'], 'ja': ['ジュース', '牛乳', 'お茶'], 'ko': ['주스', '우유', '차'], 'zh': ['果汁', '牛奶', '茶'], 'fr': ['Jus', 'Lait', 'Thé'], 'es': ['Zumo', 'Leche', 'Té'], 'de': ['Saft', 'Milch', 'Tee']}),
-  ('Máy tính', '💻', {'en': 'Laptop', 'ja': 'パソコン', 'ko': '노트북', 'zh': '电脑', 'fr': 'Ordinateur', 'es': 'Ordenador', 'de': 'Computer'},
-      {'en': ['Phone', 'Tablet', 'Camera'], 'ja': ['スマホ', 'タブレット', 'カメラ'], 'ko': ['스마트폰', '태블릿', '카메라'], 'zh': ['手机', '平板', '相机'], 'fr': ['Téléphone', 'Tablette', 'Appareil photo'], 'es': ['Teléfono', 'Tableta', 'Cámara'], 'de': ['Telefon', 'Tablet', 'Kamera']}),
-  ('Chó', '🐶', {'en': 'Dog', 'ja': '犬', 'ko': '개', 'zh': '狗', 'fr': 'Chien', 'es': 'Perro', 'de': 'Hund'},
-      {'en': ['Cat', 'Rabbit', 'Horse'], 'ja': ['猫', 'うさぎ', '馬'], 'ko': ['고양이', '토끼', '말'], 'zh': ['猫', '兔子', '马'], 'fr': ['Chat', 'Lapin', 'Cheval'], 'es': ['Gato', 'Conejo', 'Caballo'], 'de': ['Katze', 'Hase', 'Pferd']}),
-];
-
-List<_Question> _buildQuestions(String langCode) {
-  final rng = Random();
-  final raw = List.of(_kRawQuestions)..shuffle(rng);
-  return raw.take(10).map((q) {
-    final correct = q.$3[langCode] ?? q.$3['en']!;
-    final wrongs  = List<String>.from(q.$4[langCode] ?? q.$4['en']!);
-    wrongs.shuffle(rng);
-    final opts = [correct, ...wrongs.take(3)]..shuffle(rng);
-    return _Question(
-      wordVi: q.$1,
-      emoji: q.$2,
-      correctAnswer: correct,
-      options: opts,
-      langCode: langCode,
-    );
-  }).toList();
-}
-
-// ── TTS locale map ────────────────────────────────────────
 const _kTtsLocales = {
-  'en': 'en-US', 'ja': 'ja-JP', 'ko': 'ko-KR',
-  'zh': 'zh-CN', 'fr': 'fr-FR', 'es': 'es-ES', 'de': 'de-DE',
+  'en': 'en-US',
+  'vi': 'vi-VN',
+  'ja': 'ja-JP',
+  'ko': 'ko-KR',
+  'zh': 'zh-CN',
+  'fr': 'fr-FR',
+  'es': 'es-ES',
+  'de': 'de-DE',
 };
 
-// ── Screen ────────────────────────────────────────────────
+class ExamScreen extends ConsumerStatefulWidget {
+  const ExamScreen({
+    required this.deckId,
+    required this.deckName,
+    required this.langCode,
+    required this.langName,
+    super.key,
+  });
 
-class ExamScreen extends StatefulWidget {
-  const ExamScreen({super.key, required this.langCode, required this.langName});
+  final String deckId;
+  final String deckName;
   final String langCode;
   final String langName;
 
   @override
-  State<ExamScreen> createState() => _ExamScreenState();
+  ConsumerState<ExamScreen> createState() => _ExamScreenState();
 }
 
-class _ExamScreenState extends State<ExamScreen>
-    with SingleTickerProviderStateMixin {
-  late final List<_Question> _questions;
+class _ExamScreenState extends ConsumerState<ExamScreen> {
   late final FlutterTts _tts;
-  late final AnimationController _optionCtrl;
+
+  StudySessionResponse? _session;
+  bool _loading = true;
+  bool _submitting = false;
+  String? _error;
 
   int _current = 0;
-  int? _selectedIndex;
+  int _correct = 0;
+  int _coins = 0;
   bool _answered = false;
-  int _score = 0;
+  bool _revealed = false;
+  String? _selectedOptionId;
+  int? _selectedQuality;
 
   @override
   void initState() {
     super.initState();
-    _questions = _buildQuestions(widget.langCode);
     _tts = FlutterTts();
     _tts.setSpeechRate(0.45);
-    _optionCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSession());
   }
 
   @override
   void dispose() {
     _tts.stop();
-    _optionCtrl.dispose();
     super.dispose();
   }
 
-  _Question get _q => _questions[_current];
-  bool get _isLast => _current == _questions.length - 1;
+  List<StudyCard> get _cards => _session?.cards ?? const [];
+  StudyCard get _card => _cards[_current];
+  bool get _isLast => _current >= _cards.length - 1;
 
-  void _select(int i) {
-    if (_answered) return;
-    final correct = _q.options[i] == _q.correctAnswer;
+  Future<void> _loadSession() async {
+    if (widget.deckId.isEmpty) {
+      setState(() {
+        _loading = false;
+        _error = 'Khong tim thay bo tu de bat dau bai kiem tra.';
+      });
+      return;
+    }
+
     setState(() {
-      _selectedIndex = i;
-      _answered = true;
-      if (correct) _score += 10;
+      _loading = true;
+      _error = null;
+      _session = null;
+      _current = 0;
+      _correct = 0;
+      _coins = 0;
+      _answered = false;
+      _revealed = false;
+      _selectedOptionId = null;
+      _selectedQuality = null;
     });
-    _optionCtrl.forward(from: 0);
+
+    try {
+      final session = await ref
+          .read(milingoApiServiceProvider)
+          .getStudySession(widget.deckId, limit: 20);
+      if (!mounted) return;
+      setState(() {
+        _session = session;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  Future<void> _speak() async {
+    await _tts.setLanguage(_kTtsLocales[widget.langCode] ?? 'en-US');
+    await _tts.speak(_card.term);
+  }
+
+  Future<void> _submitMcq(StudyOption option) async {
+    if (_answered || _submitting) return;
+    setState(() {
+      _selectedOptionId = option.id;
+      _submitting = true;
+    });
+
+    try {
+      final result =
+          await ref.read(milingoApiServiceProvider).submitStudyAnswer(
+                deckId: _card.deckId,
+                cardId: _card.cardId,
+                mode: 'mcq',
+                isCorrect: option.isCorrect,
+              );
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _answered = true;
+        if (option.isCorrect) _correct++;
+        _coins += result.coinsAwarded;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _selectedOptionId = null;
+      });
+      _showError(error);
+    }
+  }
+
+  Future<void> _submitFlashcard(int quality) async {
+    if (_answered || _submitting) return;
+    setState(() {
+      _selectedQuality = quality;
+      _submitting = true;
+    });
+
+    try {
+      final result =
+          await ref.read(milingoApiServiceProvider).submitStudyAnswer(
+                deckId: _card.deckId,
+                cardId: _card.cardId,
+                mode: 'flashcard',
+                quality: quality,
+              );
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _answered = true;
+        if (quality >= 3) _correct++;
+        _coins += result.coinsAwarded;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _selectedQuality = null;
+      });
+      _showError(error);
+    }
   }
 
   void _next() {
@@ -130,18 +192,14 @@ class _ExamScreenState extends State<ExamScreen>
       _showResults();
       return;
     }
+
     setState(() {
       _current++;
-      _selectedIndex = null;
       _answered = false;
+      _revealed = false;
+      _selectedOptionId = null;
+      _selectedQuality = null;
     });
-    _optionCtrl.reset();
-  }
-
-  Future<void> _speak() async {
-    await _tts.setLanguage(
-        _kTtsLocales[widget.langCode] ?? 'en-US');
-    await _tts.speak(_q.correctAnswer);
   }
 
   void _showResults() {
@@ -149,106 +207,117 @@ class _ExamScreenState extends State<ExamScreen>
       context: context,
       barrierDismissible: false,
       builder: (_) => _ResultDialog(
-        score: _score,
-        total: _questions.length * 10,
-        correct: _score ~/ 10,
-        total_q: _questions.length,
+        correct: _correct,
+        total: _cards.length,
+        coins: _coins,
         onRetry: () {
           Navigator.of(context).pop();
-          setState(() {
-            _questions..clear()..addAll(_buildQuestions(widget.langCode));
-            _current = 0;
-            _selectedIndex = null;
-            _answered = false;
-            _score = 0;
-          });
+          _loadSession();
         },
         onExit: () {
           Navigator.of(context).pop();
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true);
         },
       ),
+    );
+  }
+
+  void _showError(Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Khong gui duoc cau tra loi: $error')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F4),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(),
-            _buildProgressBar(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildImageCard(),
-                    const SizedBox(height: 20),
-                    _buildQuestionText(),
-                    const SizedBox(height: 16),
-                    ..._buildOptions(),
-                  ],
-                ),
-              ),
-            ),
-            _buildNextButton(),
-          ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: _kBg,
+        body: SafeArea(
+          child: _loading
+              ? const _LoadingView()
+              : _error != null
+                  ? _ErrorView(message: _error!, onRetry: _loadSession)
+                  : _cards.isEmpty
+                      ? _EmptyDueView(
+                          deckName: widget.deckName, onRetry: _loadSession)
+                      : Column(
+                          children: [
+                            _buildTopBar(),
+                            _buildProgressBar(),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildPromptCard(),
+                                    const SizedBox(height: 18),
+                                    _card.isMcq
+                                        ? _buildMcqBody()
+                                        : _buildFlashcardBody(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            _buildNextButton(),
+                          ],
+                        ),
         ),
       ),
     );
   }
 
-  // ── Top bar ──────────────────────────────────────────────
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 20, 4),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Row(
-              children: const [
-                Icon(Icons.close_rounded, size: 18, color: Color(0xFF757575)),
-                SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Thoat',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded, color: _kMuted),
+          ),
+          Expanded(
+            child: Column(
+              children: [
                 Text(
-                  'Thoát',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF757575),
-                    fontWeight: FontWeight.w500,
+                  widget.deckName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: _kDark,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _card.isMcq ? 'Multiple choice' : 'Flashcard',
+                  style: const TextStyle(
+                    color: _kMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
           ),
-          const Expanded(
-            child: Text(
-              'BÀI KIỂM TRA',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF424242),
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: const Color(0xFF2C1A0C),
-              borderRadius: BorderRadius.circular(20),
+              color: _kDark,
+              borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
-              '$_score pts',
+              '+$_coins',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
@@ -257,9 +326,8 @@ class _ExamScreenState extends State<ExamScreen>
     );
   }
 
-  // ── Progress bar ─────────────────────────────────────────
   Widget _buildProgressBar() {
-    final progress = (_current + 1) / _questions.length;
+    final progress = (_current + 1) / _cards.length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
       child: Column(
@@ -268,35 +336,37 @@ class _ExamScreenState extends State<ExamScreen>
           Row(
             children: [
               Text(
-                'Câu hỏi ${_current + 1}',
+                'Cau ${_current + 1}',
                 style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: _kDark,
                 ),
               ),
               Text(
-                ' / ${_questions.length}',
+                ' / ${_cards.length}',
                 style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF9E9E9E),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
+                  color: _kMuted,
                 ),
               ),
+              const Spacer(),
+              _ModeChip(label: _card.srsState),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(99),
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: progress),
-              duration: const Duration(milliseconds: 400),
+              duration: const Duration(milliseconds: 280),
               curve: Curves.easeOut,
-              builder: (_, v, __) => LinearProgressIndicator(
-                value: v,
-                minHeight: 6,
-                backgroundColor: const Color(0xFFEEEEEE),
-                color: AppTheme.primaryColor,
+              builder: (_, value, __) => LinearProgressIndicator(
+                value: value,
+                minHeight: 7,
+                backgroundColor: _kBorder,
+                color: _kAccent,
               ),
             ),
           ),
@@ -305,191 +375,329 @@ class _ExamScreenState extends State<ExamScreen>
     );
   }
 
-  // ── Emoji image card ─────────────────────────────────────
-  Widget _buildImageCard() {
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          height: 200,
-          decoration: BoxDecoration(
-            color: const Color(0xFF2C1A0C),
-            borderRadius: BorderRadius.circular(20),
+  Widget _buildPromptCard() {
+    final hasImage = _card.imageUrl != null && _card.imageUrl!.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 214),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kDark,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: _kDark.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
           ),
-          child: Center(
-            child: Text(_q.emoji,
-                style: const TextStyle(fontSize: 90)),
-          ),
-        ),
-        // Listen button
-        Positioned(
-          bottom: 12,
-          right: 14,
-          child: GestureDetector(
-            onTap: _speak,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                  ),
-                ],
+        ],
+      ),
+      child: Column(
+        children: [
+          if (hasImage)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Image.network(
+                _card.imageUrl!,
+                width: double.infinity,
+                height: 138,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _FallbackPromptIcon(
+                  isMcq: _card.isMcq,
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.volume_up_rounded,
-                      size: 16, color: AppTheme.primaryColor),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'NGHE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF424242),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
-              ),
+            )
+          else
+            _FallbackPromptIcon(isMcq: _card.isMcq),
+          const SizedBox(height: 16),
+          Text(
+            _card.isMcq ? _card.translation : _card.term,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 27,
+              fontWeight: FontWeight.w900,
+              height: 1.12,
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  // ── Question text ────────────────────────────────────────
-  Widget _buildQuestionText() {
-    return Text(
-      'Chọn bản dịch đúng cho từ "${_q.wordVi}"',
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: Color(0xFF424242),
-        height: 1.4,
+          if (_card.pronunciation.isNotEmpty && !_card.isMcq) ...[
+            const SizedBox(height: 6),
+            Text(
+              _card.pronunciation,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  // ── Answer options ────────────────────────────────────────
-  List<Widget> _buildOptions() {
-    return List.generate(_q.options.length, (i) {
-      final opt = _q.options[i];
-      final isCorrect = opt == _q.correctAnswer;
-      final isSelected = _selectedIndex == i;
+  Widget _buildMcqBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Chon tu dung',
+          style: TextStyle(
+            color: _kDark,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Dua vao hinh anh hoac nghia goi y o tren.',
+          style: TextStyle(
+            color: _kMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 14),
+        for (final option in _card.options ?? const <StudyOption>[])
+          _McqOptionTile(
+            option: option,
+            selected: _selectedOptionId == option.id,
+            answered: _answered,
+            disabled: _submitting,
+            onTap: () => _submitMcq(option),
+          ),
+      ],
+    );
+  }
 
-      Color bg = Colors.white;
-      Color border = const Color(0xFFE8E8E8);
-      Color textColor = const Color(0xFF1A1A1A);
-      Widget? trailing;
-
-      if (_answered) {
-        if (isCorrect) {
-          bg = AppTheme.primaryColor;
-          border = AppTheme.primaryColor;
-          textColor = Colors.white;
-          trailing = const Icon(Icons.check_circle_rounded,
-              color: Colors.white, size: 22);
-        } else if (isSelected) {
-          bg = const Color(0xFFFFEEEE);
-          border = const Color(0xFFEF5350);
-          textColor = const Color(0xFFEF5350);
-          trailing = const Icon(Icons.cancel_rounded,
-              color: Color(0xFFEF5350), size: 22);
-        }
-      }
-
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: GestureDetector(
-          onTap: () => _select(i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: border, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: isCorrect && _answered
-                      ? AppTheme.primaryColor.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+  Widget _buildFlashcardBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Ban nho tu nay den muc nao?',
+          style: TextStyle(
+            color: _kDark,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 14),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _kBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Mat sau',
+                style: TextStyle(
+                  color: _kMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _revealed ? _card.translation : 'Nhan de xem nghia',
+                style: TextStyle(
+                  color: _revealed ? _kDark : _kMuted,
+                  fontSize: _revealed ? 24 : 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (_revealed && _card.exampleSentence.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _card.exampleSentence,
+                  style: const TextStyle(
+                    color: _kMuted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
                 ),
               ],
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _speak,
+                      icon: const Icon(Icons.volume_up_rounded, size: 18),
+                      label: const Text('Nghe'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _revealed
+                          ? null
+                          : () => setState(() => _revealed = true),
+                      style: FilledButton.styleFrom(backgroundColor: _kDark),
+                      child: const Text('Lat the'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (_revealed) _buildGradeButtons(),
+      ],
+    );
+  }
+
+  Widget _buildGradeButtons() {
+    const grades = [
+      (0, 'Again', _kDanger),
+      (2, 'Hard', Color(0xFFE1A43B)),
+      (4, 'Good', _kSuccess),
+      (5, 'Easy', _kAccent),
+    ];
+
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      childAspectRatio: 2.45,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      children: [
+        for (final grade in grades)
+          _GradeButton(
+            quality: grade.$1,
+            label: grade.$2,
+            color: grade.$3,
+            selected: _selectedQuality == grade.$1,
+            answered: _answered,
+            disabled: _submitting,
+            onPressed: () => _submitFlashcard(grade.$1),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNextButton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: FilledButton(
+          onPressed: _answered ? _next : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: _kDark,
+            disabledBackgroundColor: _kDark.withValues(alpha: 0.25),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(17),
+            ),
+          ),
+          child: _submitting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _isLast ? 'Xem ket qua' : 'Cau tiep theo',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _McqOptionTile extends StatelessWidget {
+  const _McqOptionTile({
+    required this.option,
+    required this.selected,
+    required this.answered,
+    required this.disabled,
+    required this.onTap,
+  });
+
+  final StudyOption option;
+  final bool selected;
+  final bool answered;
+  final bool disabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final showCorrect = answered && option.isCorrect;
+    final showWrong = answered && selected && !option.isCorrect;
+    final color = showCorrect
+        ? _kSuccess
+        : showWrong
+            ? _kDanger
+            : _kDark;
+    final bg = showCorrect
+        ? _kSuccess.withValues(alpha: 0.12)
+        : showWrong
+            ? _kDanger.withValues(alpha: 0.1)
+            : _kSurface;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(17),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(17),
+          onTap: disabled || answered ? null : onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 58),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(
+                color: showCorrect || showWrong ? color : _kBorder,
+                width: showCorrect || showWrong ? 1.6 : 1,
+              ),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
-                    opt,
+                    option.term,
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
+                      color: color,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
-                if (trailing != null) trailing,
-                if (trailing == null && !_answered)
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFFD0D0D0), width: 2),
-                    ),
+                if (showCorrect)
+                  const Icon(Icons.check_circle_rounded, color: _kSuccess)
+                else if (showWrong)
+                  const Icon(Icons.cancel_rounded, color: _kDanger)
+                else
+                  Icon(
+                    selected
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: _kMuted,
                   ),
-              ],
-            ),
-          ),
-        ),
-      );
-    });
-  }
-
-  // ── Next button ──────────────────────────────────────────
-  Widget _buildNextButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: _answered ? 1.0 : 0.4,
-        child: SizedBox(
-          width: double.infinity,
-          height: 54,
-          child: ElevatedButton(
-            onPressed: _answered ? _next : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2C1A0C),
-              disabledBackgroundColor: const Color(0xFF2C1A0C),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _isLast ? 'Xem kết quả' : 'Câu tiếp theo',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text('→',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -499,139 +707,307 @@ class _ExamScreenState extends State<ExamScreen>
   }
 }
 
-// ── Result dialog ─────────────────────────────────────────
-
-class _ResultDialog extends StatelessWidget {
-  const _ResultDialog({
-    required this.score,
-    required this.total,
-    required this.correct,
-    required this.total_q,
-    required this.onRetry,
-    required this.onExit,
+class _GradeButton extends StatelessWidget {
+  const _GradeButton({
+    required this.quality,
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.answered,
+    required this.disabled,
+    required this.onPressed,
   });
-  final int score;
-  final int total;
-  final int correct;
-  final int total_q;
-  final VoidCallback onRetry;
-  final VoidCallback onExit;
 
-  String get _emoji {
-    final pct = score / total;
-    if (pct >= 0.9) return '🏆';
-    if (pct >= 0.7) return '🎉';
-    if (pct >= 0.5) return '👍';
-    return '💪';
-  }
-
-  String get _message {
-    final pct = score / total;
-    if (pct >= 0.9) return 'Xuất sắc!';
-    if (pct >= 0.7) return 'Rất tốt!';
-    if (pct >= 0.5) return 'Khá tốt!';
-    return 'Cố gắng hơn nhé!';
-  }
+  final int quality;
+  final String label;
+  final Color color;
+  final bool selected;
+  final bool answered;
+  final bool disabled;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    final active = selected || (!answered && !disabled);
+    return FilledButton(
+      onPressed: answered || disabled ? null : onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: selected ? color : color.withValues(alpha: 0.13),
+        disabledBackgroundColor:
+            selected ? color : color.withValues(alpha: active ? 0.13 : 0.08),
+        foregroundColor: selected ? Colors.white : color,
+        disabledForegroundColor: selected ? Colors.white : color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+      ),
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _kSoft,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: _kAccent,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _FallbackPromptIcon extends StatelessWidget {
+  const _FallbackPromptIcon({required this.isMcq});
+
+  final bool isMcq;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 124,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Icon(
+        isMcq ? Icons.quiz_rounded : Icons.style_rounded,
+        color: Colors.white,
+        size: 48,
+      ),
+    );
+  }
+}
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(color: _kAccent),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CenteredState(
+      icon: Icons.error_outline_rounded,
+      title: 'Khong tai duoc bai kiem tra',
+      message: message,
+      actionLabel: 'Thu lai',
+      onAction: onRetry,
+    );
+  }
+}
+
+class _EmptyDueView extends StatelessWidget {
+  const _EmptyDueView({required this.deckName, required this.onRetry});
+
+  final String deckName;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CenteredState(
+      icon: Icons.check_circle_outline_rounded,
+      title: 'Hom nay da xong',
+      message: 'Khong con tu nao den han trong "$deckName".',
+      actionLabel: 'Tai lai',
+      onAction: onRetry,
+    );
+  }
+}
+
+class _CenteredState extends StatelessWidget {
+  const _CenteredState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _kBorder),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: _kAccent, size: 46),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kDark,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: onAction,
+                style: FilledButton.styleFrom(backgroundColor: _kAccent),
+                child: Text(actionLabel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ResultDialog extends StatelessWidget {
+  const _ResultDialog({
+    required this.correct,
+    required this.total,
+    required this.coins,
+    required this.onRetry,
+    required this.onExit,
+  });
+
+  final int correct;
+  final int total;
+  final int coins;
+  final VoidCallback onRetry;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = total == 0 ? 0.0 : correct / total;
+    final title = ratio >= 0.85
+        ? 'Qua tot'
+        : ratio >= 0.55
+            ? 'On dinh roi'
+            : 'Cu tiep tuc nhe';
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+      child: Padding(
+        padding: const EdgeInsets.all(26),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_emoji, style: const TextStyle(fontSize: 56)),
-            const SizedBox(height: 12),
-            Text(
-              _message,
-              style: const TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A)),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$correct / $total_q câu đúng',
-              style: const TextStyle(fontSize: 14, color: Color(0xFF9E9E9E)),
-            ),
-            const SizedBox(height: 16),
-            // Score chip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '$score / $total pts',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Progress arc indicator
             SizedBox(
-              width: 100,
-              height: 100,
+              width: 104,
+              height: 104,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   CircularProgressIndicator(
-                    value: score / total,
+                    value: ratio,
                     strokeWidth: 10,
-                    backgroundColor: const Color(0xFFEEEEEE),
-                    color: AppTheme.primaryColor,
+                    backgroundColor: _kBorder,
+                    color: _kAccent,
                     strokeCap: StrokeCap.round,
                   ),
                   Center(
                     child: Text(
-                      '${((score / total) * 100).round()}%',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
+                      '${(ratio * 100).round()}%',
+                      style: const TextStyle(
+                        color: _kDark,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _kDark,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$correct / $total cau tot · +$coins coins',
+              style: const TextStyle(
+                color: _kMuted,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: onExit,
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppTheme.primaryColor),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      foregroundColor: _kAccent,
+                      side: const BorderSide(color: _kAccent),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text('Thoát',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primaryColor)),
+                    child: const Text('Thoat'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton(
+                  child: FilledButton(
                     onPressed: onRetry,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _kAccent,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Thử lại',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: const Text('Lam tiep'),
                   ),
                 ),
               ],

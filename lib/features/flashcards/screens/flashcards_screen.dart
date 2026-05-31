@@ -11,10 +11,12 @@ import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 const _kBg = Color(0xFFFFF8F4);
 const _kSurface = Colors.white;
 const _kAccent = AppTheme.primaryColor;
-const _kDark = Color(0xFF1A1A1A);
-const _kMuted = Color(0xFF8F8F8F);
-const _kBorder = Color(0xFFE8E2DE);
+const _kDark = Color(0xFF1F1B18);
+const _kMuted = Color(0xFF8E817A);
+const _kSubtle = Color(0xFFB8ADA6);
+const _kBorder = Color(0xFFF0E4DE);
 const _kSoft = Color(0xFFFFEDE7);
+const _kWarm = Color(0xFFFFF2EC);
 const _kStar = Color(0xFFFFC84B);
 
 const _kTabs = [
@@ -55,6 +57,16 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(flashcardProvider);
+    final data = asyncState.valueOrNull;
+    final totalDecks = data?.decks.length ?? 0;
+    final totalWords =
+        data?.decks.fold<int>(0, (sum, deck) => sum + deck.total) ?? 0;
+    final favoriteWords = data?.decks.fold<int>(
+          0,
+          (sum, deck) =>
+              sum + deck.cards.where((entry) => entry.isFavorite).length,
+        ) ??
+        0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -66,6 +78,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
             children: [
               _LibraryHeader(
                 selectedIndex: _tabIndex,
+                totalDecks: totalDecks,
+                totalWords: totalWords,
+                favoriteWords: favoriteWords,
+                isLoading: asyncState.isLoading && data == null,
                 onTabSelected: _selectTab,
                 onCreateDeck: () =>
                     _showCreateDeckSheet(context, asyncState.hasValue),
@@ -76,6 +92,10 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                     ? 'Tìm kiếm bộ từ...'
                     : 'Tìm kiếm từ vựng...',
                 onChanged: (value) => setState(() => _query = value),
+                onClear: () {
+                  _searchController.clear();
+                  setState(() => _query = '');
+                },
               ),
               const SizedBox(height: 8),
               Expanded(
@@ -121,48 +141,79 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
 class _LibraryHeader extends StatelessWidget {
   const _LibraryHeader({
     required this.selectedIndex,
+    required this.totalDecks,
+    required this.totalWords,
+    required this.favoriteWords,
+    required this.isLoading,
     required this.onTabSelected,
     required this.onCreateDeck,
   });
 
   final int selectedIndex;
+  final int totalDecks;
+  final int totalWords;
+  final int favoriteWords;
+  final bool isLoading;
   final ValueChanged<int> onTabSelected;
   final VoidCallback onCreateDeck;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Expanded(
-                child: Text(
-                  'Thư viện',
-                  style: TextStyle(
-                    color: _kDark,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    height: 1,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Thư viện',
+                      style: TextStyle(
+                        color: _kDark,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Sắp xếp bộ từ, lưu lại từ hay và ôn tập nhanh.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _kMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              IconButton(
-                tooltip: 'Tạo bộ từ',
-                onPressed: onCreateDeck,
-                icon: const Icon(Icons.add_rounded, color: _kDark, size: 32),
-              ),
+              const SizedBox(width: 14),
+              _CreateDeckButton(onPressed: onCreateDeck),
             ],
           ),
           const SizedBox(height: 18),
+          _LibraryStatsStrip(
+            selectedIndex: selectedIndex,
+            totalDecks: totalDecks,
+            totalWords: totalWords,
+            favoriteWords: favoriteWords,
+            isLoading: isLoading,
+          ),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 44,
+            height: 42,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _kTabs.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final selected = index == selectedIndex;
                 return _TabPill(
@@ -171,6 +222,181 @@ class _LibraryHeader extends StatelessWidget {
                   onTap: () => onTabSelected(index),
                 );
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreateDeckButton extends StatelessWidget {
+  const _CreateDeckButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _kAccent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: _kAccent.withValues(alpha: 0.28),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryStatsStrip extends StatelessWidget {
+  const _LibraryStatsStrip({
+    required this.selectedIndex,
+    required this.totalDecks,
+    required this.totalWords,
+    required this.favoriteWords,
+    required this.isLoading,
+  });
+
+  final int selectedIndex;
+  final int totalDecks;
+  final int totalWords;
+  final int favoriteWords;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: _kAccent.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatPill(
+              icon: Icons.folder_copy_rounded,
+              label: 'Bộ từ',
+              value: isLoading ? '-' : '$totalDecks',
+              selected: selectedIndex == 0,
+            ),
+          ),
+          Expanded(
+            child: _StatPill(
+              icon: Icons.menu_book_rounded,
+              label: 'Từ vựng',
+              value: isLoading ? '-' : '$totalWords',
+              selected: selectedIndex == 1 || selectedIndex > 2,
+            ),
+          ),
+          Expanded(
+            child: _StatPill(
+              icon: Icons.star_rounded,
+              label: 'Yêu thích',
+              value: isLoading ? '-' : '$favoriteWords',
+              selected: selectedIndex == 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.selected = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: selected ? _kWarm : Colors.transparent,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: selected ? _kAccent : _kSoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: selected ? Colors.white : _kAccent,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _kDark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _kMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -193,25 +419,25 @@ class _TabPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? Colors.transparent : const Color(0xFFFFEEE9),
+      color: selected ? _kAccent : _kWarm,
       shape: StadiumBorder(
         side: BorderSide(
-          color: selected ? _kAccent : Colors.transparent,
-          width: selected ? 1.8 : 0,
+          color: selected ? _kAccent : _kBorder,
+          width: 1,
         ),
       ),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 10),
           child: Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: selected ? _kDark : const Color(0xFF5E5A58),
-              fontSize: 14,
+              color: selected ? Colors.white : _kMuted,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -226,16 +452,18 @@ class _SearchBox extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.onChanged,
+    required this.onClear,
   });
 
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
@@ -245,21 +473,32 @@ class _SearchBox extends StatelessWidget {
           hintText: hintText,
           hintStyle: const TextStyle(color: Color(0xFFB8B3B0), fontSize: 15),
           prefixIcon: const Icon(Icons.search_rounded,
-              color: Color(0xFFB8B3B0), size: 24),
+              color: _kSubtle, size: 23),
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Xóa tìm kiếm',
+                  onPressed: onClear,
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: _kMuted,
+                    size: 20,
+                  ),
+                ),
           filled: true,
           fillColor: _kSurface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             borderSide: const BorderSide(color: _kBorder),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             borderSide: const BorderSide(color: _kBorder),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             borderSide: const BorderSide(color: _kAccent, width: 1.4),
           ),
         ),
@@ -292,9 +531,9 @@ class _FlashcardTabBody extends ConsumerWidget {
       }
 
       return ListView.separated(
-        padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+        padding: const EdgeInsets.fromLTRB(20, 6, 20, 28),
         itemCount: decks.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) => _DeckLibraryRow(
           deck: decks[index],
           onFavorite: () => _toggleDeckFavorite(context, ref, decks[index]),
@@ -313,9 +552,9 @@ class _FlashcardTabBody extends ConsumerWidget {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 28),
       itemCount: vocabItems.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final item = vocabItems[index];
         return _VocabLibraryRow(
@@ -510,24 +749,28 @@ class _DeckLibraryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final count = deck.total;
+    final loadedCount = deck.cards.length;
+    final progress =
+        count == 0 ? 0.0 : (loadedCount / count).clamp(0.0, 1.0).toDouble();
 
     return Material(
       color: _kSurface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 78),
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          constraints: const BoxConstraints(minHeight: 92),
+          padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _kBorder),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: _kAccent.withValues(alpha: 0.07),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -551,39 +794,51 @@ class _DeckLibraryRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _kDark,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Học phần  ·  $count thuật ngữ',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _kMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        const _MetaChip(
+                          icon: Icons.layers_rounded,
+                          label: 'Học phần',
+                        ),
+                        _MetaChip(
+                          icon: Icons.menu_book_rounded,
+                          label: '$count thuật ngữ',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        minHeight: 4,
+                        value: progress,
+                        backgroundColor: _kSoft,
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(_kAccent),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton(
+              const SizedBox(width: 10),
+              _RoundIconAction(
                 tooltip: deck.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích deck',
-                visualDensity: VisualDensity.compact,
                 onPressed: onFavorite,
-                icon: Icon(
-                  deck.isFavorite
-                      ? Icons.star_rounded
-                      : Icons.star_border_rounded,
-                  color: deck.isFavorite ? _kStar : _kMuted,
-                  size: 23,
-                ),
+                icon: deck.isFavorite
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                color: deck.isFavorite ? _kStar : _kSubtle,
               ),
+              const SizedBox(width: 2),
               const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFFC4BFBC), size: 26),
+                  color: _kSubtle, size: 26),
             ],
           ),
         ),
@@ -609,23 +864,26 @@ class _VocabLibraryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final partOfSpeech = entry.partOfSpeech.trim();
+
     return Material(
       color: _kSurface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 82),
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          constraints: const BoxConstraints(minHeight: 92),
+          padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _kBorder),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: _kAccent.withValues(alpha: 0.07),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -657,53 +915,133 @@ class _VocabLibraryRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _kDark,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 6),
                     Text(
-                      '${entry.translation}  ·  $deckName',
+                      entry.translation,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: _kMuted,
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _MetaChip(
+                          icon: Icons.collections_bookmark_rounded,
+                          label: deckName,
+                        ),
+                        if (partOfSpeech.isNotEmpty)
+                          _MetaChip(
+                            icon: _iconForPartOfSpeech(partOfSpeech),
+                            label: partOfSpeech,
+                          ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton(
+              _RoundIconAction(
                 tooltip: entry.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích từ',
-                visualDensity: VisualDensity.compact,
                 onPressed: onFavorite,
-                icon: Icon(
-                  entry.isFavorite
-                      ? Icons.star_rounded
-                      : Icons.star_border_rounded,
-                  color: entry.isFavorite ? _kStar : _kMuted,
-                  size: 23,
-                ),
+                icon: entry.isFavorite
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                color: entry.isFavorite ? _kStar : _kSubtle,
               ),
-              IconButton(
+              _RoundIconAction(
                 tooltip: 'Xóa từ',
-                visualDensity: VisualDensity.compact,
                 onPressed: onDelete,
-                icon: const Icon(
-                  Icons.delete_outline_rounded,
-                  color: _kMuted,
-                  size: 22,
-                ),
+                icon: Icons.delete_outline_rounded,
+                color: _kSubtle,
               ),
               const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFFC4BFBC), size: 26),
+                  color: _kSubtle, size: 26),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: _kWarm,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: _kAccent, size: 13),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _kMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundIconAction extends StatelessWidget {
+  const _RoundIconAction({
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+    required this.color,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+      padding: EdgeInsets.zero,
+      style: IconButton.styleFrom(
+        backgroundColor: _kWarm,
+        shape: const CircleBorder(),
+      ),
+      onPressed: onPressed,
+      icon: Icon(icon, color: color, size: 20),
     );
   }
 }
@@ -719,8 +1057,13 @@ class _IconTile extends StatelessWidget {
       width: 54,
       height: 54,
       decoration: BoxDecoration(
-        color: _kSoft,
-        borderRadius: BorderRadius.circular(13),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF0EB), Color(0xFFFFE2D6)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
@@ -734,7 +1077,68 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator(color: _kAccent));
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 4,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, __) => const _SkeletonRow(),
+    );
+  }
+}
+
+class _SkeletonRow extends StatelessWidget {
+  const _SkeletonRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 92,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: _kWarm,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 140,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: _kWarm,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: 210,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _kWarm,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -798,32 +1202,50 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 62,
-              height: 62,
-              decoration:
-                  const BoxDecoration(color: _kSoft, shape: BoxShape.circle),
-              child: Icon(icon, color: _kAccent, size: 32),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: _kDark, fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style:
-                  const TextStyle(color: _kMuted, fontSize: 13, height: 1.35),
-            ),
-          ],
+        padding: const EdgeInsets.fromLTRB(28, 18, 28, 34),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+          decoration: BoxDecoration(
+            color: _kSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _kBorder),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 66,
+                height: 66,
+                decoration: const BoxDecoration(
+                  color: _kWarm,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: _kAccent, size: 32),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kDark,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

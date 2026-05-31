@@ -53,6 +53,9 @@ class CardResponse {
     required this.targetLangCode,
     required this.createdAt,
     required this.isFavorite,
+    this.srsState = 'new',
+    this.srsRepetitions = 0,
+    this.srsIntervalDays = 0,
     this.sourceVocabId,
     this.imageUrl,
   });
@@ -68,6 +71,9 @@ class CardResponse {
       targetLangCode: (json['target_lang_code'] ?? 'en').toString(),
       createdAt: (json['created_at'] ?? '').toString(),
       isFavorite: json['is_favorite'] as bool? ?? false,
+      srsState: (json['srs_state'] ?? 'new').toString(),
+      srsRepetitions: (json['srs_repetitions'] as num?)?.toInt() ?? 0,
+      srsIntervalDays: (json['srs_interval_days'] as num?)?.toInt() ?? 0,
       sourceVocabId: json['source_vocab_id'] as String?,
       imageUrl: json['image_url'] as String?,
     );
@@ -82,6 +88,9 @@ class CardResponse {
   final String targetLangCode;
   final String createdAt;
   final bool isFavorite;
+  final String srsState;
+  final int srsRepetitions;
+  final int srsIntervalDays;
   final String? sourceVocabId;
   final String? imageUrl;
 
@@ -96,10 +105,185 @@ class CardResponse {
       targetLangCode: targetLangCode,
       createdAt: createdAt,
       isFavorite: isFavorite,
+      srsState: srsState,
+      srsRepetitions: srsRepetitions,
+      srsIntervalDays: srsIntervalDays,
       sourceVocabId: sourceVocabId,
       imageUrl: value,
     );
   }
+}
+
+// Study / Exam
+
+class StudyOption {
+  const StudyOption({
+    required this.id,
+    required this.term,
+    required this.isCorrect,
+  });
+
+  factory StudyOption.fromJson(Map<String, dynamic> json) {
+    return StudyOption(
+      id: (json['id'] ?? '').toString(),
+      term: (json['term'] ?? '').toString(),
+      isCorrect: json['is_correct'] as bool? ?? false,
+    );
+  }
+
+  final String id;
+  final String term;
+  final bool isCorrect;
+}
+
+class StudyCard {
+  const StudyCard({
+    required this.cardId,
+    required this.deckId,
+    required this.term,
+    required this.translation,
+    required this.pronunciation,
+    required this.exampleSentence,
+    required this.srsState,
+    required this.srsRepetitions,
+    required this.srsIntervalDays,
+    required this.suggestedMode,
+    required this.options,
+    this.imageUrl,
+  });
+
+  factory StudyCard.fromJson(Map<String, dynamic> json) {
+    final rawOptions = json['options'] as List<dynamic>?;
+    return StudyCard(
+      cardId: (json['card_id'] ?? '').toString(),
+      deckId: (json['deck_id'] ?? '').toString(),
+      term: (json['term'] ?? '').toString(),
+      translation: (json['translation'] ?? '').toString(),
+      pronunciation: (json['pronunciation'] ?? '').toString(),
+      exampleSentence: (json['example_sentence'] ?? '').toString(),
+      imageUrl: json['image_url'] as String?,
+      srsState: (json['srs_state'] ?? 'new').toString(),
+      srsRepetitions: (json['srs_repetitions'] as num?)?.toInt() ?? 0,
+      srsIntervalDays: (json['srs_interval_days'] as num?)?.toInt() ?? 0,
+      suggestedMode: (json['suggested_mode'] ?? 'flashcard').toString(),
+      options: rawOptions
+          ?.whereType<Map>()
+          .map((e) => StudyOption.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+    );
+  }
+
+  final String cardId;
+  final String deckId;
+  final String term;
+  final String translation;
+  final String pronunciation;
+  final String exampleSentence;
+  final String? imageUrl;
+  final String srsState;
+  final int srsRepetitions;
+  final int srsIntervalDays;
+  final String suggestedMode;
+  final List<StudyOption>? options;
+
+  bool get isMcq => suggestedMode == 'mcq' && (options?.isNotEmpty ?? false);
+}
+
+class StudySessionResponse {
+  const StudySessionResponse({
+    required this.deckId,
+    required this.deckName,
+    required this.cards,
+    required this.totalDue,
+    required this.flashcardCount,
+    required this.mcqCount,
+  });
+
+  factory StudySessionResponse.fromJson(Map<String, dynamic> json) {
+    final rawCards = json['cards'] as List<dynamic>? ?? const [];
+    return StudySessionResponse(
+      deckId: (json['deck_id'] ?? '').toString(),
+      deckName: (json['deck_name'] ?? '').toString(),
+      cards: rawCards
+          .whereType<Map>()
+          .map((e) => StudyCard.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+      totalDue: (json['total_due'] as num?)?.toInt() ?? 0,
+      flashcardCount: (json['flashcard_count'] as num?)?.toInt() ?? 0,
+      mcqCount: (json['mcq_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String deckId;
+  final String deckName;
+  final List<StudyCard> cards;
+  final int totalDue;
+  final int flashcardCount;
+  final int mcqCount;
+}
+
+class SubmitStudyAnswerResponse {
+  const SubmitStudyAnswerResponse({
+    required this.cardId,
+    required this.mode,
+    required this.qualityApplied,
+    required this.newSrsState,
+    required this.newIntervalDays,
+    required this.nextReviewAt,
+    required this.coinsAwarded,
+  });
+
+  factory SubmitStudyAnswerResponse.fromJson(Map<String, dynamic> json) {
+    return SubmitStudyAnswerResponse(
+      cardId: (json['card_id'] ?? '').toString(),
+      mode: (json['mode'] ?? '').toString(),
+      qualityApplied: (json['quality_applied'] as num?)?.toInt() ?? 0,
+      newSrsState: (json['new_srs_state'] ?? '').toString(),
+      newIntervalDays: (json['new_interval_days'] as num?)?.toInt() ?? 0,
+      nextReviewAt: (json['next_review_at'] ?? '').toString(),
+      coinsAwarded: (json['coins_awarded'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String cardId;
+  final String mode;
+  final int qualityApplied;
+  final String newSrsState;
+  final int newIntervalDays;
+  final String nextReviewAt;
+  final int coinsAwarded;
+}
+
+class DeckStudyStats {
+  const DeckStudyStats({
+    required this.deckId,
+    required this.newCount,
+    required this.learningCount,
+    required this.reviewCount,
+    required this.masteredCount,
+    required this.dueToday,
+    required this.totalCards,
+  });
+
+  factory DeckStudyStats.fromJson(Map<String, dynamic> json) {
+    return DeckStudyStats(
+      deckId: (json['deck_id'] ?? '').toString(),
+      newCount: (json['new_count'] as num?)?.toInt() ?? 0,
+      learningCount: (json['learning_count'] as num?)?.toInt() ?? 0,
+      reviewCount: (json['review_count'] as num?)?.toInt() ?? 0,
+      masteredCount: (json['mastered_count'] as num?)?.toInt() ?? 0,
+      dueToday: (json['due_today'] as num?)?.toInt() ?? 0,
+      totalCards: (json['total_cards'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String deckId;
+  final int newCount;
+  final int learningCount;
+  final int reviewCount;
+  final int masteredCount;
+  final int dueToday;
+  final int totalCards;
 }
 
 // ── Snap Analysis ────────────────────────────────────────

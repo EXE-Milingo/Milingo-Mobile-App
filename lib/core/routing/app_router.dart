@@ -86,6 +86,8 @@ GoRouter appRouter(AppRouterRef ref) {
         builder: (context, state) {
           final extra = state.extra as Map<String, String>?;
           return ExamScreen(
+            deckId: extra?['deckId'] ?? '',
+            deckName: extra?['deckName'] ?? 'Bài kiểm tra',
             langCode: extra?['langCode'] ?? 'en',
             langName: extra?['langName'] ?? 'English',
           );

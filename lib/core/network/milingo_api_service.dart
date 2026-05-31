@@ -464,6 +464,72 @@ class MilingoApiService {
   // Flashcard Saved Status
   // ═══════════════════════════════════════════════════════
 
+  // Study / Exam
+
+  Future<StudySessionResponse> getStudySession(
+    String deckId, {
+    int limit = 20,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/study/session',
+        queryParameters: {
+          'deckId': deckId,
+          'limit': limit,
+        },
+      );
+      return _unwrap(
+        response,
+        (data) => StudySessionResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<SubmitStudyAnswerResponse> submitStudyAnswer({
+    required String deckId,
+    required String cardId,
+    required String mode,
+    int? quality,
+    bool? isCorrect,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/study/answer',
+        data: {
+          'deck_id': deckId,
+          'card_id': cardId,
+          'mode': mode,
+          if (quality != null) 'quality': quality,
+          if (isCorrect != null) 'is_correct': isCorrect,
+        },
+      );
+      return _unwrap(
+        response,
+        (data) =>
+            SubmitStudyAnswerResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<DeckStudyStats> getDeckStudyStats(String deckId) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/study/stats',
+        queryParameters: {'deckId': deckId},
+      );
+      return _unwrap(
+        response,
+        (data) => DeckStudyStats.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   Future<SavedStatusResponse> getSavedStatus({
     required String term,
     required String sourceLangCode,

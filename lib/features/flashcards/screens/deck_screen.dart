@@ -6,6 +6,7 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/features/flashcards/widgets/exam_banner.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 
 const _kBg = Color(0xFFFFF8F4);
@@ -70,6 +71,12 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               _SearchBox(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _query = value),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                child: ExamBanner(
+                  onTap: () => _startExam(liveDeck),
+                ),
               ),
               const SizedBox(height: 8),
               Expanded(
@@ -137,6 +144,37 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           entry.translation.toLowerCase().contains(trimmed) ||
           entry.pronunciation.toLowerCase().contains(trimmed);
     }).toList();
+  }
+
+  void _startExam(DeckData? liveDeck) {
+    context.push(
+      AppConstants.examRoute,
+      extra: {
+        'deckId': widget.deck.id,
+        'deckName': liveDeck?.name ?? widget.deck.name,
+        'langCode': _resolveLangCode(liveDeck),
+        'langName': _resolveLangName(liveDeck),
+      },
+    );
+  }
+
+  String _resolveLangCode(DeckData? liveDeck) {
+    final cards = liveDeck?.cards ?? const <FlashcardEntry>[];
+    if (cards.isEmpty) return 'en';
+    return cards.first.langCode;
+  }
+
+  String _resolveLangName(DeckData? liveDeck) {
+    return switch (_resolveLangCode(liveDeck)) {
+      'vi' => 'Vietnamese',
+      'ja' => 'Japanese',
+      'ko' => 'Korean',
+      'zh' => 'Chinese',
+      'fr' => 'French',
+      'es' => 'Spanish',
+      'de' => 'German',
+      _ => 'English',
+    };
   }
 
   Future<void> _toggleDeckFavorite(DeckData deck) async {

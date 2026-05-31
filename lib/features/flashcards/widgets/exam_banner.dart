@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 
 class ExamBanner extends StatelessWidget {
-  const ExamBanner({super.key, required this.onTap});
+  const ExamBanner({required this.onTap, super.key});
+
   final VoidCallback onTap;
 
   @override
@@ -13,15 +14,15 @@ class ExamBanner extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.primaryColor, const Color(0xFFD94E28)],
+          gradient: const LinearGradient(
+            colors: [AppTheme.primaryColor, Color(0xFFD94E28)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryColor.withOpacity(0.35),
+              color: AppTheme.primaryColor.withValues(alpha: 0.35),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -33,11 +34,13 @@ class ExamBanner extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: const Center(
-                child: Text('📝', style: TextStyle(fontSize: 24)),
+              child: const Icon(
+                Icons.quiz_rounded,
+                color: Colors.white,
+                size: 25,
               ),
             ),
             const SizedBox(width: 14),
@@ -46,7 +49,7 @@ class ExamBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bài kiểm tra',
+                    'On tap thong minh',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -55,7 +58,9 @@ class ExamBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 3),
                   Text(
-                    'Kiểm tra từ vựng với 10 câu hỏi',
+                    'Flashcard va cau hoi theo lich SRS',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
@@ -67,8 +72,8 @@ class ExamBanner extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                'Bắt đầu',
+              child: const Text(
+                'Bat dau',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
