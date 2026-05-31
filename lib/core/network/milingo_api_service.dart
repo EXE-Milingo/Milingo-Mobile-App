@@ -75,7 +75,10 @@ class MilingoApiService {
             case 403:
               message = 'Bạn không có quyền thực hiện thao tác này.';
             case 404:
-              message = 'Không tìm thấy tài nguyên yêu cầu.';
+              final path = error.requestOptions.path;
+              message = path.contains('/api/v1/payments/')
+                  ? 'Backend thanh toán chưa sẵn sàng. Hãy deploy bản backend có PayOS rồi thử lại.'
+                  : 'Không tìm thấy tài nguyên yêu cầu.';
             case 409:
               message = 'Dữ liệu đã tồn tại.';
             case 500:
@@ -180,6 +183,46 @@ class MilingoApiService {
   }
 
   /// Lấy stats của user: coins, streak, totalPoints.
+  Future<UserProfileResponse> getUserProfile() async {
+    try {
+      final response = await _dio.get('/api/v1/users/me');
+      return _unwrap(
+        response,
+        (data) => UserProfileResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<UserProfileResponse> updateUserProfile({
+    String? displayName,
+    String? nativeLanguage,
+    String? targetLanguage,
+    String? cefrLevel,
+    String? photoUrl,
+  }) async {
+    final data = <String, dynamic>{
+      if (displayName != null) 'displayName': displayName,
+      if (nativeLanguage != null) 'nativeLanguage': nativeLanguage,
+      if (targetLanguage != null) 'targetLanguage': targetLanguage,
+      if (cefrLevel != null) 'cefrLevel': cefrLevel,
+      if (photoUrl != null) 'photoUrl': photoUrl,
+    };
+
+    if (data.isEmpty) return getUserProfile();
+
+    try {
+      final response = await _dio.patch('/api/v1/users/me', data: data);
+      return _unwrap(
+        response,
+        (body) => UserProfileResponse.fromJson(body as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   Future<UserStatsResponse> getUserStats() async {
     try {
       final response = await _dio.get('/api/v1/users/stats');
@@ -200,6 +243,70 @@ class MilingoApiService {
       return _unwrap(
         response,
         (data) => UserStatsResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<CreatePayOSOrderResponse> createPayOSOrder({
+    required String planId,
+    required String returnUrl,
+    required String cancelUrl,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/payments/payos/create-order',
+        data: {
+          'planId': planId,
+          'returnUrl': returnUrl,
+          'cancelUrl': cancelUrl,
+        },
+      );
+      return _unwrap(
+        response,
+        (data) =>
+            CreatePayOSOrderResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<PremiumStatusResponse> getPremiumStatus() async {
+    try {
+      final response = await _dio.get('/api/v1/payments/status');
+      return _unwrap(
+        response,
+        (data) => PremiumStatusResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<SubscriptionOverviewResponse> getSubscriptionOverview() async {
+    try {
+      final response = await _dio.get('/api/v1/payments/subscription');
+      return _unwrap(
+        response,
+        (data) =>
+            SubscriptionOverviewResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<PaymentTransactionHistoryResponse>
+      getPaymentTransactionHistory() async {
+    try {
+      final response = await _dio.get('/api/v1/payments/history');
+      return _unwrap(
+        response,
+        (data) => PaymentTransactionHistoryResponse.fromJson(
+          data as Map<String, dynamic>,
+        ),
       );
     } on DioException catch (e) {
       throw MilingoApiException(_userFriendlyError(e));

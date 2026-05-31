@@ -15,6 +15,10 @@ import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
 import 'package:milingo/features/flashcards/screens/vocab_detail_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/leaderboard/screens/leaderboard_screen.dart';
+import 'package:milingo/features/premium/screens/payment_result_screen.dart';
+import 'package:milingo/features/premium/screens/premium_screen.dart';
+import 'package:milingo/features/premium/screens/subscription_management_screen.dart';
+import 'package:milingo/features/premium/screens/transaction_history_screen.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
 import 'package:milingo/features/splash/screens/splash_screen.dart';
@@ -27,6 +31,8 @@ const _publicRoutes = {
   AppConstants.authRoute,
   AppConstants.registerRoute,
   AppConstants.forgotPasswordRoute,
+  AppConstants.paymentSuccessRoute,
+  AppConstants.paymentCancelRoute,
 };
 
 @riverpod
@@ -139,6 +145,35 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.profileRoute,
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.premiumRoute,
+        name: 'premium',
+        builder: (context, state) => const PremiumScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.subscriptionRoute,
+        name: 'subscription',
+        builder: (context, state) => const SubscriptionManagementScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.paymentHistoryRoute,
+        name: 'payment-history',
+        builder: (context, state) => const TransactionHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.paymentSuccessRoute,
+        name: 'payment-success',
+        builder: (context, state) => const PaymentResultScreen(
+          isSuccess: true,
+        ),
+      ),
+      GoRoute(
+        path: AppConstants.paymentCancelRoute,
+        name: 'payment-cancel',
+        builder: (context, state) => const PaymentResultScreen(
+          isSuccess: false,
+        ),
       ),
       GoRoute(
         path: AppConstants.leaderboardRoute,

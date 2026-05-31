@@ -399,6 +399,70 @@ class SupportedLanguage {
 }
 // ── User Stats ────────────────────────────────────────────
 
+class UserProfileResponse {
+  const UserProfileResponse({
+    required this.id,
+    required this.displayName,
+    required this.email,
+    required this.cefrLevel,
+    required this.isPremium,
+    this.photoUrl,
+    this.nativeLanguage,
+    this.targetLanguage,
+    this.localAvatarPath,
+  });
+
+  factory UserProfileResponse.fromJson(Map<String, dynamic> json) {
+    return UserProfileResponse(
+      id: (json['id'] ?? '').toString(),
+      displayName:
+          (json['displayName'] ?? json['display_name'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+      photoUrl: (json['photoUrl'] ?? json['photo_url']) as String?,
+      nativeLanguage:
+          (json['nativeLanguage'] ?? json['native_language']) as String?,
+      targetLanguage:
+          (json['targetLanguage'] ?? json['target_language']) as String?,
+      cefrLevel: (json['cefrLevel'] ?? json['cefr_level'] ?? 'A1').toString(),
+      isPremium: json['isPremium'] as bool? ?? false,
+    );
+  }
+
+  final String id;
+  final String displayName;
+  final String email;
+  final String? photoUrl;
+  final String? nativeLanguage;
+  final String? targetLanguage;
+  final String cefrLevel;
+  final bool isPremium;
+  final String? localAvatarPath;
+
+  UserProfileResponse copyWith({
+    String? id,
+    String? displayName,
+    String? email,
+    String? photoUrl,
+    String? nativeLanguage,
+    String? targetLanguage,
+    String? cefrLevel,
+    bool? isPremium,
+    String? localAvatarPath,
+  }) {
+    return UserProfileResponse(
+      id: id ?? this.id,
+      displayName: displayName ?? this.displayName,
+      email: email ?? this.email,
+      photoUrl: photoUrl ?? this.photoUrl,
+      nativeLanguage: nativeLanguage ?? this.nativeLanguage,
+      targetLanguage: targetLanguage ?? this.targetLanguage,
+      cefrLevel: cefrLevel ?? this.cefrLevel,
+      isPremium: isPremium ?? this.isPremium,
+      localAvatarPath: localAvatarPath ?? this.localAvatarPath,
+    );
+  }
+}
+
 class UserStatsResponse {
   const UserStatsResponse({
     required this.coins,
@@ -420,4 +484,209 @@ class UserStatsResponse {
   final int currentStreak;
   final int totalPoints;
   final String? lastStudyDate;
+}
+
+class CreatePayOSOrderResponse {
+  const CreatePayOSOrderResponse({
+    required this.checkoutUrl,
+    required this.orderCode,
+    required this.paymentLinkId,
+  });
+
+  factory CreatePayOSOrderResponse.fromJson(Map<String, dynamic> json) {
+    return CreatePayOSOrderResponse(
+      checkoutUrl: (json['checkoutUrl'] ?? '').toString(),
+      orderCode: (json['orderCode'] as num?)?.toInt() ?? 0,
+      paymentLinkId: (json['paymentLinkId'] ?? '').toString(),
+    );
+  }
+
+  final String checkoutUrl;
+  final int orderCode;
+  final String paymentLinkId;
+}
+
+class PremiumStatusResponse {
+  const PremiumStatusResponse({
+    required this.isPremium,
+    this.expiresAt,
+    this.source,
+  });
+
+  factory PremiumStatusResponse.fromJson(Map<String, dynamic> json) {
+    return PremiumStatusResponse(
+      isPremium: json['isPremium'] as bool? ?? false,
+      expiresAt: DateTime.tryParse((json['expiresAt'] ?? '').toString()),
+      source: json['source'] as String?,
+    );
+  }
+
+  final bool isPremium;
+  final DateTime? expiresAt;
+  final String? source;
+}
+
+class SubscriptionBenefitResponse {
+  const SubscriptionBenefitResponse({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  factory SubscriptionBenefitResponse.fromJson(Map<String, dynamic> json) {
+    return SubscriptionBenefitResponse(
+      icon: (json['icon'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      subtitle: (json['subtitle'] ?? '').toString(),
+    );
+  }
+
+  final String icon;
+  final String title;
+  final String subtitle;
+}
+
+class SubscriptionOverviewResponse {
+  const SubscriptionOverviewResponse({
+    required this.isPremium,
+    required this.planName,
+    required this.lastPaymentAmount,
+    required this.nextPaymentAmount,
+    required this.monthlyProgressPercent,
+    required this.benefits,
+    this.planId,
+    this.expiresAt,
+    this.source,
+    this.remainingDays,
+    this.startedAt,
+    this.memberSince,
+    this.lastPaymentAt,
+  });
+
+  factory SubscriptionOverviewResponse.fromJson(Map<String, dynamic> json) {
+    final rawBenefits = json['benefits'] as List<dynamic>? ?? const [];
+    return SubscriptionOverviewResponse(
+      isPremium: json['isPremium'] as bool? ?? false,
+      planId: json['planId'] as String?,
+      planName: (json['planName'] ?? 'Gói miễn phí').toString(),
+      expiresAt: DateTime.tryParse((json['expiresAt'] ?? '').toString()),
+      source: json['source'] as String?,
+      remainingDays: (json['remainingDays'] as num?)?.toInt(),
+      startedAt: DateTime.tryParse((json['startedAt'] ?? '').toString()),
+      memberSince: DateTime.tryParse((json['memberSince'] ?? '').toString()),
+      lastPaymentAt:
+          DateTime.tryParse((json['lastPaymentAt'] ?? '').toString()),
+      lastPaymentAmount: (json['lastPaymentAmount'] as num?)?.toInt() ?? 0,
+      nextPaymentAmount: (json['nextPaymentAmount'] as num?)?.toInt() ?? 0,
+      monthlyProgressPercent:
+          (json['monthlyProgressPercent'] as num?)?.toInt() ?? 0,
+      benefits: rawBenefits
+          .whereType<Map>()
+          .map((item) => SubscriptionBenefitResponse.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+    );
+  }
+
+  final bool isPremium;
+  final String? planId;
+  final String planName;
+  final DateTime? expiresAt;
+  final String? source;
+  final int? remainingDays;
+  final DateTime? startedAt;
+  final DateTime? memberSince;
+  final DateTime? lastPaymentAt;
+  final int lastPaymentAmount;
+  final int nextPaymentAmount;
+  final int monthlyProgressPercent;
+  final List<SubscriptionBenefitResponse> benefits;
+}
+
+class PaymentTransactionHistoryResponse {
+  const PaymentTransactionHistoryResponse({
+    required this.totalSpentThisYear,
+    required this.transactions,
+  });
+
+  factory PaymentTransactionHistoryResponse.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final rawTransactions = json['transactions'] as List<dynamic>? ?? const [];
+    return PaymentTransactionHistoryResponse(
+      totalSpentThisYear: (json['totalSpentThisYear'] as num?)?.toInt() ?? 0,
+      transactions: rawTransactions
+          .whereType<Map>()
+          .map((item) => PaymentTransactionResponse.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList(),
+    );
+  }
+
+  final int totalSpentThisYear;
+  final List<PaymentTransactionResponse> transactions;
+}
+
+class PaymentTransactionResponse {
+  const PaymentTransactionResponse({
+    required this.id,
+    required this.planId,
+    required this.planName,
+    required this.amount,
+    required this.status,
+    required this.statusLabel,
+    required this.source,
+    required this.paymentMethodLabel,
+    this.orderCode,
+    this.paymentLinkId,
+    this.checkoutUrl,
+    this.createdAt,
+    this.updatedAt,
+    this.paidAt,
+  });
+
+  factory PaymentTransactionResponse.fromJson(Map<String, dynamic> json) {
+    return PaymentTransactionResponse(
+      id: (json['id'] ?? '').toString(),
+      orderCode: (json['orderCode'] as num?)?.toInt(),
+      planId: (json['planId'] ?? '').toString(),
+      planName: (json['planName'] ?? '').toString(),
+      amount: (json['amount'] as num?)?.toInt() ?? 0,
+      status: (json['status'] ?? '').toString(),
+      statusLabel: (json['statusLabel'] ?? '').toString(),
+      source: (json['source'] ?? '').toString(),
+      paymentMethodLabel: (json['paymentMethodLabel'] ?? '').toString(),
+      paymentLinkId: json['paymentLinkId'] as String?,
+      checkoutUrl: json['checkoutUrl'] as String?,
+      createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()),
+      updatedAt: DateTime.tryParse((json['updatedAt'] ?? '').toString()),
+      paidAt: DateTime.tryParse((json['paidAt'] ?? '').toString()),
+    );
+  }
+
+  final String id;
+  final int? orderCode;
+  final String planId;
+  final String planName;
+  final int amount;
+  final String status;
+  final String statusLabel;
+  final String source;
+  final String paymentMethodLabel;
+  final String? paymentLinkId;
+  final String? checkoutUrl;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? paidAt;
+
+  DateTime? get displayDate => paidAt ?? updatedAt ?? createdAt;
+
+  bool get isPaid {
+    final normalized = status.toUpperCase();
+    return normalized == 'PAID' ||
+        normalized == 'SUCCESS' ||
+        normalized == 'COMPLETED';
+  }
 }

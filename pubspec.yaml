@@ -36,6 +36,7 @@ dependencies:
 
   # Network & HTTP Client
   dio: ^5.5.0+1
+  url_launcher: ^6.3.1
 
   # UI & Icons
   cupertino_icons: ^1.0.8
