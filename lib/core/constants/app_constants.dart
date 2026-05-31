@@ -16,11 +16,18 @@ class AppConstants {
 // static const String milingoBaseUrl = 'http://192.168.2.9:5098'; // IP máy tính của bạn -- test trên đt
 
   // PayOS Configuration
+  static const String milingoWebBaseUrl = 'https://milingo.vn';
   static const String payOSBaseUrl = 'https://api-merchant.payos.vn';
   static String get payOSClientId =>
       dotenv.env['PAYOS_CLIENT_ID'] ?? 'YOUR_PAYOS_CLIENT_ID';
   static String get payOSApiKey =>
       dotenv.env['PAYOS_API_KEY'] ?? 'YOUR_PAYOS_API_KEY';
+  static String get paymentReturnUrl =>
+      dotenv.env['PAYMENT_RETURN_URL'] ??
+      '$milingoWebBaseUrl$paymentSuccessRoute';
+  static String get paymentCancelUrl =>
+      dotenv.env['PAYMENT_CANCEL_URL'] ??
+      '$milingoWebBaseUrl$paymentCancelRoute';
 
   // Supported Languages
   static const List<String> supportedLanguages = [
@@ -56,6 +63,11 @@ class AppConstants {
   static const String vocabDetailRoute = '/flashcards/vocabulary';
   static const String examRoute = '/flashcards/exam';
   static const String profileRoute = '/profile';
+  static const String premiumRoute = '/premium';
+  static const String subscriptionRoute = '/subscription';
+  static const String paymentHistoryRoute = '/payments/history';
+  static const String paymentSuccessRoute = '/payment/success';
+  static const String paymentCancelRoute = '/payment/cancel';
   static const String allCategoriesRoute = '/flashcards/all-categories';
   static const String leaderboardRoute = '/leaderboard';
 }
