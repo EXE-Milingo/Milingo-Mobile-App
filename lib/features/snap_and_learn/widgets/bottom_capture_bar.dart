@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:milingo/core/theme/app_theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// Bottom bar with gallery, capture, and effect buttons.
 class BottomCaptureBar extends StatelessWidget {
   const BottomCaptureBar({
-    super.key,
     required this.onGallery,
     required this.onCapture,
+    super.key,
   });
 
   final VoidCallback onGallery;
@@ -16,72 +16,38 @@ class BottomCaptureBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(48, 12, 48, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(40),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
           // Gallery
-          GestureDetector(
-            onTap: onGallery,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: onGallery,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(Icons.photo_library_rounded,
+                    color: Colors.grey[700], size: 22),
               ),
-              child: Icon(Icons.photo_library_rounded,
-                  color: Colors.grey[600], size: 22),
             ),
           ),
 
           // Capture (orange ring)
           GestureDetector(
             onTap: onCapture,
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border:
-                    Border.all(color: AppTheme.primaryColor, width: 3.5),
-              ),
-              child: Center(
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey[100],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Effect
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.auto_fix_high_rounded,
-                  color: Colors.grey[600], size: 22),
+            child: SvgPicture.asset(
+              'assets/svg/takepicure.svg',
+              width: 82,
+              height: 82,
             ),
           ),
         ],
