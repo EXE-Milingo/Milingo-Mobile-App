@@ -335,86 +335,95 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(30, 0, 30, 0),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
       child: SizedBox(
-        height: 56,
+        height: 44,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: _kSurface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.black.withValues(alpha: 0.05),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.055),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Icon(
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              const Positioned(
+                left: 16,
+                child: Icon(
                   Icons.search_rounded,
-                  color: _kSubtle,
-                  size: 28,
+                  color: Color(0xFFA8A4A1),
+                  size: 24,
                 ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: SizedBox(
-                    height: 26,
-                    child: TextField(
-                      controller: controller,
-                      onChanged: onChanged,
-                      maxLines: 1,
-                      style: const TextStyle(
-                        color: _kInk,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        height: 1,
-                      ),
-                      strutStyle: const StrutStyle(
-                        fontSize: 15,
-                        height: 1,
-                        forceStrutHeight: true,
-                      ),
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        hintText: hintText,
-                        hintStyle: const TextStyle(
-                          color: _kSubtle,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          height: 1,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(44, 0, 16, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 18,
+                        child: TextField(
+                          controller: controller,
+                          onChanged: onChanged,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            color: _kInk,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w400,
+                            height: 1,
+                          ),
+                          strutStyle: const StrutStyle(
+                            fontSize: 17,
+                            height: 1,
+                            forceStrutHeight: true,
+                          ),
+                          decoration: InputDecoration(
+                            isCollapsed: true,
+                            hintText: hintText,
+                            hintStyle: const TextStyle(
+                              color: _kSubtle,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w400,
+                              height: 1,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
-                  ),
+                    if (controller.text.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      IconButton(
+                        tooltip: 'Xóa tìm kiếm',
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints.tightFor(
+                            width: 30, height: 30),
+                        padding: EdgeInsets.zero,
+                        onPressed: onClear,
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: _kMuted,
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (controller.text.isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  IconButton(
-                    tooltip: 'Xóa tìm kiếm',
-                    visualDensity: VisualDensity.compact,
-                    constraints:
-                        const BoxConstraints.tightFor(width: 30, height: 30),
-                    padding: EdgeInsets.zero,
-                    onPressed: onClear,
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: _kMuted,
-                      size: 18,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
