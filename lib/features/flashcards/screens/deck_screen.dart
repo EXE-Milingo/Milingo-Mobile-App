@@ -6,6 +6,7 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/features/flashcards/screens/flashcard_study_screen.dart';
 import 'package:milingo/features/flashcards/widgets/exam_banner.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 
@@ -75,7 +76,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
                 child: ExamBanner(
-                  onTap: () => _startExam(liveDeck),
+                  onTap: () => _startFlashcardStudy(liveDeck),
                 ),
               ),
               const SizedBox(height: 8),
@@ -146,35 +147,22 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     }).toList();
   }
 
-  void _startExam(DeckData? liveDeck) {
-    context.push(
-      AppConstants.examRoute,
-      extra: {
-        'deckId': widget.deck.id,
-        'deckName': liveDeck?.name ?? widget.deck.name,
-        'langCode': _resolveLangCode(liveDeck),
-        'langName': _resolveLangName(liveDeck),
-      },
-    );
-  }
-
-  String _resolveLangCode(DeckData? liveDeck) {
+  void _startFlashcardStudy(DeckData? liveDeck) {
     final cards = liveDeck?.cards ?? const <FlashcardEntry>[];
-    if (cards.isEmpty) return 'en';
-    return cards.first.langCode;
-  }
+    if (cards.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa có thẻ nào trong bộ này.')),
+      );
+      return;
+    }
 
-  String _resolveLangName(DeckData? liveDeck) {
-    return switch (_resolveLangCode(liveDeck)) {
-      'vi' => 'Vietnamese',
-      'ja' => 'Japanese',
-      'ko' => 'Korean',
-      'zh' => 'Chinese',
-      'fr' => 'French',
-      'es' => 'Spanish',
-      'de' => 'German',
-      _ => 'English',
-    };
+    context.push(
+      AppConstants.flashcardStudyRoute,
+      extra: FlashcardStudyArg(
+        deckName: liveDeck?.name ?? widget.deck.name,
+        cards: List<FlashcardEntry>.from(cards),
+      ),
+    );
   }
 
   Future<void> _toggleDeckFavorite(DeckData deck) async {
@@ -308,7 +296,7 @@ class _DeckHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '$count thuật ngữ',
+                  '$count thẻ',
                   style: const TextStyle(
                     color: _kMuted,
                     fontSize: 13,

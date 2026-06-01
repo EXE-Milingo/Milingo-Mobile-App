@@ -11,10 +11,11 @@ import 'package:milingo/features/flashcards/models/flashcard_models.dart';
 import 'package:milingo/features/flashcards/screens/all_categories_screen.dart';
 import 'package:milingo/features/flashcards/screens/deck_screen.dart';
 import 'package:milingo/features/flashcards/screens/exam_screen.dart';
+import 'package:milingo/features/flashcards/screens/flashcard_study_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
 import 'package:milingo/features/flashcards/screens/vocab_detail_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
-import 'package:milingo/features/leaderboard/screens/leaderboard_screen.dart';
+import 'package:milingo/features/leaderboard/screens/exam_screen.dart';
 import 'package:milingo/features/premium/screens/payment_result_screen.dart';
 import 'package:milingo/features/premium/screens/premium_screen.dart';
 import 'package:milingo/features/premium/screens/subscription_management_screen.dart';
@@ -121,6 +122,24 @@ GoRouter appRouter(AppRouterRef ref) {
         },
       ),
       GoRoute(
+        path: AppConstants.flashcardStudyRoute,
+        name: 'flashcard-study',
+        builder: (context, state) {
+          final arg = state.extra;
+          if (arg is FlashcardStudyArg) {
+            return FlashcardStudyScreen(
+              deckName: arg.deckName,
+              cards: arg.cards,
+            );
+          }
+
+          return const FlashcardStudyScreen(
+            deckName: 'Flashcard',
+            cards: [],
+          );
+        },
+      ),
+      GoRoute(
         path: AppConstants.vocabDetailRoute,
         name: 'vocabulary-detail',
         builder: (context, state) {
@@ -180,7 +199,7 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: AppConstants.leaderboardRoute,
         name: 'leaderboard',
-        builder: (context, state) => const LeaderboardScreen(),
+        builder: (context, state) => const ReviewExamScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

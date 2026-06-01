@@ -38,7 +38,7 @@ class ExamBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(13),
               ),
               child: const Icon(
-                Icons.quiz_rounded,
+                Icons.style_rounded,
                 color: Colors.white,
                 size: 25,
               ),
@@ -49,7 +49,7 @@ class ExamBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Ôn tập thông minh',
+                    'Học bằng Flashcard',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -58,7 +58,7 @@ class ExamBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 3),
                   Text(
-                    'Thẻ mới và câu hỏi theo lịch SRS',
+                    'Chạm để lật thẻ và xem nghĩa',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: Colors.white70, fontSize: 12),
