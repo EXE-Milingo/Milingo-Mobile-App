@@ -11,7 +11,7 @@ import 'package:milingo/core/network/milingo_models.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
-import 'package:milingo/features/profile/widgets/account_settings_view.dart';
+import 'package:milingo/features/profile/screens/account_settings_screen.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class _ProfileColors {
@@ -174,7 +174,7 @@ class _ProfileContent extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) =>
-            AccountSettingsView(profile: _accountProfile(user, profile)),
+            AccountSettingsScreen(profile: _accountProfile(user, profile)),
       ),
     );
   }
