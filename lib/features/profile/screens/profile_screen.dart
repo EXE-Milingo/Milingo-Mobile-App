@@ -12,6 +12,7 @@ import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/features/profile/screens/account_settings_screen.dart';
+import 'package:milingo/features/profile/screens/language_goal_screen.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class _ProfileColors {
@@ -82,7 +83,7 @@ class _ProfileContent extends ConsumerWidget {
                   leaderboard: leaderboard,
                   onAccountSettings: () =>
                       _openAccountSettings(context, user, profile),
-                  onLanguageGoal: () {},
+                  onLanguageGoal: () => _openLanguageGoal(context),
                   onTheme: () {},
                   onPurchases: () =>
                       context.push(AppConstants.subscriptionRoute),
@@ -175,6 +176,14 @@ class _ProfileContent extends ConsumerWidget {
       MaterialPageRoute<void>(
         builder: (_) =>
             AccountSettingsScreen(profile: _accountProfile(user, profile)),
+      ),
+    );
+  }
+
+  static void _openLanguageGoal(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const LanguageGoalScreen(),
       ),
     );
   }
