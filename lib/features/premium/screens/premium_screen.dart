@@ -35,7 +35,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
         );
       },
       onRestorePurchases: () => context.push(AppConstants.subscriptionRoute),
-      onTermsPressed: () {},
+      onTermsPressed: () => context.push(AppConstants.termsOfServiceRoute),
     );
   }
 }

@@ -164,3 +164,30 @@ flutter test
 ---
 
 **Happy Coding!** 🎉
+
+---
+
+## 🤖 Claude Code Agent Setup
+
+This repository contains optimization settings and rules to enable smooth AI-assisted coding using **Claude Code**.
+
+### Team Onboarding & Environment Check
+
+1. **Verify your local environment**:
+   Run the setup script to check project prerequisites (Flutter, Dart, Git, Claude Code):
+   ```powershell
+   pwsh -NoProfile -File scripts/setup-claude.ps1
+   ```
+
+2. **Run setup-team skill**:
+   Execute the `/setup-team` command in Claude Code to configure project MCP settings and review optional integrations (e.g. Sentry, Firebase, or vexp context engine).
+
+3. **Verify changes before submitting**:
+   After modifying code, run `/verify-flutter` to format, analyze, and test your changes:
+   ```powershell
+   dart format --output=none --set-exit-if-changed lib test
+   flutter analyze
+   flutter test
+   ```
+
+All agent workflows, priorities, and folder structure guidelines are documented in [AGENTS.md](file:///C:/FPTUniversity/MILINGO/PROJECT/APP/Milingo-Mobile-App/AGENTS.md). Quick agent rules are defined in [CLAUDE.md](file:///C:/FPTUniversity/MILINGO/PROJECT/APP/Milingo-Mobile-App/CLAUDE.md).
