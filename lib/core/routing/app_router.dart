@@ -16,6 +16,7 @@ import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
 import 'package:milingo/features/flashcards/screens/vocab_detail_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/leaderboard/screens/exam_screen.dart';
+import 'package:milingo/features/premium/screens/payment_method_screen.dart';
 import 'package:milingo/features/premium/screens/payment_result_screen.dart';
 import 'package:milingo/features/premium/screens/premium_screen.dart';
 import 'package:milingo/features/premium/screens/subscription_management_screen.dart';
@@ -171,6 +172,14 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.premiumRoute,
         name: 'premium',
         builder: (context, state) => const PremiumScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.paymentMethodRoute,
+        name: 'payment-method',
+        builder: (context, state) {
+          final planId = state.extra as String?;
+          return PaymentMethodScreen(selectedPlanId: planId);
+        },
       ),
       GoRoute(
         path: AppConstants.subscriptionRoute,
