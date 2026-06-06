@@ -6,6 +6,7 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/core/network/milingo_models.dart';
 import 'package:milingo/features/auth/providers/auth_provider.dart';
+import 'package:milingo/features/auth/widgets/language_flag_assets.dart';
 
 // ── Screen ─────────────────────────────────────────────────
 
@@ -202,16 +203,15 @@ class _ChooseLanguageScreenState extends ConsumerState<ChooseLanguageScreen> {
   Future<void> _onContinue() async {
     if (_selectedIndex == null) return;
 
-    final languages = ref.read(supportedLanguagesProvider).valueOrNull ??
-        _fallbackLanguages;
+    final languages =
+        ref.read(supportedLanguagesProvider).valueOrNull ?? _fallbackLanguages;
     final selected = languages[_selectedIndex!];
 
     setState(() => _isSaving = true);
     try {
       final user = FirebaseAuth.instance.currentUser;
-      final displayName = user?.displayName ??
-          user?.email?.split('@').first ??
-          'Milingo User';
+      final displayName =
+          user?.displayName ?? user?.email?.split('@').first ?? 'Milingo User';
 
       await ref.read(authServiceProvider).initProfile(
             displayName: displayName,
@@ -230,14 +230,23 @@ class _ChooseLanguageScreenState extends ConsumerState<ChooseLanguageScreen> {
 
 // ── Fallback hardcoded languages (offline safety net) ───
 
-final _fallbackLanguages = [
-  SupportedLanguage(code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸'),
-  SupportedLanguage(code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵'),
-  SupportedLanguage(code: 'ko', name: 'Korean', nativeName: '한국어', flag: '🇰🇷'),
-  SupportedLanguage(code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷'),
-  SupportedLanguage(code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸'),
-  SupportedLanguage(code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪'),
-  SupportedLanguage(code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳'),
+const _fallbackLanguages = [
+  SupportedLanguage(
+      code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸'),
+  SupportedLanguage(
+      code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵'),
+  SupportedLanguage(
+      code: 'ko', name: 'Korean', nativeName: '한국어', flag: '🇰🇷'),
+  SupportedLanguage(
+      code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷'),
+  SupportedLanguage(
+      code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸'),
+  SupportedLanguage(
+      code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪'),
+  SupportedLanguage(
+      code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳'),
+  SupportedLanguage(
+      code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹'),
 ];
 
 // ── Language card widget ──────────────────────────────────
@@ -264,15 +273,14 @@ class _LanguageCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color:
-                selected ? AppTheme.primaryColor : Colors.transparent,
+            color: selected ? AppTheme.primaryColor : Colors.transparent,
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
               color: selected
-                  ? AppTheme.primaryColor.withOpacity(0.12)
-                  : Colors.black.withOpacity(0.04),
+                  ? AppTheme.primaryColor.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: selected ? 14 : 8,
               offset: const Offset(0, 3),
             ),
@@ -288,10 +296,7 @@ class _LanguageCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Text(
-                  language.flag,
-                  style: const TextStyle(fontSize: 28),
-                ),
+                child: _LanguageFlag(language: language),
               ),
             ),
             const SizedBox(width: 16),
@@ -326,8 +331,7 @@ class _LanguageCard extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:
-                    selected ? AppTheme.primaryColor : Colors.transparent,
+                color: selected ? AppTheme.primaryColor : Colors.transparent,
                 border: Border.all(
                   color: selected
                       ? AppTheme.primaryColor
@@ -344,6 +348,33 @@ class _LanguageCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LanguageFlag extends StatelessWidget {
+  const _LanguageFlag({required this.language});
+
+  final SupportedLanguage language;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetPath = languageFlagAssetForCode(language.code);
+    if (assetPath == null) {
+      return Text(language.flag, style: const TextStyle(fontSize: 28));
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: Image.asset(
+        assetPath,
+        width: 34,
+        height: 24,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) {
+          return Text(language.flag, style: const TextStyle(fontSize: 28));
+        },
       ),
     );
   }

@@ -55,6 +55,7 @@ class _TermsTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       height: 64,
       decoration: const BoxDecoration(
         color: _TermsColors.background,
