@@ -291,13 +291,9 @@ class _LanguageCard extends StatelessWidget {
             Container(
               width: 52,
               height: 52,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F0EC),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: _LanguageFlag(language: language),
-              ),
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(shape: BoxShape.circle),
+              child: _LanguageFlag(language: language),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -365,17 +361,16 @@ class _LanguageFlag extends StatelessWidget {
       return Text(language.flag, style: const TextStyle(fontSize: 28));
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: Image.asset(
-        assetPath,
-        width: 34,
-        height: 24,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) {
-          return Text(language.flag, style: const TextStyle(fontSize: 28));
-        },
-      ),
+    return Image.asset(
+      assetPath,
+      width: 52,
+      height: 52,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) {
+        return Center(
+          child: Text(language.flag, style: const TextStyle(fontSize: 28)),
+        );
+      },
     );
   }
 }
