@@ -31,6 +31,7 @@ FlashcardEntry _cardResponseToEntry(CardResponse r) {
     langCode: r.targetLangCode,
     imageUrl: r.imageUrl,
     isFavorite: r.isFavorite,
+    createdAt: r.createdAt,
     srsState: r.srsState,
     srsRepetitions: r.srsRepetitions,
     srsIntervalDays: r.srsIntervalDays,

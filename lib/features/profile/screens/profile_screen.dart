@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
@@ -13,6 +14,8 @@ import 'package:milingo/features/gamification/providers/user_stats_provider.dart
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/features/profile/screens/account_settings_screen.dart';
 import 'package:milingo/features/profile/screens/language_goal_screen.dart';
+import 'package:milingo/features/profile/widgets/payment_method_view.dart';
+import 'package:milingo/features/profile/widgets/restore_purchase_flow.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -943,22 +946,13 @@ class _LogoutButtonState extends ConsumerState<_LogoutButton> {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Icon(Icons.logout_rounded, size: 15),
-        label: Text(_isSigningOut ? 'Đang đăng xuất...' : 'Đăng xuất'),
-        style: FilledButton.styleFrom(
-          backgroundColor: _ProfileColors.logoutBackground,
-          foregroundColor: _ProfileColors.text,
-          disabledBackgroundColor:
-              _ProfileColors.logoutBackground.withValues(alpha: 0.7),
-          disabledForegroundColor: _ProfileColors.text.withValues(alpha: 0.6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+            : const _ProfileSvgIcon(
+                'assets/svg/logout.svg',
+                width: 15,
+                height: 15,
+                color: _ProfileColors.text,
+              ),
+        label: Text(_busy ? 'Đang đăng xuất...' : 'Đăng xuất'),
       ),
     );
   }
@@ -1312,6 +1306,100 @@ class _ProfileSvgIcon extends StatelessWidget {
       height: height,
       colorFilter:
           color == null ? null : ColorFilter.mode(color!, BlendMode.srcIn),
+    );
+  }
+}
+
+class _UpgradeHero extends StatelessWidget {
+  const _UpgradeHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(26, 28, 26, 26),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: _ProfileColors.primary.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: const Column(
+        children: [
+          _ProfileSvgIcon(
+            'assets/svg/premium-icon.svg',
+            width: 54,
+            height: 54,
+          ),
+          SizedBox(height: 18),
+          Text(
+            'Mở khóa Milingo Premium',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: _ProfileColors.text,
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+              height: 1.12,
+            ),
+          ),
+          SizedBox(height: 10),
+          Text(
+            'Học nhanh hơn với quét không giới hạn, AI tutor cá nhân hóa và trải nghiệm không quảng cáo.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: _ProfileColors.mutedText,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BillingToggle extends StatelessWidget {
+  const _BillingToggle({
+    required this.yearly,
+    required this.onChanged,
+  });
+
+  final bool yearly;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFE8E1),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _BillingOption(
+              label: 'Hàng tháng',
+              selected: !yearly,
+              onTap: () => onChanged(false),
+            ),
+          ),
+          Expanded(
+            child: _BillingOption(
+              label: 'Hàng năm',
+              selected: yearly,
+              onTap: () => onChanged(true),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1961,17 +2049,4 @@ class _TermsTextStyles {
     height: 1.45,
     fontWeight: FontWeight.w500,
   );
-}
-
-class _ProfileColors {
-  static const background = Color(0xFFFFF9F6);
-  static const primary = AppTheme.primaryColor;
-  static const primaryDark = Color(0xFFC6491F);
-  static const text = Color(0xFF221914);
-  static const mutedText = Color(0xFF8E7167);
-  static const softText = Color(0xFF9C8178);
-  static const iconBubble = Color(0xFFF0EAE8);
-  static const icon = Color(0xFF907972);
-  static const chevron = Color(0xFFE6B1A2);
-  static const logoutBackground = Color(0xFFFFDED6);
 }

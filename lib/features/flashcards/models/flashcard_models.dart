@@ -13,6 +13,7 @@ class FlashcardEntry {
     this.imageUrl,
     this.objectImageBase64,
     this.isFavorite = false,
+    this.createdAt = '',
     this.srsState = 'new',
     this.srsRepetitions = 0,
     this.srsIntervalDays = 0,
@@ -28,6 +29,7 @@ class FlashcardEntry {
   final String? imageUrl;
   final String? objectImageBase64;
   final bool isFavorite;
+  final String createdAt;
   final String srsState;
   final int srsRepetitions;
   final int srsIntervalDays;
@@ -48,6 +50,7 @@ class FlashcardEntry {
     String? imageUrl,
     String? objectImageBase64,
     bool? isFavorite,
+    String? createdAt,
     String? srsState,
     int? srsRepetitions,
     int? srsIntervalDays,
@@ -63,6 +66,7 @@ class FlashcardEntry {
       imageUrl: imageUrl ?? this.imageUrl,
       objectImageBase64: objectImageBase64 ?? this.objectImageBase64,
       isFavorite: isFavorite ?? this.isFavorite,
+      createdAt: createdAt ?? this.createdAt,
       srsState: srsState ?? this.srsState,
       srsRepetitions: srsRepetitions ?? this.srsRepetitions,
       srsIntervalDays: srsIntervalDays ?? this.srsIntervalDays,
