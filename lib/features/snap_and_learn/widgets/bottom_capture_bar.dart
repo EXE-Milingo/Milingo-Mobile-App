@@ -15,7 +15,7 @@ class BottomCaptureBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(48, 12, 48, 4),
+      margin: const EdgeInsets.fromLTRB(48, 12, 48, 68),
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
       child: Stack(
         alignment: Alignment.center,

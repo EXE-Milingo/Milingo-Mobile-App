@@ -1,7 +1,11 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/routing/app_router.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -42,11 +46,75 @@ void main() async {
 }
 
 /// Root application widget
-class MiLingoApp extends ConsumerWidget {
+class MiLingoApp extends ConsumerStatefulWidget {
   const MiLingoApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MiLingoApp> createState() => _MiLingoAppState();
+}
+
+class _MiLingoAppState extends ConsumerState<MiLingoApp> {
+  StreamSubscription<Uri>? _linkSubscription;
+  Uri? _lastHandledLink;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenForPaymentReturnLinks();
+  }
+
+  void _listenForPaymentReturnLinks() {
+    final appLinks = AppLinks();
+    _linkSubscription = appLinks.uriLinkStream.listen(
+      _handleIncomingLink,
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Payment return link error: $error');
+      },
+    );
+  }
+
+  void _handleIncomingLink(Uri uri) {
+    if (_lastHandledLink == uri) return;
+    _lastHandledLink = uri;
+
+    final route = _paymentRouteFor(uri);
+    if (route == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(appRouterProvider).go(route);
+    });
+  }
+
+  String? _paymentRouteFor(Uri uri) {
+    if (uri.scheme == 'https' &&
+        uri.host == Uri.parse(AppConstants.milingoWebBaseUrl).host) {
+      return _knownPaymentRoute(uri.path);
+    }
+
+    if (uri.scheme == 'milingo' && uri.host == 'payment') {
+      return _knownPaymentRoute('/payment${uri.path}');
+    }
+
+    return null;
+  }
+
+  String? _knownPaymentRoute(String path) {
+    return switch (path) {
+      AppConstants.paymentSuccessRoute => AppConstants.paymentSuccessRoute,
+      AppConstants.paymentCancelRoute => AppConstants.paymentCancelRoute,
+      _ => null,
+    };
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Get the router configuration from Riverpod
     final router = ref.watch(appRouterProvider);
 

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pwsh -NoProfile -File scripts/setup-claude.ps1*)",
+      "Bash(powershell -NoProfile -File scripts/setup-claude.ps1*)",
+      "Bash(flutter analyze)",
+      "Bash(flutter test)",
+      "Bash(dart format --output=none --set-exit-if-changed lib test)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(./**/credentials.json)",
+      "Read(./**/token.json)",
+      "Read(./**/appsettings.*.json)"
+    ]
+  }
+}
