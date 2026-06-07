@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 
+typedef PaymentMethodConfirmCallback = Future<void> Function(
+  PaymentMethodOption method,
+  PaymentPlanSummary plan,
+);
+
 class PaymentPlanSummary {
   const PaymentPlanSummary({
+    required this.planId,
     required this.planLabel,
     required this.totalLabel,
     required this.buttonTotalLabel,
   });
 
+  final String planId;
   final String planLabel;
   final String totalLabel;
   final String buttonTotalLabel;
@@ -32,6 +39,7 @@ class PaymentMethodView extends StatefulWidget {
     required this.plan,
     required this.methods,
     required this.onClose,
+    required this.onConfirmPayment,
     this.onChangePlan,
     this.initialMethodId,
     super.key,
@@ -40,6 +48,7 @@ class PaymentMethodView extends StatefulWidget {
   final PaymentPlanSummary plan;
   final List<PaymentMethodOption> methods;
   final VoidCallback onClose;
+  final PaymentMethodConfirmCallback onConfirmPayment;
   final VoidCallback? onChangePlan;
   final String? initialMethodId;
 
@@ -49,12 +58,34 @@ class PaymentMethodView extends StatefulWidget {
 
 class _PaymentMethodViewState extends State<PaymentMethodView> {
   late String? _selectedMethodId;
+  bool _isConfirming = false;
 
   @override
   void initState() {
     super.initState();
     _selectedMethodId =
         widget.initialMethodId ?? widget.methods.firstOrNull?.id;
+  }
+
+  PaymentMethodOption? get _selectedMethod {
+    for (final method in widget.methods) {
+      if (method.id == _selectedMethodId) return method;
+    }
+    return null;
+  }
+
+  Future<void> _confirmPayment() async {
+    final method = _selectedMethod;
+    if (method == null || _isConfirming) return;
+
+    setState(() => _isConfirming = true);
+    try {
+      await widget.onConfirmPayment(method, widget.plan);
+    } finally {
+      if (mounted) {
+        setState(() => _isConfirming = false);
+      }
+    }
   }
 
   @override
@@ -162,7 +193,9 @@ class _PaymentMethodViewState extends State<PaymentMethodView> {
                 width: double.infinity,
                 height: 52,
                 child: FilledButton(
-                  onPressed: _selectedMethodId == null ? null : () {},
+                  onPressed: _selectedMethodId == null || _isConfirming
+                      ? null
+                      : _confirmPayment,
                   style: FilledButton.styleFrom(
                     backgroundColor: _PaymentColors.primary,
                     foregroundColor: Colors.white,
@@ -172,8 +205,7 @@ class _PaymentMethodViewState extends State<PaymentMethodView> {
                       borderRadius: BorderRadius.circular(26),
                     ),
                     elevation: 9,
-                    shadowColor:
-                        _PaymentColors.primary.withValues(alpha: 0.28),
+                    shadowColor: _PaymentColors.primary.withValues(alpha: 0.28),
                   ),
                   child: Row(
                     children: [
@@ -356,7 +388,8 @@ class _PaymentMethodTile extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? _PaymentColors.primaryDark : const Color(0xFFECE1DC),
+            color:
+                selected ? _PaymentColors.primaryDark : const Color(0xFFECE1DC),
             width: selected ? 1.6 : 1,
           ),
         ),

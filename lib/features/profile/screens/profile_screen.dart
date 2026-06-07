@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:milingo/core/constants/app_constants.dart';
-import 'package:milingo/core/network/milingo_models.dart';
+import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/widgets/account_settings_view.dart';
@@ -13,6 +13,7 @@ import 'package:milingo/features/profile/widgets/payment_method_view.dart';
 import 'package:milingo/features/profile/widgets/purchase_management_view.dart';
 import 'package:milingo/features/profile/widgets/restore_purchase_flow.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -782,14 +783,14 @@ class _LogoutButtonState extends ConsumerState<_LogoutButton> {
   }
 }
 
-class _UpgradeModal extends StatefulWidget {
+class _UpgradeModal extends ConsumerStatefulWidget {
   const _UpgradeModal();
 
   @override
-  State<_UpgradeModal> createState() => _UpgradeModalState();
+  ConsumerState<_UpgradeModal> createState() => _UpgradeModalState();
 }
 
-class _UpgradeModalState extends State<_UpgradeModal> {
+class _UpgradeModalState extends ConsumerState<_UpgradeModal> {
   bool _yearly = false;
   bool _showTerms = false;
   bool _showRestore = false;
@@ -858,6 +859,7 @@ class _UpgradeModalState extends State<_UpgradeModal> {
         initialMethodId: 'card',
         onClose: () => setState(() => _paymentPlan = null),
         onChangePlan: () => setState(() => _paymentPlan = null),
+        onConfirmPayment: _confirmPayment,
       );
     }
 
@@ -889,6 +891,7 @@ class _UpgradeModalState extends State<_UpgradeModal> {
                       cta: 'Chọn gói Plus',
                       onCtaTap: () => setState(
                         () => _paymentPlan = _buildPaymentPlan(
+                          planId: _yearly ? 'plus_yearly' : 'plus_monthly',
                           planName: 'Milingo Plus',
                           monthlyPrice: _yearly ? 79000 : 99000,
                         ),
@@ -918,6 +921,7 @@ class _UpgradeModalState extends State<_UpgradeModal> {
                     _StartNowButton(
                       onTap: () => setState(
                         () => _paymentPlan = _buildPaymentPlan(
+                          planId: _yearly ? 'pro_yearly' : 'pro_monthly',
                           planName: 'Milingo Premium',
                           monthlyPrice: _yearly ? 111000 : 139000,
                         ),
@@ -938,7 +942,64 @@ class _UpgradeModalState extends State<_UpgradeModal> {
     );
   }
 
+  Future<void> _confirmPayment(
+    PaymentMethodOption method,
+    PaymentPlanSummary plan,
+  ) async {
+    if (method.id != 'bank_qr') {
+      _showPaymentSnackBar(
+        'Phương thức này chưa hỗ trợ. Hãy chọn QR Ngân hàng để thanh toán qua PayOS.',
+        isError: true,
+      );
+      return;
+    }
+
+    try {
+      final order = await ref.read(milingoApiServiceProvider).createPayOSOrder(
+            planId: plan.planId,
+            returnUrl: AppConstants.paymentReturnUrl,
+            cancelUrl: AppConstants.paymentCancelUrl,
+          );
+
+      final checkoutUri = Uri.tryParse(order.checkoutUrl);
+      if (checkoutUri == null || !checkoutUri.hasScheme) {
+        throw const MilingoApiException('Link thanh toán không hợp lệ.');
+      }
+
+      final launched = await launchUrl(
+        checkoutUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw const MilingoApiException('Không mở được PayOS checkout.');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      _showPaymentSnackBar(_paymentErrorMessage(error), isError: true);
+    }
+  }
+
+  String _paymentErrorMessage(Object error) {
+    if (error is MilingoApiException) return error.message;
+    return 'Không thể tạo thanh toán. Vui lòng thử lại.';
+  }
+
+  void _showPaymentSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor:
+              isError ? AppTheme.errorColor : const Color(0xFF2E7D32),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
   PaymentPlanSummary _buildPaymentPlan({
+    required String planId,
     required String planName,
     required int monthlyPrice,
   }) {
@@ -948,6 +1009,7 @@ class _UpgradeModalState extends State<_UpgradeModal> {
     final totalLabel = NumberFormat.decimalPattern('en_US').format(total);
 
     return PaymentPlanSummary(
+      planId: planId,
       planLabel: '$planName - $durationLabel',
       totalLabel: '$totalLabel đ',
       buttonTotalLabel: '$totalLabel đ',
@@ -1210,8 +1272,9 @@ class _PlanCard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color:
-                      highlighted ? _ProfileColors.primary : _ProfileColors.text,
+                  color: highlighted
+                      ? _ProfileColors.primary
+                      : _ProfileColors.text,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                 ),
