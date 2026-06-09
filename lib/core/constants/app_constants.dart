@@ -11,8 +11,8 @@ class AppConstants {
   static String get openaiApiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
 
   // Milingo Backend API
-//  static const String milingoBaseUrl = 'http://10.0.2.2:5098'; //Emulator
-  static const String milingoBaseUrl = 'https://api.milingo.vn';
+ static const String milingoBaseUrl = 'http://10.0.2.2:5098'; //Emulator
+//   static const String milingoBaseUrl = 'https://api.milingo.vn';
 // static const String milingoBaseUrl = 'http://192.168.2.9:5098'; // IP máy tính của bạn -- test trên đt
 
   // PayOS Configuration

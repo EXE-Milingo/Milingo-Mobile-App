@@ -397,6 +397,7 @@ class SnapVocabItem {
     required this.translation,
     required this.pronunciation,
     required this.exampleSentence,
+    this.relatedWords = const [],
     this.detectionLabel,
     this.detectionConfidence,
     this.boundingBox,
@@ -410,6 +411,7 @@ class SnapVocabItem {
       translation: (json['translation'] ?? '').toString(),
       pronunciation: (json['pronunciation'] ?? '').toString(),
       exampleSentence: (json['example_sentence'] ?? '').toString(),
+      relatedWords: _parseRelatedWords(json),
       detectionLabel: json['detection_label'] as String?,
       detectionConfidence: (json['detection_confidence'] as num?)?.toDouble(),
       boundingBox: _parseBoundingBox(json),
@@ -434,10 +436,22 @@ class SnapVocabItem {
     return segmentation.isValid ? segmentation : null;
   }
 
+  static List<SnapRelatedWord> _parseRelatedWords(Map<String, dynamic> json) {
+    final raw = json['related_words'] ?? json['relatedWords'];
+    if (raw is! List) return const [];
+
+    return raw
+        .whereType<Map>()
+        .map((e) => SnapRelatedWord.fromJson(Map<String, dynamic>.from(e)))
+        .where((e) => e.keyword.trim().isNotEmpty)
+        .toList();
+  }
+
   final String keyword;
   final String translation;
   final String pronunciation;
   final String exampleSentence;
+  final List<SnapRelatedWord> relatedWords;
   final String? detectionLabel;
   final double? detectionConfidence;
   final SnapBoundingBox? boundingBox;
@@ -446,6 +460,27 @@ class SnapVocabItem {
   /// Base64-encoded JPEG of the cropped object from YOLO detection.
   /// Null when fallback (full-image) was used.
   final String? croppedImageBase64;
+}
+
+class SnapRelatedWord {
+  const SnapRelatedWord({
+    required this.keyword,
+    required this.translation,
+    required this.pronunciation,
+  });
+
+  factory SnapRelatedWord.fromJson(Map<String, dynamic> json) {
+    return SnapRelatedWord(
+      keyword:
+          (json['keyword'] ?? json['english'] ?? json['term'] ?? '').toString(),
+      translation: (json['translation'] ?? '').toString(),
+      pronunciation: (json['pronunciation'] ?? '').toString(),
+    );
+  }
+
+  final String keyword;
+  final String translation;
+  final String pronunciation;
 }
 
 class SnapDetectedObject {

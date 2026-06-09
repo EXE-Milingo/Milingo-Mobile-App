@@ -8,7 +8,8 @@ class RelatedWord {
 
   factory RelatedWord.fromJson(Map<String, dynamic> json) {
     return RelatedWord(
-      english: (json['english'] ?? '').toString(),
+      english:
+          (json['english'] ?? json['keyword'] ?? json['term'] ?? '').toString(),
       translation: (json['translation'] ?? '').toString(),
       pronunciation: (json['pronunciation'] ?? '').toString(),
     );
@@ -36,10 +37,11 @@ class MilingoResult {
   });
 
   factory MilingoResult.fromJson(Map<String, dynamic> json) {
-    final related = (json['relatedWords'] as List<dynamic>?)
-            ?.map((e) => RelatedWord.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        [];
+    final related =
+        ((json['relatedWords'] ?? json['related_words']) as List<dynamic>?)
+                ?.map((e) => RelatedWord.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [];
 
     return MilingoResult(
       keyword: (json['keyword'] ?? '').toString(),

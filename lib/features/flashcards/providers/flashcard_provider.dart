@@ -201,18 +201,35 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
     final current = state.valueOrNull;
     if (current == null) return;
 
-    for (final deck in current.decks) {
-      final latest = state.valueOrNull;
-      final matchingDecks =
-          latest?.decks.where((d) => d.id == deck.id).toList() ?? const [];
-      final latestDeck = matchingDecks.isEmpty ? null : matchingDecks.first;
-      if (latestDeck == null ||
-          latestDeck.cards.isNotEmpty ||
-          latestDeck.total == 0) {
-        continue;
-      }
-      await loadCardsForDeck(deck.id);
-    }
+    final decksToLoad = current.decks
+        .where((deck) => deck.cards.isEmpty && deck.total > 0)
+        .toList();
+    if (decksToLoad.isEmpty) return;
+
+    final loadedEntries = await Future.wait(
+      decksToLoad.map((deck) async {
+        try {
+          final cards = await _api.getCards(deck.id);
+          return MapEntry(deck.id, cards.map(_cardResponseToEntry).toList());
+        } catch (_) {
+          return MapEntry(deck.id, <FlashcardEntry>[]);
+        }
+      }),
+    );
+
+    final cardsByDeck = {
+      for (final entry in loadedEntries) entry.key: entry.value,
+    };
+    final latest = state.valueOrNull;
+    if (latest == null) return;
+
+    final updatedDecks = latest.decks.map((deck) {
+      final cards = cardsByDeck[deck.id];
+      if (cards == null) return deck;
+      return deck.copyWith(cards: cards, vocabCount: cards.length);
+    }).toList();
+
+    state = AsyncValue.data(latest.copyWith(decks: updatedDecks));
   }
 
   /// Returns true if added, false if already exists in that deck.

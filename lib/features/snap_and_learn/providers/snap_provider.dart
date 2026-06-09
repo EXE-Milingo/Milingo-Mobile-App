@@ -6,6 +6,7 @@ import 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 import 'package:milingo/shared/utils/image_utils.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
+import 'package:milingo/features/profile/providers/profile_provider.dart';
 export 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 
 // ─────────────────────────────────────────────────────────
@@ -104,7 +105,15 @@ MilingoResult _vocabItemToMilingoResult(SnapVocabItem item) {
     partOfSpeech: 'Noun',
     sentence: item.exampleSentence,
     sentenceTranslation: '',
-    relatedWords: const [],
+    relatedWords: item.relatedWords
+        .map(
+          (word) => RelatedWord(
+            english: word.keyword,
+            translation: word.translation,
+            pronunciation: word.pronunciation,
+          ),
+        )
+        .toList(),
     boundingBox: item.boundingBox == null
         ? null
         : ObjectBoundingBox(
@@ -174,12 +183,32 @@ SnapDetectedObject _resultToDetectedObject(DetectedObjectResult item) {
 // ─────────────────────────────────────────────────────────
 
 class SnapController extends StateNotifier<SnapState> {
-  SnapController(this._api, this._ref) : super(const SnapState());
+  SnapController(
+    this._api,
+    this._ref, {
+    String initialLanguage = 'en',
+  }) : super(SnapState(
+          selectedLanguage: _normalizeLearningLanguage(initialLanguage),
+        ));
   final MilingoApiService _api;
   final Ref _ref;
 
   void setLanguage(String languageCode) {
-    state = state.copyWith(selectedLanguage: languageCode);
+    state = state.copyWith(
+      selectedLanguage: _normalizeLearningLanguage(languageCode),
+    );
+  }
+
+  void setProfileLanguageIfIdle(String languageCode) {
+    if (state.selectedLanguage != 'en' ||
+        state.isLoading ||
+        state.capturedImage != null ||
+        state.capturedImageBytes != null ||
+        state.detectedObjects.isNotEmpty ||
+        state.showVocabulary) {
+      return;
+    }
+    setLanguage(languageCode);
   }
 
   void showVocab() => state = state.copyWith(showVocabulary: true);
@@ -204,7 +233,12 @@ class SnapController extends StateNotifier<SnapState> {
   // ── Capture / pick ─────────────────────────────────────
 
   Future<void> captureFromCamera(String targetLanguage) async {
-    state = state.copyWith(isLoading: true, error: null);
+    final language = _normalizeLearningLanguage(targetLanguage);
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      selectedLanguage: language,
+    );
     try {
       final File? imageFile = await ImageUtils.pickFromCamera();
       if (imageFile == null) {
@@ -227,7 +261,7 @@ class SnapController extends StateNotifier<SnapState> {
   }
 
   Future<void> analyzeFile(File imageFile, String targetLanguage) async {
-    final language = state.selectedLanguage;
+    final language = _normalizeLearningLanguage(targetLanguage);
     state = SnapState(
       isLoading: true,
       capturedImage: imageFile,
@@ -249,7 +283,12 @@ class SnapController extends StateNotifier<SnapState> {
   }
 
   Future<void> pickFromGallery(String targetLanguage) async {
-    state = state.copyWith(isLoading: true, error: null);
+    final language = _normalizeLearningLanguage(targetLanguage);
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      selectedLanguage: language,
+    );
     try {
       final xFile = await ImageUtils.pickImageAsXFile();
       if (xFile == null) {
@@ -319,6 +358,7 @@ class SnapController extends StateNotifier<SnapState> {
     try {
       final snapResponse = await _api.analyzeDetectedSnap(
         detectedObjects.map(_resultToDetectedObject).toList(),
+        targetLanguage: state.selectedLanguage,
       );
       final allResults =
           snapResponse.vocabItems.map(_vocabItemToMilingoResult).toList();
@@ -367,5 +407,40 @@ class SnapController extends StateNotifier<SnapState> {
 final snapControllerProvider =
     StateNotifierProvider<SnapController, SnapState>((ref) {
   final api = ref.watch(milingoApiServiceProvider);
-  return SnapController(api, ref);
+  final controller = SnapController(
+    api,
+    ref,
+    initialLanguage:
+        ref.read(userProfileProvider).valueOrNull?.targetLanguage ?? 'en',
+  );
+
+  ref.listen(userProfileProvider, (_, next) {
+    final language = next.valueOrNull?.targetLanguage;
+    if (language != null) {
+      controller.setProfileLanguageIfIdle(language);
+    }
+  });
+
+  return controller;
 });
+
+String _normalizeLearningLanguage(String? language) {
+  final value = language?.trim();
+  if (value == null || value.isEmpty) return 'en';
+
+  final code = value.toLowerCase().split('-').first;
+  const nameToCode = {
+    'english': 'en',
+    'japanese': 'ja',
+    'chinese': 'zh',
+    'korean': 'ko',
+    'french': 'fr',
+    'german': 'de',
+    'spanish': 'es',
+    'italian': 'it',
+    'thai': 'th',
+    'vietnamese': 'vi',
+  };
+
+  return nameToCode[code] ?? code;
+}

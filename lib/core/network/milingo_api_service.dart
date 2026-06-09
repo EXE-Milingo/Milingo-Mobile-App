@@ -344,14 +344,16 @@ class MilingoApiService {
   }
 
   Future<SnapAnalysisResponse> analyzeDetectedSnap(
-    List<SnapDetectedObject> objects,
-  ) async {
+    List<SnapDetectedObject> objects, {
+    required String targetLanguage,
+  }) async {
     final idempotencyKey = _uuid.v4();
     try {
       final response = await _dio.post(
         '/api/v1/snap/analyze-detected',
         data: {
           'objects': objects.map((o) => o.toJson()).toList(),
+          'targetLanguage': targetLanguage,
         },
         options: Options(
           headers: {'Idempotency-Key': idempotencyKey},
@@ -367,7 +369,10 @@ class MilingoApiService {
     }
   }
 
-  Future<SnapAnalysisResponse> analyzeSnap(File imageFile) async {
+  Future<SnapAnalysisResponse> analyzeSnap(
+    File imageFile, {
+    String targetLanguage = 'en',
+  }) async {
     final idempotencyKey = _uuid.v4();
     try {
       final formData = FormData.fromMap({
@@ -375,6 +380,7 @@ class MilingoApiService {
           imageFile.path,
           filename: 'snap_${DateTime.now().millisecondsSinceEpoch}.jpg',
         ),
+        'targetLanguage': targetLanguage,
       });
 
       final response = await _dio.post(
