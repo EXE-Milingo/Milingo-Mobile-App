@@ -8,7 +8,7 @@ void main() {
     PaymentPlanSummary? confirmedPlan;
 
     const plan = PaymentPlanSummary(
-      planId: 'pro_monthly',
+      planId: 'pro',
       planLabel: 'Milingo Premium - 1 Thang',
       totalLabel: '139,000 d',
       buttonTotalLabel: '139,000 d',
@@ -50,6 +50,6 @@ void main() {
     await tester.pump();
 
     expect(confirmedMethod?.id, 'bank_qr');
-    expect(confirmedPlan?.planId, 'pro_monthly');
+    expect(confirmedPlan?.planId, 'pro');
   });
 }

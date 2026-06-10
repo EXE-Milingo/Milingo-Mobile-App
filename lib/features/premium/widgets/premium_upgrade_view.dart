@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+import 'package:milingo/core/network/milingo_models.dart';
 
 class PremiumPlan {
   const PremiumPlan({
@@ -13,6 +15,35 @@ class PremiumPlan {
     this.accentColor = _PremiumColors.orange,
   });
 
+  factory PremiumPlan.fromApi(SubscriptionPlanResponse plan) {
+    final formattedPrice = NumberFormat.decimalPattern('en_US')
+        .format(plan.amount)
+        .replaceAll(',', '.');
+    final unit = switch (plan.durationDays) {
+      7 => '/ Tuần',
+      30 => '/ tháng',
+      365 => '/ Năm',
+      _ => '/ ${plan.durationDays} ngày',
+    };
+
+    return PremiumPlan(
+      id: plan.planId,
+      name: plan.planName,
+      priceText: '$formattedPriceđ',
+      unit: unit,
+      features: _premiumFeatures,
+      badge: switch (plan.planId) {
+        'pro' => 'PHỔ BIẾN NHẤT',
+        'ultra' => 'PHỔ BIẾN',
+        _ => null,
+      },
+      showStar: plan.planId == 'ultra',
+      accentColor: plan.planId == 'ultra'
+          ? _PremiumColors.lightOrange
+          : _PremiumColors.orange,
+    );
+  }
+
   final String id;
   final String name;
   final String priceText;
@@ -25,14 +56,14 @@ class PremiumPlan {
 
 const premiumPlans = [
   PremiumPlan(
-    id: 'plus_monthly',
+    id: 'plus',
     name: 'Gói Plus',
     priceText: '59.000đ',
     unit: '/ Tuần',
     features: _premiumFeatures,
   ),
   PremiumPlan(
-    id: 'pro_monthly',
+    id: 'pro',
     name: 'Gói Pro',
     priceText: '139.000đ',
     unit: '/ tháng',
@@ -40,8 +71,8 @@ const premiumPlans = [
     features: _premiumFeatures,
   ),
   PremiumPlan(
-    id: 'pro_yearly',
-    name: 'Gói Pro',
+    id: 'ultra',
+    name: 'Gói Ultra',
     priceText: '510.000đ',
     unit: '/ Năm',
     badge: 'PHỔ BIẾN',
@@ -62,6 +93,7 @@ const _premiumFeatures = [
 
 class PremiumUpgradeView extends StatelessWidget {
   const PremiumUpgradeView({
+    required this.plans,
     required this.selectedPlanId,
     required this.isStartingPayment,
     required this.onClose,
@@ -72,6 +104,7 @@ class PremiumUpgradeView extends StatelessWidget {
     super.key,
   });
 
+  final List<PremiumPlan> plans;
   final String selectedPlanId;
   final bool isStartingPayment;
   final VoidCallback onClose;
@@ -105,6 +138,7 @@ class PremiumUpgradeView extends StatelessWidget {
                       const _PremiumHero(),
                       const SizedBox(height: 40),
                       _PremiumPlanList(
+                        plans: plans,
                         selectedPlanId: selectedPlanId,
                         onPlanSelected: onPlanSelected,
                       ),
@@ -273,10 +307,12 @@ class _PremiumGlyph extends StatelessWidget {
 
 class _PremiumPlanList extends StatelessWidget {
   const _PremiumPlanList({
+    required this.plans,
     required this.selectedPlanId,
     required this.onPlanSelected,
   });
 
+  final List<PremiumPlan> plans;
   final String selectedPlanId;
   final ValueChanged<PremiumPlan> onPlanSelected;
 
@@ -284,13 +320,13 @@ class _PremiumPlanList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (final plan in premiumPlans) ...[
+        for (final plan in plans) ...[
           _PremiumPlanCard(
             plan: plan,
             selected: plan.id == selectedPlanId,
             onTap: () => onPlanSelected(plan),
           ),
-          if (plan != premiumPlans.last) const SizedBox(height: 24),
+          if (plan != plans.last) const SizedBox(height: 24),
         ],
       ],
     );

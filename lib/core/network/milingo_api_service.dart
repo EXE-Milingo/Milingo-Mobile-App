@@ -249,6 +249,24 @@ class MilingoApiService {
     }
   }
 
+  Future<List<SubscriptionPlanResponse>> getSubscriptionPlans() async {
+    try {
+      final response = await _dio.get('/api/v1/payments/plans');
+      return _unwrap(response, (data) {
+        final list = data as List<dynamic>? ?? const [];
+        return list
+            .map(
+              (item) => SubscriptionPlanResponse.fromJson(
+                item as Map<String, dynamic>,
+              ),
+            )
+            .toList();
+      });
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   Future<CreatePayOSOrderResponse> createPayOSOrder({
     required String planId,
     required String returnUrl,

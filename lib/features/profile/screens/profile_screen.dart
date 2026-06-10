@@ -1061,14 +1061,15 @@ class _UpgradeModalState extends ConsumerState<_UpgradeModal> {
                     const SizedBox(height: 26),
                     _PlanCard(
                       title: 'Gói Plus',
-                      price: _yearly ? '79.000đ' : '99.000đ',
-                      suffix: '/tháng',
+                      price: '59.000đ',
+                      suffix: '/tuần',
                       cta: 'Chọn gói Plus',
                       onCtaTap: () => setState(
                         () => _paymentPlan = _buildPaymentPlan(
-                          planId: _yearly ? 'plus_yearly' : 'plus_monthly',
+                          planId: 'plus',
                           planName: 'Milingo Plus',
-                          monthlyPrice: _yearly ? 79000 : 99000,
+                          totalPrice: 59000,
+                          durationLabel: '1 Tuần',
                         ),
                       ),
                       features: const [
@@ -1079,9 +1080,9 @@ class _UpgradeModalState extends ConsumerState<_UpgradeModal> {
                     ),
                     const SizedBox(height: 30),
                     _PlanCard(
-                      title: _yearly ? 'Gói Pro ✪' : 'Gói Pro',
-                      price: _yearly ? '111.000đ' : '139.000đ',
-                      suffix: '/tháng',
+                      title: _yearly ? 'Gói Ultra ✪' : 'Gói Pro',
+                      price: _yearly ? '510.000đ' : '139.000đ',
+                      suffix: _yearly ? '/năm' : '/tháng',
                       cta: null,
                       highlighted: true,
                       badge: _yearly ? 'PHỔ BIẾN NHẤT' : 'PHỔ BIẾN',
@@ -1096,9 +1097,10 @@ class _UpgradeModalState extends ConsumerState<_UpgradeModal> {
                     _StartNowButton(
                       onTap: () => setState(
                         () => _paymentPlan = _buildPaymentPlan(
-                          planId: _yearly ? 'pro_yearly' : 'pro_monthly',
-                          planName: 'Milingo Premium',
-                          monthlyPrice: _yearly ? 111000 : 139000,
+                          planId: _yearly ? 'ultra' : 'pro',
+                          planName: _yearly ? 'Milingo Ultra' : 'Milingo Pro',
+                          totalPrice: _yearly ? 510000 : 139000,
+                          durationLabel: _yearly ? '1 Năm' : '1 Tháng',
                         ),
                       ),
                     ),
@@ -1176,12 +1178,10 @@ class _UpgradeModalState extends ConsumerState<_UpgradeModal> {
   PaymentPlanSummary _buildPaymentPlan({
     required String planId,
     required String planName,
-    required int monthlyPrice,
+    required int totalPrice,
+    required String durationLabel,
   }) {
-    final months = _yearly ? 12 : 1;
-    final total = monthlyPrice * months;
-    final durationLabel = _yearly ? '12 Tháng' : '1 Tháng';
-    final totalLabel = NumberFormat.decimalPattern('en_US').format(total);
+    final totalLabel = NumberFormat.decimalPattern('en_US').format(totalPrice);
 
     return PaymentPlanSummary(
       planId: planId,

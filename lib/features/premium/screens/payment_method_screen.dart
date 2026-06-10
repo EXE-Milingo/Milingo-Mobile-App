@@ -10,10 +10,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 class PaymentMethodScreen extends ConsumerStatefulWidget {
   const PaymentMethodScreen({
+    this.selectedPlan,
     this.selectedPlanId,
     super.key,
   });
 
+  final PremiumPlan? selectedPlan;
   final String? selectedPlanId;
 
   @override
@@ -25,6 +27,8 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen> {
   bool _isConfirming = false;
 
   PremiumPlan get _selectedPlan {
+    final selectedPlan = widget.selectedPlan;
+    if (selectedPlan != null) return selectedPlan;
     return premiumPlans.firstWhere(
       (plan) => plan.id == widget.selectedPlanId,
       orElse: () => premiumPlans[1],

@@ -22,6 +22,7 @@ import 'package:milingo/features/premium/screens/premium_screen.dart';
 import 'package:milingo/features/premium/screens/subscription_management_screen.dart';
 import 'package:milingo/features/premium/screens/terms_of_service_screen.dart';
 import 'package:milingo/features/premium/screens/transaction_history_screen.dart';
+import 'package:milingo/features/premium/widgets/premium_upgrade_view.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
 import 'package:milingo/features/splash/screens/splash_screen.dart';
@@ -178,8 +179,11 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.paymentMethodRoute,
         name: 'payment-method',
         builder: (context, state) {
-          final planId = state.extra as String?;
-          return PaymentMethodScreen(selectedPlanId: planId);
+          final extra = state.extra;
+          return PaymentMethodScreen(
+            selectedPlan: extra is PremiumPlan ? extra : null,
+            selectedPlanId: extra is String ? extra : null,
+          );
         },
       ),
       GoRoute(

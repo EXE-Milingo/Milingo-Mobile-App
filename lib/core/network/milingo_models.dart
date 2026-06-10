@@ -741,6 +741,29 @@ class CreatePayOSOrderResponse {
   final String paymentLinkId;
 }
 
+class SubscriptionPlanResponse {
+  const SubscriptionPlanResponse({
+    required this.planId,
+    required this.planName,
+    required this.amount,
+    required this.durationDays,
+  });
+
+  factory SubscriptionPlanResponse.fromJson(Map<String, dynamic> json) {
+    return SubscriptionPlanResponse(
+      planId: (json['planId'] ?? '').toString(),
+      planName: (json['planName'] ?? '').toString(),
+      amount: (json['amount'] as num?)?.toInt() ?? 0,
+      durationDays: (json['durationDays'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String planId;
+  final String planName;
+  final int amount;
+  final int durationDays;
+}
+
 class PremiumStatusResponse {
   const PremiumStatusResponse({
     required this.isPremium,

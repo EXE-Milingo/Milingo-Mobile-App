@@ -9,9 +9,9 @@ class PaymentMethodPlanSummary {
 
   factory PaymentMethodPlanSummary.fromPremiumPlan(PremiumPlan plan) {
     final duration = switch (plan.id) {
-      'plus_monthly' => '1 Tuần',
-      'pro_monthly' => '1 Tháng',
-      'pro_yearly' => '12 Tháng',
+      'plus' => '1 Tuần',
+      'pro' => '1 Tháng',
+      'ultra' => '1 Năm',
       _ => plan.unit.replaceAll('/', '').trim(),
     };
 
