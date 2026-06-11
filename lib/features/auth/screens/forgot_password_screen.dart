@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/auth/utils/password_reset_validation.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -26,33 +27,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _sendResetEmail() async {
     final email = _emailController.text.trim();
+    final validationMessage = validatePasswordResetEmail(email);
 
-    if (email.isEmpty) {
-      _showSnack('Vui lòng nhập email để khôi phục mật khẩu.', isError: true);
+    if (validationMessage != null) {
+      _showSnack(validationMessage, isError: true);
       return;
     }
 
     setState(() => _isSending = true);
 
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      final auth = FirebaseAuth.instance;
+      await auth.setLanguageCode('vi');
+      await auth.sendPasswordResetEmail(email: email);
 
       if (!mounted) return;
-      setState(() {
-        _isSent = true;
-        _sentEmail = email;
-      });
-      _showSnack('Đã gửi email đặt lại mật khẩu.');
+      _showSentConfirmation(email);
     } on FirebaseAuthException catch (e) {
-      _showSnack(_mapFirebaseError(e.code), isError: true);
+      if (e.code == 'user-not-found') {
+        _showSentConfirmation(email);
+      } else {
+        _showSnack(_mapFirebaseError(e.code), isError: true);
+      }
     } catch (_) {
       _showSnack(
-        'Đã xảy ra lỗi không xác định. Vui lòng thử lại.',
+        'Không thể gửi email khôi phục lúc này. Vui lòng thử lại.',
         isError: true,
       );
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
+  }
+
+  void _showSentConfirmation(String email) {
+    if (!mounted) return;
+    setState(() {
+      _isSent = true;
+      _sentEmail = email;
+    });
+    _showSnack(
+      'Nếu email đã được đăng ký, bạn sẽ nhận được liên kết khôi phục.',
+    );
   }
 
   void _showSnack(String message, {bool isError = false}) {
@@ -74,17 +89,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   String _mapFirebaseError(String code) {
     switch (code) {
       case 'invalid-email':
-        return 'Email không hợp lệ. Vui lòng kiểm tra lại.';
-      case 'user-not-found':
-        return 'Không tìm thấy tài khoản với email này.';
+        return passwordResetEmailInvalidMessage;
       case 'missing-email':
-        return 'Vui lòng nhập email để khôi phục mật khẩu.';
+        return passwordResetEmailRequiredMessage;
       case 'too-many-requests':
         return 'Quá nhiều lần thử. Vui lòng đợi một lát rồi thử lại.';
       case 'network-request-failed':
         return 'Không thể kết nối mạng. Vui lòng kiểm tra lại.';
       default:
-        return 'Lỗi gửi email khôi phục ($code). Vui lòng thử lại.';
+        return 'Không thể gửi email khôi phục lúc này. Vui lòng thử lại.';
     }
   }
 
@@ -350,7 +363,8 @@ class _SentPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Liên kết đặt lại mật khẩu đã được gửi tới $email.',
+            'Nếu email đã được đăng ký, Firebase sẽ gửi liên kết khôi phục '
+            'tới $email. Vui lòng kiểm tra hộp thư và thư rác.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 14,
