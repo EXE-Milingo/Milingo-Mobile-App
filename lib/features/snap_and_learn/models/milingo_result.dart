@@ -20,6 +20,81 @@ class RelatedWord {
   final String pronunciation;
 }
 
+class ExampleSentencePair {
+  const ExampleSentencePair({
+    required this.original,
+    required this.translation,
+  });
+
+  final String original;
+  final String translation;
+}
+
+ExampleSentencePair exampleSentencePairFor({
+  required String sentence,
+  required String sentenceTranslation,
+}) {
+  final original = sentence.trim();
+  final translation = sentenceTranslation.trim();
+  final joinedPair = _splitJoinedExampleSentence(original);
+
+  if (joinedPair != null) {
+    return ExampleSentencePair(
+      original: joinedPair.original,
+      translation: translation.isEmpty ? joinedPair.translation : translation,
+    );
+  }
+  if (original.isEmpty && translation.isEmpty) {
+    return const ExampleSentencePair(
+      original: 'Chua co cau vi du.',
+      translation: '',
+    );
+  }
+  if (original.isEmpty || original == translation) {
+    return ExampleSentencePair(original: translation, translation: '');
+  }
+  if (translation.isEmpty) {
+    return ExampleSentencePair(original: original, translation: '');
+  }
+
+  return ExampleSentencePair(original: original, translation: translation);
+}
+
+ExampleSentencePair? _splitJoinedExampleSentence(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return null;
+
+  final parenthesizedTranslation =
+      RegExp(r'^(.*?)\s*\(([^()]+)\)\s*$').firstMatch(trimmed);
+  if (parenthesizedTranslation != null) {
+    final original = parenthesizedTranslation.group(1)?.trim() ?? '';
+    final translation = parenthesizedTranslation.group(2)?.trim() ?? '';
+    if (original.isNotEmpty && translation.isNotEmpty) {
+      return ExampleSentencePair(
+        original: original,
+        translation: translation,
+      );
+    }
+  }
+
+  const dashSeparators = [' \u2014 ', ' \u2013 ', ' -- ', ' - '];
+  for (final separator in dashSeparators) {
+    final index = trimmed.indexOf(separator);
+    if (index <= 0 || index >= trimmed.length - separator.length) continue;
+
+    final original = trimmed.substring(0, index).trim();
+    final translation = trimmed.substring(index + separator.length).trim();
+    if (original.isNotEmpty && translation.isNotEmpty) {
+      return ExampleSentencePair(
+        original: original,
+        translation: translation,
+      );
+    }
+  }
+
+  return null;
+}
+
 /// Main analysis result from Gemini for Snap & Learn
 class MilingoResult {
   MilingoResult({

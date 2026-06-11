@@ -75,7 +75,7 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
               sliver: SliverList.list(
                 children: [
                   _HeroCameraCard(
-                    onTap: () => context.go(AppConstants.snapAndLearnRoute),
+                    onTap: () => context.push(AppConstants.snapAndLearnRoute),
                   ),
                   const SizedBox(height: 24),
                   _StatsRow(

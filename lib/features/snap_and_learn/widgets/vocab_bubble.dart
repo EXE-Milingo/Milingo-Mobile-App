@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 
-const _kAccentLight = Color(0xFFFFF0EB);
-
 /// Floating vocabulary bubble displayed over the captured image.
 /// Tapping the card opens the save-to-flashcard sheet.
 /// The speaker icon plays the pronunciation.
 class VocabBubble extends StatelessWidget {
   const VocabBubble({
-    super.key,
     required this.english,
     required this.translation,
-    required this.pronunciation,
     required this.onSpeak,
     required this.onSave,
+    super.key,
   });
 
   final String english;
   final String translation;
-  final String pronunciation;
   final VoidCallback onSpeak;
   final VoidCallback onSave;
 
@@ -33,7 +29,7 @@ class VocabBubble extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -47,7 +43,7 @@ class VocabBubble extends StatelessWidget {
               children: [
                 Text(
                   english,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
@@ -55,8 +51,11 @@ class VocabBubble extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.bookmark_add_rounded,
-                    color: AppTheme.primaryColor, size: 11),
+                const Icon(
+                  Icons.bookmark_add_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 11,
+                ),
               ],
             ),
             const SizedBox(height: 2),
@@ -75,18 +74,13 @@ class VocabBubble extends StatelessWidget {
                 GestureDetector(
                   onTap: onSpeak,
                   behavior: HitTestBehavior.opaque,
-                  child: Icon(Icons.volume_up_rounded,
-                      color: AppTheme.primaryColor, size: 13),
+                  child: const Icon(
+                    Icons.volume_up_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 13,
+                  ),
                 ),
               ],
-            ),
-            Text(
-              pronunciation,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey[500],
-                fontStyle: FontStyle.italic,
-              ),
             ),
           ],
         ),

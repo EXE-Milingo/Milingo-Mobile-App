@@ -27,6 +27,7 @@ class SnapState {
     this.coinsAwarded = 0,
     this.detectedObjects = const [],
     this.currentDetectedIndex = 0,
+    this.paywallRequired = false,
   });
 
   final bool isLoading;
@@ -50,6 +51,7 @@ class SnapState {
   final List<DetectedObjectResult> detectedObjects;
 
   final int currentDetectedIndex;
+  final bool paywallRequired;
 
   DetectedObjectResult? get currentDetectedObject {
     if (detectedObjects.isEmpty) return null;
@@ -73,6 +75,7 @@ class SnapState {
     int? coinsAwarded,
     List<DetectedObjectResult>? detectedObjects,
     int? currentDetectedIndex,
+    bool? paywallRequired,
   }) {
     return SnapState(
       isLoading: isLoading ?? this.isLoading,
@@ -87,6 +90,7 @@ class SnapState {
       coinsAwarded: coinsAwarded ?? this.coinsAwarded,
       detectedObjects: detectedObjects ?? this.detectedObjects,
       currentDetectedIndex: currentDetectedIndex ?? this.currentDetectedIndex,
+      paywallRequired: paywallRequired ?? this.paywallRequired,
     );
   }
 }
@@ -214,6 +218,36 @@ class SnapController extends StateNotifier<SnapState> {
   void showVocab() => state = state.copyWith(showVocabulary: true);
   void hideVocab() => state = state.copyWith(showVocabulary: false);
 
+  Future<bool> ensureCanScan() async {
+    try {
+      final quota = await _api.getSnapQuotaStatus();
+      if (quota.isLimitReached) {
+        state = state.copyWith(
+          isLoading: false,
+          error: null,
+          paywallRequired: true,
+        );
+        return false;
+      }
+      return true;
+    } on MilingoApiException catch (e) {
+      if (_isQuotaExceeded(e)) {
+        state = state.copyWith(
+          isLoading: false,
+          error: null,
+          paywallRequired: true,
+        );
+        return false;
+      }
+      return true;
+    }
+  }
+
+  void clearPaywallRequired() {
+    if (!state.paywallRequired) return;
+    state = state.copyWith(paywallRequired: false);
+  }
+
   /// Navigate between multiple detected objects.
   void nextVocabItem() {
     if (state.allVocabItems.isEmpty) return;
@@ -230,10 +264,15 @@ class SnapController extends StateNotifier<SnapState> {
         currentVocabIndex: prev, result: state.allVocabItems[prev]);
   }
 
+  bool _isQuotaExceeded(MilingoApiException e) => e.statusCode == 402;
+
   // ── Capture / pick ─────────────────────────────────────
 
   Future<void> captureFromCamera(String targetLanguage) async {
     final language = _normalizeLearningLanguage(targetLanguage);
+    state = state.copyWith(error: null, selectedLanguage: language);
+    if (!await ensureCanScan()) return;
+
     state = state.copyWith(
       isLoading: true,
       error: null,
@@ -260,8 +299,15 @@ class SnapController extends StateNotifier<SnapState> {
     }
   }
 
-  Future<void> analyzeFile(File imageFile, String targetLanguage) async {
+  Future<void> analyzeFile(
+    File imageFile,
+    String targetLanguage, {
+    bool skipQuotaCheck = false,
+  }) async {
     final language = _normalizeLearningLanguage(targetLanguage);
+    state = state.copyWith(error: null, selectedLanguage: language);
+    if (!skipQuotaCheck && !await ensureCanScan()) return;
+
     state = SnapState(
       isLoading: true,
       capturedImage: imageFile,
@@ -284,6 +330,9 @@ class SnapController extends StateNotifier<SnapState> {
 
   Future<void> pickFromGallery(String targetLanguage) async {
     final language = _normalizeLearningLanguage(targetLanguage);
+    state = state.copyWith(error: null, selectedLanguage: language);
+    if (!await ensureCanScan()) return;
+
     state = state.copyWith(
       isLoading: true,
       error: null,
@@ -342,6 +391,14 @@ class SnapController extends StateNotifier<SnapState> {
         error: null,
       );
     } on MilingoApiException catch (e) {
+      if (_isQuotaExceeded(e)) {
+        state = state.copyWith(
+          isLoading: false,
+          error: null,
+          paywallRequired: true,
+        );
+        return;
+      }
       state = state.copyWith(isLoading: false, error: e.message);
     } catch (e) {
       state = state.copyWith(
@@ -387,6 +444,14 @@ class SnapController extends StateNotifier<SnapState> {
         error: null,
       );
     } on MilingoApiException catch (e) {
+      if (_isQuotaExceeded(e)) {
+        state = state.copyWith(
+          isLoading: false,
+          error: null,
+          paywallRequired: true,
+        );
+        return;
+      }
       state = state.copyWith(isLoading: false, error: e.message);
     } catch (e) {
       state = state.copyWith(

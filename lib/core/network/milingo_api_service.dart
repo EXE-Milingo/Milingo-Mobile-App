@@ -74,6 +74,11 @@ class MilingoApiService {
               message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
             case 403:
               message = 'Bạn không có quyền thực hiện thao tác này.';
+            case 402:
+              final body402 = error.response?.data;
+              message = (body402 is Map && body402['message'] != null)
+                  ? body402['message'].toString()
+                  : 'Bạn đã dùng hết lượt quét miễn phí hôm nay.';
             case 404:
               final path = error.requestOptions.path;
               message = path.contains('/api/v1/payments/')
@@ -81,6 +86,11 @@ class MilingoApiService {
                   : 'Không tìm thấy tài nguyên yêu cầu.';
             case 409:
               message = 'Dữ liệu đã tồn tại.';
+            case 429:
+              final body429 = error.response?.data;
+              message = (body429 is Map && body429['message'] != null)
+                  ? body429['message'].toString()
+                  : 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.';
             case 500:
               message = 'Lỗi máy chủ. Vui lòng thử lại sau.';
             default:
@@ -137,6 +147,16 @@ class MilingoApiService {
     }
     if (e is MilingoApiException) return e.message;
     return 'Đã xảy ra lỗi không xác định.';
+  }
+
+  MilingoApiException _apiExceptionFromDio(DioException e) {
+    if (e.error is MilingoApiException) {
+      return e.error as MilingoApiException;
+    }
+    return MilingoApiException(
+      _userFriendlyError(e),
+      statusCode: e.response?.statusCode,
+    );
   }
 
   // ═══════════════════════════════════════════════════════
@@ -335,6 +355,18 @@ class MilingoApiService {
   // Snap & Learn
   // ═══════════════════════════════════════════════════════
 
+  Future<SnapQuotaStatus> getSnapQuotaStatus() async {
+    try {
+      final response = await _dio.get('/api/v1/snap/quota');
+      return _unwrap(
+        response,
+        (data) => SnapQuotaStatus.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw _apiExceptionFromDio(e);
+    }
+  }
+
   Future<SnapDetectionResponse> detectSnap(File imageFile) async {
     try {
       final formData = FormData.fromMap({
@@ -357,7 +389,7 @@ class MilingoApiService {
         (data) => SnapDetectionResponse.fromJson(data as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      throw MilingoApiException(_userFriendlyError(e));
+      throw _apiExceptionFromDio(e);
     }
   }
 
@@ -383,7 +415,7 @@ class MilingoApiService {
         (data) => SnapAnalysisResponse.fromJson(data as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      throw MilingoApiException(_userFriendlyError(e));
+      throw _apiExceptionFromDio(e);
     }
   }
 
@@ -417,7 +449,7 @@ class MilingoApiService {
         (data) => SnapAnalysisResponse.fromJson(data as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      throw MilingoApiException(_userFriendlyError(e));
+      throw _apiExceptionFromDio(e);
     }
   }
 

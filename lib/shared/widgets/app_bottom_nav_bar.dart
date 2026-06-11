@@ -17,19 +17,19 @@ class AppBottomNavBar extends StatelessWidget {
 
     switch (index) {
       case 0:
-        context.go(AppConstants.homeRoute);
+        context.push(AppConstants.homeRoute);
         return;
       case 1:
-        context.go(AppConstants.flashcardsRoute);
+        context.push(AppConstants.flashcardsRoute);
         return;
       case 2:
-        context.go(AppConstants.snapAndLearnRoute);
+        context.push(AppConstants.snapAndLearnRoute);
         return;
       case 3:
-        context.go(AppConstants.leaderboardRoute);
+        context.push(AppConstants.leaderboardRoute);
         return;
       case 4:
-        context.go(AppConstants.profileRoute);
+        context.push(AppConstants.profileRoute);
         return;
     }
   }

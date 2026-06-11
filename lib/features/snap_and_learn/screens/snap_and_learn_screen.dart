@@ -17,6 +17,7 @@ import 'package:milingo/features/snap_and_learn/widgets/vocab_bubble.dart';
 import 'package:milingo/features/snap_and_learn/widgets/bottom_capture_bar.dart';
 import 'package:milingo/features/snap_and_learn/widgets/save_flashcard_sheet.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/shared/utils/tts_locale.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Design Tokens (warm orange accent like mockup)
@@ -24,6 +25,8 @@ import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 
 const _kAccent = Color(0xFFF25F36);
 const _kAccentLight = Color(0xFFFFF0EB);
+const _kHaloBubbleWidth = 92.0;
+const _kHaloBubbleHeight = 70.0;
 
 class _Lang {
   const _Lang(this.code, this.flag, this.name);
@@ -40,18 +43,6 @@ const _kLanguages = [
   _Lang('de', '🇩🇪', 'Deutsch'),
   _Lang('th', '🇹🇭', 'ไทย'),
 ];
-
-const _kTtsLocales = {
-  'vi': 'vi-VN',
-  'en': 'en-US',
-  'ja': 'ja-JP',
-  'ko': 'ko-KR',
-  'zh': 'zh-CN',
-  'es': 'es-ES',
-  'fr': 'fr-FR',
-  'de': 'de-DE',
-  'th': 'th-TH',
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Screen
@@ -142,23 +133,29 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   Future<void> _speak(String text, String langCode) async {
     final spokenText = text.trim();
     if (spokenText.isEmpty) return;
-    await _tts.setLanguage(_kTtsLocales[langCode] ?? 'en-US');
+    await _tts.setLanguage(ttsLocaleForLanguageCode(langCode));
     await _tts.stop();
     await _tts.speak(spokenText);
   }
 
   Future<void> _speakResultTerm(MilingoResult result, String langCode) {
-    return _speak(_speechTextForResult(result), langCode);
+    return _speak(_speechTextForResult(result, langCode), langCode);
   }
 
-  String _speechTextForResult(MilingoResult result) {
-    final keyword = result.keyword.trim();
-    return keyword.isNotEmpty ? keyword : result.translation.trim();
+  String _speechTextForResult(MilingoResult result, String langCode) {
+    return targetSpeechTextForLanguage(
+      langCode: langCode,
+      englishText: result.keyword,
+      translatedText: result.translation,
+    );
   }
 
-  String _speechTextForRelatedWord(RelatedWord word) {
-    final keyword = word.english.trim();
-    return keyword.isNotEmpty ? keyword : word.translation.trim();
+  String _speechTextForRelatedWord(RelatedWord word, String langCode) {
+    return targetSpeechTextForLanguage(
+      langCode: langCode,
+      englishText: word.english,
+      translatedText: word.translation,
+    );
   }
 
   void _showSaveToFlashcard(BuildContext context, FlashcardEntry entry) {
@@ -177,11 +174,17 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     }
 
     try {
-      final xFile = await _cameraController!.takePicture();
-      final file = File(xFile.path);
       final ctrl = ref.read(snapControllerProvider.notifier);
       final snap = ref.read(snapControllerProvider);
-      await ctrl.analyzeFile(file, snap.selectedLanguage);
+      if (!await ctrl.ensureCanScan()) return;
+
+      final xFile = await _cameraController!.takePicture();
+      final file = File(xFile.path);
+      await ctrl.analyzeFile(
+        file,
+        snap.selectedLanguage,
+        skipQuotaCheck: true,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -269,6 +272,13 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 
     // Listen for state transitions
     ref.listen<SnapState>(snapControllerProvider, (prev, next) {
+      if (!(prev?.paywallRequired ?? false) && next.paywallRequired) {
+        _scanCtrl.stop();
+        ctrl.clearPaywallRequired();
+        if (mounted) {
+          context.push(AppConstants.premiumRoute);
+        }
+      }
       // When loading starts → run scan animation
       if (next.isLoading && !(prev?.isLoading ?? false)) {
         _scanCtrl.repeat();
@@ -409,7 +419,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  ..._buildObjectHaloBubbles(snap, result),
+                  ..._buildObjectHaloBubbles(snap, result, objectHeight),
                   SizedBox(
                     height: objectHeight,
                     width: double.infinity,
@@ -569,18 +579,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                               height: 1.06,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          _AdaptiveResultText(
-                            text: result.pronunciation.toUpperCase(),
-                            textAlign: TextAlign.left,
-                            maxLines: 2,
-                            minFontSize: 9,
-                            style: const TextStyle(
-                              color: Color(0xFF9B938B),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -597,6 +595,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   List<Widget> _buildObjectHaloBubbles(
     SnapState snap,
     MilingoResult result,
+    double objectHeight,
   ) {
     final haloItems = <({String label, String translation})>[
       for (final word in result.relatedWords.take(4))
@@ -611,22 +610,165 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
       }
     }
 
-    const positions = <Alignment>[
-      Alignment(-0.75, -0.72),
-      Alignment(0.72, -0.70),
-      Alignment(-0.88, -0.18),
-      Alignment(0.86, -0.18),
-    ];
+    if (haloItems.isEmpty) return const [];
 
     return [
-      for (var i = 0; i < haloItems.length; i++)
-        Align(
-          alignment: positions[i % positions.length],
-          child: _HaloWordBubble(
-            label: haloItems[i].label,
-            translation: haloItems[i].translation,
-          ),
+      Positioned.fill(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (!constraints.hasBoundedWidth ||
+                !constraints.hasBoundedHeight ||
+                constraints.maxWidth <= 0 ||
+                constraints.maxHeight <= 0) {
+              return const SizedBox.shrink();
+            }
+
+            final areaSize = Size(
+              constraints.maxWidth,
+              constraints.maxHeight,
+            );
+            final previewHeight = math.min(objectHeight, areaSize.height);
+            final previewTop = (areaSize.height - previewHeight) / 2;
+            final objectRect = _estimatedResultObjectRect(
+              snap: snap,
+              result: result,
+              previewSize: Size(areaSize.width, previewHeight),
+            )
+                .translate(0, previewTop)
+                .inflate(12)
+                .intersect(Offset.zero & areaSize);
+            final offsets = _haloOffsetsForObject(
+              size: areaSize,
+              objectRect: objectRect,
+              count: haloItems.length,
+            );
+
+            return Stack(
+              children: [
+                for (var i = 0; i < haloItems.length && i < offsets.length; i++)
+                  Positioned(
+                    left: offsets[i].dx,
+                    top: offsets[i].dy,
+                    child: _HaloWordBubble(
+                      label: haloItems[i].label,
+                      translation: haloItems[i].translation,
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
+      ),
+    ];
+  }
+
+  Rect _estimatedResultObjectRect({
+    required SnapState snap,
+    required MilingoResult result,
+    required Size previewSize,
+  }) {
+    Rect fallback() {
+      return Rect.fromCenter(
+        center: previewSize.center(Offset.zero),
+        width: previewSize.width * 0.64,
+        height: previewSize.height * 0.58,
+      );
+    }
+
+    final boundingBox =
+        result.boundingBox ?? snap.currentDetectedObject?.boundingBox;
+    final segmentation =
+        result.segmentation ?? snap.currentDetectedObject?.segmentation;
+    if (boundingBox == null || !boundingBox.isValid) return fallback();
+
+    final sourceBounds = _objectSourceBounds(
+      boundingBox: boundingBox,
+      segmentation: segmentation,
+    );
+    if (sourceBounds.isEmpty) return fallback();
+
+    final padding = math.max(sourceBounds.width, sourceBounds.height) * 0.18;
+    final cropWidth = math.max(1.0, sourceBounds.width + padding * 2);
+    final cropHeight = math.max(1.0, sourceBounds.height + padding * 2);
+    final scale = math.min(
+      previewSize.width * 0.86 / cropWidth,
+      previewSize.height * 0.86 / cropHeight,
+    );
+
+    return Rect.fromCenter(
+      center: previewSize.center(Offset.zero),
+      width: cropWidth * scale,
+      height: cropHeight * scale,
+    ).inflate(24);
+  }
+
+  List<Offset> _haloOffsetsForObject({
+    required Size size,
+    required Rect objectRect,
+    required int count,
+  }) {
+    const edge = 18.0;
+    const gap = 12.0;
+    final maxLeft = math.max(edge, size.width - _kHaloBubbleWidth - edge);
+    final maxTop = math.max(edge, size.height - _kHaloBubbleHeight - edge);
+    final chosen = <Rect>[];
+
+    bool addCandidate(double left, double top, {bool avoidObject = true}) {
+      final x = left.clamp(edge, maxLeft).toDouble();
+      final y = top.clamp(edge, maxTop).toDouble();
+      final rect = Rect.fromLTWH(
+        x,
+        y,
+        _kHaloBubbleWidth,
+        _kHaloBubbleHeight,
+      );
+      if (avoidObject && rect.overlaps(objectRect)) return false;
+      if (chosen.any((used) => used.inflate(6).overlaps(rect))) return false;
+      chosen.add(rect);
+      return chosen.length >= count;
+    }
+
+    final left = edge;
+    final right = size.width - _kHaloBubbleWidth - edge;
+    final centerX = (size.width - _kHaloBubbleWidth) / 2;
+    final above = objectRect.top - _kHaloBubbleHeight - gap;
+    final middle = objectRect.center.dy - _kHaloBubbleHeight / 2;
+    final below = objectRect.bottom + gap;
+
+    for (final candidate in <Offset>[
+      Offset(left, above),
+      Offset(right, above),
+      Offset(left, middle),
+      Offset(right, middle),
+      Offset(left, below),
+      Offset(right, below),
+      Offset(centerX, above),
+      Offset(centerX, below),
+    ]) {
+      if (addCandidate(candidate.dx, candidate.dy)) break;
+    }
+
+    if (chosen.length < count) {
+      for (final candidate in <Offset>[
+        Offset(left, edge),
+        Offset(right, edge),
+        Offset(left, maxTop),
+        Offset(right, maxTop),
+        Offset(centerX, edge),
+        Offset(centerX, maxTop),
+      ]) {
+        if (addCandidate(
+          candidate.dx,
+          candidate.dy,
+          avoidObject: false,
+        )) {
+          break;
+        }
+      }
+    }
+
+    return [
+      for (final rect in chosen.take(count)) rect.topLeft,
     ];
   }
 
@@ -862,26 +1004,13 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
       );
   }
 
-  List<String> _examplesForResult(MilingoResult result) {
-    final examples = <String>[];
-    if (result.sentence.trim().isNotEmpty) {
-      examples.add(result.sentence.trim());
-    }
-    if (result.sentenceTranslation.trim().isNotEmpty &&
-        result.sentenceTranslation.trim() != result.sentence.trim()) {
-      examples.add(result.sentenceTranslation.trim());
-    }
-    if (examples.isEmpty) {
-      examples.add('Chưa có câu ví dụ.');
-    }
-    return examples;
-  }
-
-  String _exampleReading(MilingoResult result, int index) {
-    if (index == 0 && result.pronunciation.trim().isNotEmpty) {
-      return result.pronunciation.trim();
-    }
-    return result.keyword;
+  ExampleSentencePair _examplePairForResult(
+    MilingoResult result,
+  ) {
+    return exampleSentencePairFor(
+      sentence: result.sentence,
+      sentenceTranslation: result.sentenceTranslation,
+    );
   }
 
   Widget _buildResultObjectPreview({
@@ -929,8 +1058,9 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   }
 
   void _showExampleSentence(MilingoResult result) {
-    final examples = _examplesForResult(result);
+    final example = _examplePairForResult(result);
     final langCode = ref.read(snapControllerProvider).selectedLanguage;
+    final speakText = example.original;
 
     showModalBottomSheet(
       context: context,
@@ -952,11 +1082,9 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             18,
             MediaQuery.of(context).padding.bottom + 18,
           ),
-          itemCount: examples.length,
+          itemCount: 1,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final example = examples[index];
-
             return Container(
               padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
               decoration: BoxDecoration(
@@ -978,31 +1106,33 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          example,
+                          example.original,
                           style: const TextStyle(
                             color: Color(0xFF30302F),
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.w900,
-                            height: 1.22,
+                            height: 1.24,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _exampleReading(result, index),
-                          style: const TextStyle(
-                            color: Color(0xFF7D756E),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            height: 1.35,
+                        if (example.translation.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            example.translation,
+                            style: const TextStyle(
+                              color: Color(0xFF746A62),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              height: 1.28,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
                   const SizedBox(width: 10),
                   _MiniActionButton(
                     icon: Icons.volume_up_rounded,
-                    onTap: () => _speak(example, index == 0 ? langCode : 'vi'),
+                    onTap: () => _speak(speakText, langCode),
                   ),
                 ],
               ),
@@ -1329,8 +1459,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           child: VocabBubble(
             english: word.english,
             translation: word.translation,
-            pronunciation: word.pronunciation,
-            onSpeak: () => _speak(_speechTextForRelatedWord(word), langCode),
+            onSpeak: () =>
+                _speak(_speechTextForRelatedWord(word, langCode), langCode),
             onSave: () => _showSaveToFlashcard(
               context,
               FlashcardEntry(
@@ -1515,7 +1645,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 ),
               ),
 
-              // Right column: Translation large + romanized label
+              // Right column: translation only.
               Expanded(
                 flex: 4,
                 child: Column(
@@ -1536,19 +1666,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                           color: Color(0xFF333333),
                           height: 1.2,
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _AdaptiveResultText(
-                      text: r.pronunciation.toUpperCase(),
-                      textAlign: TextAlign.right,
-                      maxLines: 2,
-                      minFontSize: 8,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[400],
-                        letterSpacing: 0.8,
                       ),
                     ),
                   ],
@@ -2016,8 +2133,8 @@ class _HaloWordBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 86,
-      height: 70,
+      width: _kHaloBubbleWidth,
+      height: _kHaloBubbleHeight,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.86),

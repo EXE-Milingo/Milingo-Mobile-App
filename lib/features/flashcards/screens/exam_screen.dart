@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/profile/providers/profile_provider.dart';
+import 'package:milingo/shared/utils/tts_locale.dart';
 
 const _kBg = Color(0xFFFFF8F4);
 const _kSurface = Colors.white;
@@ -14,17 +18,6 @@ const _kBorder = Color(0xFFF0E4DE);
 const _kSoft = Color(0xFFFFEDE7);
 const _kSuccess = Color(0xFF2EAD62);
 const _kDanger = Color(0xFFE14E43);
-
-const _kTtsLocales = {
-  'en': 'en-US',
-  'vi': 'vi-VN',
-  'ja': 'ja-JP',
-  'ko': 'ko-KR',
-  'zh': 'zh-CN',
-  'fr': 'fr-FR',
-  'es': 'es-ES',
-  'de': 'de-DE',
-};
 
 class ExamScreen extends ConsumerStatefulWidget {
   const ExamScreen({
@@ -59,6 +52,8 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   bool _revealed = false;
   String? _selectedOptionId;
   int? _selectedQuality;
+  bool _closingResultDialogForRetry = false;
+  bool _closingResultDialogForReviewRoot = false;
 
   @override
   void initState() {
@@ -124,7 +119,22 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   }
 
   Future<void> _speak() async {
-    await _tts.setLanguage(_kTtsLocales[widget.langCode] ?? 'en-US');
+    final cardLangCode = _card.targetLangCode.trim().toLowerCase();
+    final profileLangCode = ref
+            .read(userProfileProvider)
+            .valueOrNull
+            ?.targetLanguage
+            ?.trim()
+            .toLowerCase() ??
+        '';
+    final routeLangCode = widget.langCode.trim().toLowerCase();
+    final langCode = cardLangCode.isNotEmpty
+        ? cardLangCode
+        : profileLangCode.isNotEmpty
+            ? profileLangCode
+            : routeLangCode;
+    await _tts.setLanguage(ttsLocaleForLanguageCode(langCode));
+    await _tts.stop();
     await _tts.speak(_card.term);
   }
 
@@ -211,20 +221,44 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _ResultDialog(
-        correct: _correct,
-        total: _cards.length,
-        coins: _coins,
-        onRetry: () {
-          Navigator.of(context).pop();
-          _loadSession();
+      builder: (_) => PopScope(
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) return;
+          _handleResultDialogPop();
         },
-        onExit: () {
-          Navigator.of(context).pop();
-          Navigator.of(context).pop(true);
-        },
+        child: _ResultDialog(
+          correct: _correct,
+          total: _cards.length,
+          coins: _coins,
+          onRetry: _retryResultSession,
+          onExit: _goToReviewRoot,
+        ),
       ),
     );
+  }
+
+  void _retryResultSession() {
+    _closingResultDialogForRetry = true;
+    Navigator.of(context).pop();
+    _loadSession();
+  }
+
+  void _goToReviewRoot() {
+    _closingResultDialogForReviewRoot = true;
+    Navigator.of(context).pop();
+    context.go(AppConstants.leaderboardRoute);
+  }
+
+  void _handleResultDialogPop() {
+    if (_closingResultDialogForRetry) {
+      _closingResultDialogForRetry = false;
+      return;
+    }
+    if (_closingResultDialogForReviewRoot) {
+      _closingResultDialogForReviewRoot = false;
+      return;
+    }
+    context.go(AppConstants.leaderboardRoute);
   }
 
   void _showError(Object error) {
@@ -1102,7 +1136,7 @@ class _ResultDialog extends StatelessWidget {
                       side: const BorderSide(color: _kAccent),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Thoát'),
+                    child: const Text('Về ôn tập'),
                   ),
                 ),
                 const SizedBox(width: 12),

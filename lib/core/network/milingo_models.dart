@@ -154,6 +154,7 @@ class StudyCard {
     required this.translation,
     required this.pronunciation,
     required this.exampleSentence,
+    required this.targetLangCode,
     required this.srsState,
     required this.srsRepetitions,
     required this.srsIntervalDays,
@@ -174,6 +175,8 @@ class StudyCard {
       translation: (json['translation'] ?? '').toString(),
       pronunciation: (json['pronunciation'] ?? '').toString(),
       exampleSentence: (json['example_sentence'] ?? '').toString(),
+      targetLangCode:
+          (json['target_lang_code'] ?? json['targetLangCode'] ?? '').toString(),
       imageUrl: json['image_url'] as String?,
       srsState: (json['srs_state'] ?? 'new').toString(),
       srsRepetitions: repetitions,
@@ -194,6 +197,7 @@ class StudyCard {
   final String translation;
   final String pronunciation;
   final String exampleSentence;
+  final String targetLangCode;
   final String? imageUrl;
   final String srsState;
   final int srsRepetitions;
@@ -561,12 +565,42 @@ class SnapDetectionResponse {
   final double processingTimeMs;
 }
 
+class SnapQuotaStatus {
+  const SnapQuotaStatus({
+    required this.isPremium,
+    required this.dailyLimit,
+    required this.usedToday,
+    required this.remainingToday,
+    required this.isLimitReached,
+    this.resetAt,
+  });
+
+  factory SnapQuotaStatus.fromJson(Map<String, dynamic> json) {
+    return SnapQuotaStatus(
+      isPremium: json['isPremium'] as bool? ?? false,
+      dailyLimit: (json['dailyLimit'] as num?)?.toInt() ?? 3,
+      usedToday: (json['usedToday'] as num?)?.toInt() ?? 0,
+      remainingToday: (json['remainingToday'] as num?)?.toInt() ?? 0,
+      isLimitReached: json['isLimitReached'] as bool? ?? false,
+      resetAt: DateTime.tryParse((json['resetAt'] ?? '').toString()),
+    );
+  }
+
+  final bool isPremium;
+  final int dailyLimit;
+  final int usedToday;
+  final int remainingToday;
+  final bool isLimitReached;
+  final DateTime? resetAt;
+}
+
 class SnapAnalysisResponse {
   const SnapAnalysisResponse({
     required this.vocabItems,
     required this.coinsAwarded,
     required this.snapGroupId,
     required this.usedFallback,
+    this.quota,
   });
 
   factory SnapAnalysisResponse.fromJson(Map<String, dynamic> json) {
@@ -574,11 +608,15 @@ class SnapAnalysisResponse {
     final items = rawItems
         .map((e) => SnapVocabItem.fromJson(e as Map<String, dynamic>))
         .toList();
+    final rawQuota = json['quota'];
     return SnapAnalysisResponse(
       vocabItems: items,
       coinsAwarded: (json['coins_awarded'] as num?)?.toInt() ?? 0,
       snapGroupId: (json['snap_group_id'] ?? '').toString(),
       usedFallback: json['used_fallback'] as bool? ?? false,
+      quota: rawQuota is Map
+          ? SnapQuotaStatus.fromJson(Map<String, dynamic>.from(rawQuota))
+          : null,
     );
   }
 
@@ -586,6 +624,7 @@ class SnapAnalysisResponse {
   final int coinsAwarded;
   final String snapGroupId;
   final bool usedFallback;
+  final SnapQuotaStatus? quota;
 }
 
 // ── Saved Status ─────────────────────────────────────────
