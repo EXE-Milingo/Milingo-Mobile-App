@@ -27,4 +27,18 @@ void main() {
     expect(languageSource, contains('assets/svg/language-scan.svg'));
     expect(languageSource, contains('assets/svg/language-check.svg'));
   });
+
+  test('language goal screen uses onboarding languages and saves target', () {
+    final languageSource =
+        File('lib/features/profile/screens/language_goal_screen.dart')
+            .readAsStringSync();
+
+    expect(languageSource, contains('supportedLanguagesProvider'));
+    expect(languageSource, contains('languageFlagAssetForCode'));
+    expect(languageSource, contains('Future<void> _changeLanguage'));
+    expect(languageSource, contains('onChanged: _changeLanguage'));
+    expect(languageSource, contains('updateLanguages(targetLanguage: code)'));
+    expect(languageSource,
+        contains('updateLanguages(targetLanguage: _selectedCode)'));
+  });
 }

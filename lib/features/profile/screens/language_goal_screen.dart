@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:milingo/core/network/milingo_models.dart';
+import 'package:milingo/features/auth/providers/auth_provider.dart';
+import 'package:milingo/features/auth/widgets/language_flag_assets.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 
@@ -29,7 +31,9 @@ class _LanguageGoalScreenState extends ConsumerState<LanguageGoalScreen> {
   @override
   Widget build(BuildContext context) {
     final stats = ref.watch(userStatsValueProvider);
-    final language = _languageByCode(_selectedCode);
+    final supportedLanguages = ref.watch(supportedLanguagesProvider);
+    final languageOptions = _languageOptionsFor(supportedLanguages.valueOrNull);
+    final language = _languageByCode(_selectedCode, languageOptions);
     final vocabularyCount = _formatVocabularyCount(stats.totalPoints);
     final wordGoal = _weeklyWordGoal(stats);
     final scanGoal = _weeklyScanGoal(stats);
@@ -72,8 +76,9 @@ class _LanguageGoalScreenState extends ConsumerState<LanguageGoalScreen> {
               ),
               const SizedBox(height: 32),
               _LanguageSelector(
+                languages: languageOptions,
                 selectedCode: _selectedCode,
-                onChanged: (code) => setState(() => _selectedCode = code),
+                onChanged: _changeLanguage,
               ),
               const SizedBox(height: 36),
               const Text(
@@ -131,18 +136,29 @@ class _LanguageGoalScreenState extends ConsumerState<LanguageGoalScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  static String _normalizeLanguageCode(String? value) {
-    final normalized = value?.toLowerCase().trim();
-    if (normalized == 'fr' || normalized == 'jp' || normalized == 'ja') {
-      return normalized == 'ja' ? 'jp' : normalized!;
-    }
-    return 'en';
+  Future<void> _changeLanguage(String code) async {
+    setState(() => _selectedCode = code);
+
+    await ref
+        .read(userProfileProvider.notifier)
+        .updateLanguages(targetLanguage: code);
   }
 
-  static _LanguageOption _languageByCode(String code) {
-    return _languageOptions.firstWhere(
-      (language) => language.code == code,
-      orElse: () => _languageOptions[1],
+  static String _normalizeLanguageCode(String? value) {
+    return _canonicalLanguageCode(value);
+  }
+
+  static _LanguageOption _languageByCode(
+    String code,
+    List<_LanguageOption> languages,
+  ) {
+    final selectedKey = _languageCodeKey(code);
+    return languages.firstWhere(
+      (language) => _languageCodeKey(language.code) == selectedKey,
+      orElse: () => languages.firstWhere(
+        (language) => _languageCodeKey(language.code) == 'en',
+        orElse: () => languages.first,
+      ),
     );
   }
 
@@ -271,6 +287,7 @@ class _ActiveLanguageCard extends StatelessWidget {
               Center(
                 child: _FlagImage(
                   assetPath: language.flagPath,
+                  fallbackText: language.flagText,
                   size: 160,
                   borderWidth: 10,
                 ),
@@ -306,10 +323,12 @@ class _ActiveLanguageCard extends StatelessWidget {
 
 class _LanguageSelector extends StatelessWidget {
   const _LanguageSelector({
+    required this.languages,
     required this.selectedCode,
     required this.onChanged,
   });
 
+  final List<_LanguageOption> languages;
   final String selectedCode;
   final ValueChanged<String> onChanged;
 
@@ -350,17 +369,22 @@ class _LanguageSelector extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            for (final language in _languageOptions)
-              _LanguagePill(
-                language: language,
-                selected: language.code == selectedCode,
-                onTap: () => onChanged(language.code),
-              ),
-            const _AddLanguagePill(),
-          ],
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final language in languages) ...[
+                _LanguagePill(
+                  language: language,
+                  selected: _languageCodeKey(language.code) ==
+                      _languageCodeKey(selectedCode),
+                  onTap: () => onChanged(language.code),
+                ),
+                const SizedBox(width: 16),
+              ],
+              const _AddLanguagePill(),
+            ],
+          ),
         ),
       ],
     );
@@ -388,6 +412,7 @@ class _LanguagePill extends StatelessWidget {
           children: [
             _FlagImage(
               assetPath: language.flagPath,
+              fallbackText: language.flagText,
               size: 58,
               borderWidth: selected ? 4 : 2,
               borderColor: selected
@@ -603,13 +628,15 @@ class _GoalSwitch extends StatelessWidget {
 
 class _FlagImage extends StatelessWidget {
   const _FlagImage({
-    required this.assetPath,
     required this.size,
     required this.borderWidth,
+    this.assetPath,
+    this.fallbackText,
     this.borderColor = _LanguageGoalColors.primary,
   });
 
-  final String assetPath;
+  final String? assetPath;
+  final String? fallbackText;
   final double size;
   final double borderWidth;
   final Color borderColor;
@@ -624,7 +651,37 @@ class _FlagImage extends StatelessWidget {
         color: borderColor,
         shape: BoxShape.circle,
       ),
-      child: ClipOval(child: Image.asset(assetPath, fit: BoxFit.cover)),
+      child: ClipOval(
+        child: assetPath == null
+            ? _FlagFallback(text: fallbackText, size: size)
+            : Image.asset(
+                assetPath!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) {
+                  return _FlagFallback(text: fallbackText, size: size);
+                },
+              ),
+      ),
+    );
+  }
+}
+
+class _FlagFallback extends StatelessWidget {
+  const _FlagFallback({required this.text, required this.size});
+
+  final String? text;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFFFFF4EF),
+      child: Center(
+        child: Text(
+          text?.trim().isNotEmpty == true ? text! : '🌐',
+          style: TextStyle(fontSize: size * 0.42, height: 1),
+        ),
+      ),
     );
   }
 }
@@ -676,14 +733,32 @@ class _LanguageOption {
     required this.title,
     required this.label,
     required this.selectedLabel,
-    required this.flagPath,
+    this.flagPath,
+    this.flagText,
   });
+
+  factory _LanguageOption.fromSupportedLanguage(SupportedLanguage language) {
+    final code = _canonicalLanguageCode(language.code);
+    final codeKey = _languageCodeKey(code);
+    final label = _languageLabels[codeKey] ?? codeKey.toUpperCase();
+
+    return _LanguageOption(
+      code: code,
+      title: _languageTitles[codeKey] ?? language.name,
+      label: label,
+      selectedLabel: '$label (Đang học)',
+      flagPath:
+          _legacyFlagPathForCode(codeKey) ?? languageFlagAssetForCode(code),
+      flagText: language.flag,
+    );
+  }
 
   final String code;
   final String title;
   final String label;
   final String selectedLabel;
-  final String flagPath;
+  final String? flagPath;
+  final String? flagText;
 }
 
 class _WeeklyGoal {
@@ -706,7 +781,64 @@ class _WeeklyGoal {
   final bool completed;
 }
 
-const _languageOptions = [
+List<_LanguageOption> _languageOptionsFor(List<SupportedLanguage>? languages) {
+  if (languages == null || languages.isEmpty) return _fallbackLanguageOptions;
+
+  final options = languages
+      .where((language) => language.code.trim().isNotEmpty)
+      .map(_LanguageOption.fromSupportedLanguage)
+      .toList(growable: false);
+
+  return options.isEmpty ? _fallbackLanguageOptions : options;
+}
+
+String _canonicalLanguageCode(String? value) {
+  final normalized = value?.trim();
+  if (normalized == null || normalized.isEmpty) return 'en';
+
+  return normalized.toLowerCase() == 'jp' ? 'ja' : normalized;
+}
+
+String _languageCodeKey(String value) {
+  final normalized = value.trim().toLowerCase();
+  if (normalized.isEmpty) return 'en';
+
+  final baseCode = normalized.split(RegExp('[-_]')).first;
+  return baseCode == 'jp' ? 'ja' : baseCode;
+}
+
+String? _legacyFlagPathForCode(String codeKey) {
+  return switch (codeKey) {
+    'en' => 'assets/images/uk.png',
+    'fr' => 'assets/images/france.png',
+    'ja' => 'assets/images/jp.png',
+    _ => null,
+  };
+}
+
+const _languageTitles = <String, String>{
+  'en': 'Tiếng Anh',
+  'ja': 'Tiếng Nhật',
+  'ko': 'Tiếng Hàn',
+  'fr': 'Tiếng Pháp',
+  'es': 'Tiếng Tây Ban Nha',
+  'de': 'Tiếng Đức',
+  'zh': 'Tiếng Trung',
+  'it': 'Tiếng Ý',
+};
+
+const _languageLabels = <String, String>{
+  'en': 'ANH',
+  'ja': 'NHẬT',
+  'ko': 'HÀN',
+  'fr': 'PHÁP',
+  'es': 'TBN',
+  'de': 'ĐỨC',
+  'zh': 'TRUNG',
+  'it': 'Ý',
+};
+
+const _fallbackLanguageOptions = [
   _LanguageOption(
     code: 'fr',
     title: 'Tiếng Pháp',
@@ -722,11 +854,46 @@ const _languageOptions = [
     flagPath: 'assets/images/uk.png',
   ),
   _LanguageOption(
-    code: 'jp',
+    code: 'ja',
     title: 'Tiếng Nhật',
     label: 'NHẬT',
     selectedLabel: 'NHẬT (Đang học)',
     flagPath: 'assets/images/jp.png',
+  ),
+  _LanguageOption(
+    code: 'ko',
+    title: 'Tiếng Hàn',
+    label: 'HÀN',
+    selectedLabel: 'HÀN (Đang học)',
+    flagPath: 'assets/svg/flag/South Korea Flag.png',
+  ),
+  _LanguageOption(
+    code: 'es',
+    title: 'Tiếng Tây Ban Nha',
+    label: 'TBN',
+    selectedLabel: 'TBN (Đang học)',
+    flagPath: 'assets/svg/flag/Spain Flag.png',
+  ),
+  _LanguageOption(
+    code: 'de',
+    title: 'Tiếng Đức',
+    label: 'ĐỨC',
+    selectedLabel: 'ĐỨC (Đang học)',
+    flagPath: 'assets/svg/flag/Germany Flag.png',
+  ),
+  _LanguageOption(
+    code: 'zh',
+    title: 'Tiếng Trung',
+    label: 'TRUNG',
+    selectedLabel: 'TRUNG (Đang học)',
+    flagPath: 'assets/svg/flag/chinese flag.png',
+  ),
+  _LanguageOption(
+    code: 'it',
+    title: 'Tiếng Ý',
+    label: 'Ý',
+    selectedLabel: 'Ý (Đang học)',
+    flagPath: 'assets/svg/flag/italia flag.png',
   ),
 ];
 
