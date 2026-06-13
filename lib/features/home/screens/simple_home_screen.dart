@@ -251,7 +251,7 @@ class _JourneyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 194,
+      height: 230,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: const LinearGradient(
@@ -382,7 +382,7 @@ class _HeroMetricTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _SvgIcon(assetPath, size: 20, color: Colors.white),
+          _SvgIcon(assetPath, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
