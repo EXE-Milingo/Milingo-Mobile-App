@@ -179,6 +179,41 @@ class ProfileScreen extends ConsumerWidget {
       email: _emailFor(user, profile),
       firstName: parts.first,
       lastName: parts.length > 1 ? parts.sublist(1).join(' ') : '',
+      phoneNumber: user?.phoneNumber ?? '',
+      photoUrl: profile?.photoUrl ?? user?.photoURL,
+      localAvatarPath: profile?.localAvatarPath,
+      linkedAccounts: _linkedAccountsFor(user),
+    );
+  }
+
+  static List<AccountLinkedProviderData> _linkedAccountsFor(User? user) {
+    final providers = user?.providerData ?? const <UserInfo>[];
+    return [
+      _linkedAccountFor(providers, 'google.com', 'Google', 'G'),
+      _linkedAccountFor(providers, 'apple.com', 'Apple', 'A'),
+      _linkedAccountFor(providers, 'facebook.com', 'Facebook', 'F'),
+    ];
+  }
+
+  static AccountLinkedProviderData _linkedAccountFor(
+    List<UserInfo> providers,
+    String providerId,
+    String label,
+    String initial,
+  ) {
+    UserInfo? matched;
+    for (final provider in providers) {
+      if (provider.providerId == providerId) {
+        matched = provider;
+        break;
+      }
+    }
+
+    return AccountLinkedProviderData(
+      label: label,
+      initial: initial,
+      email: matched?.email ?? '',
+      isConnected: matched != null,
     );
   }
 
