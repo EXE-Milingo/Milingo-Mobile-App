@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:milingo/core/constants/app_constants.dart';
-import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
@@ -56,6 +56,8 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
     final totalWords =
         flashcards.decks.fold<int>(0, (sum, deck) => sum + deck.total);
     final recentWords = _recentVocabulary(flashcards);
+    final dueWords = _dueVocabulary(recentWords);
+    final featuredWord = recentWords.isEmpty ? null : recentWords.first;
 
     return Scaffold(
       backgroundColor: _HomeColors.background,
@@ -67,50 +69,51 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
             SliverToBoxAdapter(
               child: _HomeHeader(
                 name: name,
-                streak: stats.currentStreak,
+                onNotificationTap: () =>
+                    context.push(AppConstants.profileRoute),
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              padding: const EdgeInsets.fromLTRB(17, 14, 17, 112),
               sliver: SliverList.list(
                 children: [
-                  _HeroCameraCard(
-                    onTap: () => context.push(AppConstants.snapAndLearnRoute),
-                  ),
-                  const SizedBox(height: 24),
-                  _StatsRow(
-                    scannedWords: totalWords,
+                  _JourneyCard(
+                    streak: stats.currentStreak,
                     coins: stats.coins,
+                    onTap: () => context.push(AppConstants.examRoute),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 17),
+                  _QuickActionsGrid(
+                    onReview: () => context.push(AppConstants.examRoute),
+                    onScan: () => context.push(AppConstants.snapAndLearnRoute),
+                    onFlashcards: () =>
+                        context.go(AppConstants.flashcardsRoute),
+                  ),
+                  const SizedBox(height: 27),
                   _SectionHeader(
-                    title: 'Tiếp tục học',
-                    actionLabel: 'Xem tất cả',
-                    onAction: () => context.push(AppConstants.examRoute),
+                    title: 'Nhiệm vụ hôm nay',
+                    trailing: dueWords.isEmpty ? null : '${dueWords.length}',
                   ),
                   const SizedBox(height: 12),
-                  _ContinueLearningCard(
+                  _DailyMissionCard(
+                    dueCount: dueWords.length,
                     totalWords: totalWords,
+                    onTap: () => context.push(AppConstants.examRoute),
+                  ),
+                  const SizedBox(height: 30),
+                  _ReviewFocusCard(
+                    dueCount: dueWords.length,
+                    word: featuredWord,
                     onTap: () => context.push(AppConstants.examRoute),
                   ),
                   const SizedBox(height: 24),
                   _SectionHeader(
-                    title: 'Từ vựng gần đây',
+                    title: 'Top học viên tuần',
                     actionLabel: 'Xem tất cả',
-                    onAction: () => context.go(AppConstants.flashcardsRoute),
+                    onAction: () => context.go(AppConstants.leaderboardRoute),
                   ),
                   const SizedBox(height: 12),
-                  _RecentVocabularySection(
-                    items: recentWords,
-                    onOpen: (item) => context.push(
-                      AppConstants.vocabDetailRoute,
-                      extra: VocabDetailArg(
-                        deckId: item.deckId,
-                        deckName: item.deckName,
-                        entry: item.entry,
-                      ),
-                    ),
-                  ),
+                  const _LeaderboardEmptyCard(),
                 ],
               ),
             ),
@@ -141,19 +144,23 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader({
     required this.name,
-    required this.streak,
+    required this.onNotificationTap,
   });
 
   final String name;
-  final int streak;
+  final VoidCallback onNotificationTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _HomeColors.header,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
       child: Row(
         children: [
+          const Text(
+            '👋',
+            style: TextStyle(fontSize: 24, height: 1.3),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,30 +170,31 @@ class _HomeHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _HomeColors.brown,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
+                    color: _HomeColors.mutedText,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                     height: 1.5,
                   ),
                 ),
                 Text(
-                  '$name 👋',
+                  '$name!',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _HomeColors.text,
-                    fontSize: 24,
+                    color: _HomeColors.title,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    height: 1.25,
+                    height: 1.5,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          _StreakPill(streak: streak),
-          const SizedBox(width: 12),
-          _AvatarInitial(name: name),
+          _CircleIconButton(
+            icon: Icons.notifications_none_rounded,
+            onTap: onNotificationTap,
+          ),
         ],
       ),
     );
@@ -200,241 +208,262 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-class _StreakPill extends StatelessWidget {
-  const _StreakPill({required this.streak});
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({
+    required this.icon,
+    required this.onTap,
+  });
 
-  final int streak;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDBC8),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: _HomeColors.orange.withValues(alpha: 0.10),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.local_fire_department_rounded,
-            color: _HomeColors.orange,
-            size: 16,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            streak.toString(),
-            style: const TextStyle(
-              color: Color(0xFF321200),
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AvatarInitial extends StatelessWidget {
-  const _AvatarInitial({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = name.trim().isEmpty ? 'M' : name.trim()[0].toUpperCase();
-
-    return Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFDEE1F8),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Text(
-        initial,
-        style: const TextStyle(
-          color: Color(0xFF606376),
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-          height: 1.3,
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroCameraCard extends StatelessWidget {
-  const _HeroCameraCard({required this.onTap});
-
+  final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        customBorder: const CircleBorder(),
         onTap: onTap,
-        child: Ink(
-          height: 226,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFF7A00),
-                Color(0xFF994700),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF994700).withValues(alpha: 0.15),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: _HomeColors.ink, size: 21),
+        ),
+      ),
+    );
+  }
+}
+
+class _JourneyCard extends StatelessWidget {
+  const _JourneyCard({
+    required this.streak,
+    required this.coins,
+    required this.onTap,
+  });
+
+  final int streak;
+  final int coins;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 194,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFF8A1F), Color(0xFFE93322)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _HomeColors.orange.withValues(alpha: 0.30),
+            blurRadius: 32,
+            offset: const Offset(0, 16),
           ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                right: -48,
-                top: -48,
-                child: Container(
-                  width: 192,
-                  height: 192,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.10),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              Positioned(
-                right: -10,
-                bottom: -12,
-                child: Image.asset(
-                  'assets/images/limabo_home.png',
-                  width: 148,
-                  height: 148,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              Column(
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          children: [
+            const Positioned(
+              left: -23,
+              bottom: -48,
+              child: _SoftCircle(size: 112),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 17),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.20),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _ReadyDot(),
-                        SizedBox(width: 8),
-                        Text(
-                          'SẴN SÀNG',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            height: 1.3,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
                   const Text(
-                    'Học cùng Limabo',
+                    'Tiếp tục hành trình',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      height: 1.25,
+                      height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const SizedBox(
-                    width: 212,
-                    child: Text(
-                      'Phân tích hình ảnh và học từ vựng ngay lập tức.',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Color(0xFFFFDBC8),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        height: 1.5,
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Bạn đang học rất tốt! Cố lên nhé 🚀',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Color(0xD9FFFFFF),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _HeroMetricTile(
+                          assetPath: 'assets/svg/new-streak.svg',
+                          value: _formatNumber(streak),
+                          label: 'Ngày streak',
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _HeroMetricTile(
+                          assetPath: 'assets/svg/new-coin.svg',
+                          value: _formatNumber(coins),
+                          label: 'Xu hiện có',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              const Color(0xFF994700).withValues(alpha: 0.20),
-                          blurRadius: 0,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.camera_alt_rounded,
-                          color: _HomeColors.darkOrange,
-                          size: 17,
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Bắt đầu chụp',
-                          style: TextStyle(
-                            color: _HomeColors.darkOrange,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
+                  const Spacer(),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _PrimaryHomeButton(
+                      label: 'Học ngay',
+                      onTap: onTap,
                     ),
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SoftCircle extends StatelessWidget {
+  const _SoftCircle({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.10),
+      ),
+    );
+  }
+}
+
+class _HeroMetricTile extends StatelessWidget {
+  const _HeroMetricTile({
+    required this.assetPath,
+    required this.value,
+    required this.label,
+  });
+
+  final String assetPath;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.20),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          _SvgIcon(assetPath, size: 20, color: Colors.white),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xCCFFFFFF),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrimaryHomeButton extends StatelessWidget {
+  const _PrimaryHomeButton({
+    required this.label,
+    required this.onTap,
+    this.foreground = _HomeColors.orange,
+    this.padding = const EdgeInsets.symmetric(vertical: 14),
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final Color foreground;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: padding,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: foreground, size: 20),
             ],
           ),
         ),
@@ -443,137 +472,159 @@ class _HeroCameraCard extends StatelessWidget {
   }
 }
 
-class _ReadyDot extends StatelessWidget {
-  const _ReadyDot();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: const BoxDecoration(
-        color: Color(0xFFA8E05F),
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-class _StatsRow extends StatelessWidget {
-  const _StatsRow({
-    required this.scannedWords,
-    required this.coins,
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid({
+    required this.onReview,
+    required this.onScan,
+    required this.onFlashcards,
   });
 
-  final int scannedWords;
-  final int coins;
+  final VoidCallback onReview;
+  final VoidCallback onScan;
+  final VoidCallback onFlashcards;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            icon: Icons.photo_camera_rounded,
-            iconColor: const Color(0xFF5A5D70),
-            iconBackground: const Color(0xFFEEF0FF),
-            title: 'Từ đã quét',
-            value: '${_formatNumber(scannedWords)} từ',
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.bolt_rounded,
-            iconColor: _HomeColors.orange,
-            iconBackground: const Color(0xFFFFDBC8),
-            title: _formatNumber(coins),
-            value: 'Xu',
-            titleLarge: true,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.iconColor,
-    required this.iconBackground,
-    required this.title,
-    required this.value,
-    this.titleLarge = false,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
-  final String title;
-  final String value;
-  final bool titleLarge;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 82,
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _HomeColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: iconBackground,
-              borderRadius: BorderRadius.circular(12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = (constraints.maxWidth - 12) / 2;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _QuickActionTile(
+              width: itemWidth,
+              label: 'Ôn tập',
+              assetPath: 'assets/svg/new-review.svg',
+              colors: const [Color(0xFFFFF1E6), Color(0xFFFFE2CC)],
+              onTap: onReview,
             ),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: _HomeColors.text,
-                    fontSize: titleLarge ? 18 : 14,
-                    fontWeight: titleLarge ? FontWeight.w500 : FontWeight.w800,
-                    height: titleLarge ? 1.15 : 1.4,
-                  ),
+            _QuickActionTile(
+              width: itemWidth,
+              label: 'AI Tutor',
+              assetPath: 'assets/svg/new-ai-tutor.svg',
+              colors: const [Color(0xFFF0EAFF), Color(0xFFE2D6FF)],
+            ),
+            _QuickActionTile(
+              width: itemWidth,
+              label: 'Luyện phát âm',
+              icon: Icons.mic_none_rounded,
+              colors: const [Color(0xFFE9F7EC), Color(0xFFD4F0DC)],
+            ),
+            _QuickActionTile(
+              width: itemWidth,
+              label: 'Quét từ mới',
+              icon: Icons.camera_alt_outlined,
+              colors: const [Color(0xFFE8F1FF), Color(0xFFD5E6FF)],
+              onTap: onScan,
+              onLongPress: onFlashcards,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    required this.width,
+    required this.label,
+    required this.colors,
+    this.assetPath,
+    this.icon,
+    this.onTap,
+    this.onLongPress,
+  });
+
+  final double width;
+  final String label;
+  final List<Color> colors;
+  final String? assetPath;
+  final IconData? icon;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+
+    return SizedBox(
+      width: width,
+      height: 78,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          borderRadius: BorderRadius.circular(24),
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: colors,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1D1814).withValues(alpha: 0.12),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                  spreadRadius: -12,
                 ),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: _HomeColors.brown,
-                    fontSize: titleLarge ? 12 : 13,
-                    fontWeight: FontWeight.w400,
-                    height: titleLarge ? 1.15 : 1.5,
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.10),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: assetPath != null
+                      ? _SvgIcon(assetPath!, size: 21)
+                      : Icon(
+                          icon,
+                          color: enabled
+                              ? _HomeColors.orange
+                              : _HomeColors.mutedText,
+                          size: 21,
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: enabled
+                          ? const Color(0xFF1D1814)
+                          : _HomeColors.mutedText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      height: 1.5,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -582,18 +633,19 @@ class _StatCard extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
-    required this.actionLabel,
-    required this.onAction,
+    this.trailing,
+    this.actionLabel,
+    this.onAction,
   });
 
   final String title;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final String? trailing;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
           child: Text(
@@ -601,145 +653,177 @@ class _SectionHeader extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: _HomeColors.text,
-              fontSize: 20,
+              color: _HomeColors.title,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
-              height: 1.3,
+              height: 1.5,
             ),
           ),
         ),
-        TextButton(
-          onPressed: onAction,
-          style: TextButton.styleFrom(
-            minimumSize: Size.zero,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: Text(
-            actionLabel,
+        if (trailing != null)
+          Text(
+            trailing!,
             style: const TextStyle(
-              color: Color(0xFF5A5D70),
+              color: _HomeColors.orange,
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              height: 1.3,
+              height: 1.5,
+            ),
+          )
+        else if (actionLabel != null && onAction != null)
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              actionLabel!,
+              style: const TextStyle(
+                color: _HomeColors.orange,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1.5,
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 }
 
-class _ContinueLearningCard extends StatelessWidget {
-  const _ContinueLearningCard({
+class _DailyMissionCard extends StatelessWidget {
+  const _DailyMissionCard({
+    required this.dueCount,
     required this.totalWords,
     required this.onTap,
   });
 
+  final int dueCount;
   final int totalWords;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final progress = totalWords == 0 ? 0.0 : (totalWords.clamp(0, 12) / 12);
-    final label = totalWords == 0
-        ? 'Chưa có từ nào'
-        : '${_formatNumber(totalWords.clamp(0, 12))} / 12 từ';
+    final hasMission = dueCount > 0;
+    final progress = totalWords == 0
+        ? 0.0
+        : ((totalWords - dueCount).clamp(0, totalWords) / totalWords);
+    final progressLabel =
+        totalWords == 0 ? '' : '${_formatNumber((progress * 100).round())}%';
 
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.white.withValues(alpha: 0.88),
+      borderRadius: BorderRadius.circular(28),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
+        onTap: hasMission ? onTap : null,
+        borderRadius: BorderRadius.circular(28),
         child: Container(
-          padding: const EdgeInsets.all(17),
+          padding: const EdgeInsets.fromLTRB(17, 16, 17, 16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _HomeColors.border),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: const Color(0xFF1D1814).withValues(alpha: 0.12),
+                blurRadius: 34,
+                offset: const Offset(0, 16),
+                spreadRadius: -14,
               ),
             ],
           ),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDEE1F8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.language_rounded,
-                  color: Color(0xFF5A5D70),
-                  size: 24,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _HomeColors.orange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Text('🎯', style: TextStyle(fontSize: 24)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasMission
+                              ? 'Thử thách hôm nay'
+                              : 'Không có nhiệm vụ',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _HomeColors.title,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            height: 1.5,
+                          ),
+                        ),
+                        Text(
+                          hasMission
+                              ? '${_formatNumber(dueCount)} từ cần ôn'
+                              : 'Dữ liệu nhiệm vụ đang trống',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _HomeColors.mutedText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (hasMission)
+                    const _RewardBadges()
+                  else
+                    const SizedBox(width: 8),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Ôn tập hôm nay',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: _HomeColors.text,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 8,
-                        backgroundColor: _HomeColors.border,
-                        color: const Color(0xFF5A5D70),
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      label,
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      totalWords == 0
+                          ? ''
+                          : '${_formatNumber(totalWords - dueCount)} / ${_formatNumber(totalWords)} từ',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _HomeColors.brown,
+                        color: _HomeColors.secondaryText,
                         fontSize: 11,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w500,
                         height: 1.5,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5A5D70),
-                  borderRadius: BorderRadius.circular(999),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF5A5D70).withValues(alpha: 0.30),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                  ),
+                  Text(
+                    progressLabel,
+                    style: const TextStyle(
+                      color: _HomeColors.orange,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      height: 1.5,
                     ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 26,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFF1F1F1),
+                  color: _HomeColors.orange,
                 ),
               ),
             ],
@@ -750,180 +834,373 @@ class _ContinueLearningCard extends StatelessWidget {
   }
 }
 
-class _RecentVocabularySection extends StatelessWidget {
-  const _RecentVocabularySection({
-    required this.items,
-    required this.onOpen,
-  });
-
-  final List<_RecentVocabularyItem> items;
-  final ValueChanged<_RecentVocabularyItem> onOpen;
+class _RewardBadges extends StatelessWidget {
+  const _RewardBadges();
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return const _EmptyVocabularyCard();
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _RewardBadge(label: '+ XP'),
+        SizedBox(height: 5),
+        _RewardBadge(label: '+ Xu', soft: true),
+      ],
+    );
+  }
+}
 
-    return SizedBox(
-      height: 134,
-      child: ListView.separated(
-        clipBehavior: Clip.none,
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return _RecentVocabularyCard(
-            item: item,
-            accent: _recentAccent(index),
-            onTap: () => onOpen(item),
-          );
-        },
+class _RewardBadge extends StatelessWidget {
+  const _RewardBadge({
+    required this.label,
+    this.soft = false,
+  });
+
+  final String label;
+  final bool soft;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: soft
+            ? const Color(0xFFFFF4D6)
+            : _HomeColors.orange.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: soft ? const Color(0xFFC47A00) : _HomeColors.orange,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          height: 1.2,
+        ),
       ),
     );
   }
 }
 
-class _RecentVocabularyCard extends StatelessWidget {
-  const _RecentVocabularyCard({
-    required this.item,
-    required this.accent,
+class _ReviewFocusCard extends StatelessWidget {
+  const _ReviewFocusCard({
+    required this.dueCount,
+    required this.word,
     required this.onTap,
   });
 
-  final _RecentVocabularyItem item;
-  final _RecentAccent accent;
+  final int dueCount;
+  final _RecentVocabularyItem? word;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final title = item.entry.english.trim().isEmpty
-        ? item.entry.translation
-        : item.entry.english;
-    final subtitle = item.entry.translation.trim().isEmpty
-        ? item.deckName
-        : item.entry.translation;
-
-    return SizedBox(
-      width: 140,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(17),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _HomeColors.border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: accent.background,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.description_outlined,
-                    color: accent.foreground,
-                    size: 20,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _HomeColors.text,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _HomeColors.text,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.30),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
           ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            const Positioned(
+              right: -32,
+              bottom: -48,
+              child: _SoftCircle(size: 112),
+            ),
+            Positioned(
+              right: -4,
+              bottom: 0,
+              top: 20,
+              child: _FlashcardPreview(word: word),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 134, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.20),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _SvgIcon(
+                          'assets/svg/new-review.svg',
+                          size: 13,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Ôn tập',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    dueCount > 0
+                        ? '${_formatNumber(dueCount)} từ cần ôn'
+                        : 'Chưa có từ cần ôn',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      height: 1.5,
+                    ),
+                  ),
+                  Text(
+                    dueCount > 0
+                        ? 'Củng cố trí nhớ của bạn hôm nay'
+                        : 'Dữ liệu ôn tập đang trống',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xD9FFFFFF),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      height: 1.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  _PrimaryHomeButton(
+                    label: 'Bắt đầu ôn ngay',
+                    foreground: const Color(0xFF6D28D9),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    onTap: onTap,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _EmptyVocabularyCard extends StatelessWidget {
-  const _EmptyVocabularyCard();
+class _FlashcardPreview extends StatelessWidget {
+  const _FlashcardPreview({required this.word});
+
+  final _RecentVocabularyItem? word;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = word?.entry.english.trim() ?? '';
+    final translation = word?.entry.translation.trim() ?? '';
+    final pronunciation = word?.entry.pronunciation.trim() ?? '';
+
+    return SizedBox(
+      width: 150,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: -18,
+            top: 10,
+            child: Transform.rotate(
+              angle: 0.26,
+              child: _StackedCard(color: Colors.white.withValues(alpha: 0.40)),
+            ),
+          ),
+          Positioned(
+            right: -4,
+            top: 22,
+            child: Transform.rotate(
+              angle: 0.14,
+              child: _StackedCard(color: Colors.white.withValues(alpha: 0.60)),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 132,
+              height: 120,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFF3E8FF)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title.isEmpty ? '' : title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF1D1814),
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          pronunciation.isEmpty ? '' : '/$pronunciation/',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      if (pronunciation.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.volume_up_rounded,
+                          color: Color(0xFF7C3AED),
+                          size: 13,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    translation,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF1E293B),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StackedCard extends StatelessWidget {
+  const _StackedCard({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 132,
+      height: 120,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.50)),
+      ),
+    );
+  }
+}
+
+class _LeaderboardEmptyCard extends StatelessWidget {
+  const _LeaderboardEmptyCard();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _HomeColors.border),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Row(
         children: [
-          Image.asset(
-            'assets/images/nothing.png',
-            width: 96,
-            height: 96,
-            fit: BoxFit.contain,
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4D6),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.emoji_events_outlined,
+              color: Color(0xFFFFB300),
+              size: 26,
+            ),
           ),
           const SizedBox(width: 14),
           const Expanded(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Chưa có từ gần đây',
+                  'Chưa có dữ liệu',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: _HomeColors.text,
-                    fontSize: 15,
+                    color: _HomeColors.title,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
-                    height: 1.3,
+                    height: 1.4,
                   ),
                 ),
-                SizedBox(height: 6),
+                SizedBox(height: 3),
                 Text(
-                  'Chụp một vật cùng Limabo để lưu từ mới ở đây.',
+                  'Dữ liệu đang được cập nhật.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: _HomeColors.brown,
+                    color: _HomeColors.mutedText,
                     fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -931,6 +1208,29 @@ class _EmptyVocabularyCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SvgIcon extends StatelessWidget {
+  const _SvgIcon(
+    this.assetPath, {
+    this.size = 20,
+    this.color,
+  });
+
+  final String assetPath;
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      assetPath,
+      width: size,
+      height: size,
+      colorFilter:
+          color == null ? null : ColorFilter.mode(color!, BlendMode.srcIn),
     );
   }
 }
@@ -947,13 +1247,6 @@ class _RecentVocabularyItem {
   final String deckName;
   final FlashcardEntry entry;
   final int index;
-}
-
-class _RecentAccent {
-  const _RecentAccent(this.background, this.foreground);
-
-  final Color background;
-  final Color foreground;
 }
 
 List<_RecentVocabularyItem> _recentVocabulary(FlashcardState state) {
@@ -982,18 +1275,22 @@ List<_RecentVocabularyItem> _recentVocabulary(FlashcardState state) {
   return items.take(8).toList(growable: false);
 }
 
+List<_RecentVocabularyItem> _dueVocabulary(List<_RecentVocabularyItem> items) {
+  return items.where((item) => _isDueForReview(item.entry)).toList();
+}
+
+bool _isDueForReview(FlashcardEntry entry) {
+  final nextReviewAt = DateTime.tryParse(entry.srsNextReviewAt ?? '');
+  if (nextReviewAt == null) {
+    return entry.isNewForStudy || entry.isLearning || entry.isReviewing;
+  }
+
+  return !nextReviewAt.isAfter(DateTime.now());
+}
+
 DateTime _createdAtOf(FlashcardEntry entry) {
   return DateTime.tryParse(entry.createdAt) ??
       DateTime.fromMillisecondsSinceEpoch(0);
-}
-
-_RecentAccent _recentAccent(int index) {
-  const accents = [
-    _RecentAccent(Color(0xFFE3F2FD), Color(0xFF1E88E5)),
-    _RecentAccent(Color(0xFFE8F5E9), Color(0xFF43A047)),
-    _RecentAccent(Color(0xFFFFDBC8), Color(0xFFE36F2C)),
-  ];
-  return accents[index % accents.length];
 }
 
 String _formatNumber(num value) {
@@ -1001,11 +1298,10 @@ String _formatNumber(num value) {
 }
 
 class _HomeColors {
-  static const background = Color(0xFFF5F3F3);
-  static const header = Color(0xFFFBF9F9);
-  static const border = Color(0xFFE4E2E2);
-  static const text = Color(0xFF1B1C1C);
-  static const brown = Color(0xFF584235);
-  static const orange = Color(0xFFFF7A00);
-  static const darkOrange = Color(0xFF994700);
+  static const background = Color(0xFFFFF8F4);
+  static const ink = Color(0xFF0A0A0A);
+  static const title = Color(0xFF1F2430);
+  static const secondaryText = Color(0xFF64748B);
+  static const mutedText = Color(0xFF9AA0AB);
+  static const orange = Color(0xFFFF6A00);
 }
