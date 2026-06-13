@@ -116,7 +116,7 @@ class ProfileScreen extends ConsumerWidget {
       ProfileSettingsItemData(
         label: 'About',
         assetPath: 'assets/svg/new-profile/about.svg',
-        onTap: () => context.push(AppConstants.termsOfServiceRoute),
+        onTap: () => context.push(AppConstants.aboutRoute),
       ),
     ];
   }

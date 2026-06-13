@@ -1,8 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
-import 'package:milingo/core/theme/app_theme.dart';
+
+const _kActive = Color(0xFFFF6A00);
+const _kInactive = Color(0xFF94A3B8);
 
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({
@@ -17,19 +21,19 @@ class AppBottomNavBar extends StatelessWidget {
 
     switch (index) {
       case 0:
-        context.push(AppConstants.homeRoute);
+        context.go(AppConstants.homeRoute);
         return;
       case 1:
-        context.push(AppConstants.flashcardsRoute);
+        context.go(AppConstants.flashcardsRoute);
         return;
       case 2:
         context.push(AppConstants.snapAndLearnRoute);
         return;
       case 3:
-        context.push(AppConstants.leaderboardRoute);
+        context.go(AppConstants.leaderboardRoute);
         return;
       case 4:
-        context.push(AppConstants.profileRoute);
+        context.go(AppConstants.profileRoute);
         return;
     }
   }
@@ -39,56 +43,72 @@ class AppBottomNavBar extends StatelessWidget {
     const items = [
       _BottomNavItem(
         label: 'Trang chủ',
-        icon: Icons.home_outlined,
-        activeIcon: Icons.home_rounded,
+        assetPath: 'assets/svg/homescreen.svg',
       ),
       _BottomNavItem(
-        label: 'Từ vựng',
-        assetPath: 'assets/svg/menu_book.svg',
+        label: 'AI Tutor',
+        assetPath: 'assets/svg/new-ai-tutor.svg',
       ),
       _BottomNavItem(
-        label: 'Chụp',
-        assetPath: 'assets/svg/Camera Icon.svg',
+        label: '',
+        assetPath: 'assets/svg/snap.svg',
         isCenter: true,
       ),
       _BottomNavItem(
         label: 'Ôn tập',
-        icon: Icons.school_outlined,
-        activeIcon: Icons.school_rounded,
+        assetPath: 'assets/svg/new-review.svg',
       ),
       _BottomNavItem(
         label: 'Hồ sơ',
-        assetPath: 'assets/svg/personalize.svg',
+        assetPath: 'assets/svg/new-profile/profile-account.svg',
       ),
     ];
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, -6),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 76,
-          child: Row(
-            children: List.generate(items.length, (index) {
-              final selected = index == currentIndex;
-              return Expanded(
-                child: _BottomNavTile(
-                  item: items[index],
-                  selected: selected,
-                  onTap: () => _goToTab(context, index),
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return ColoredBox(
+      color: Colors.transparent,
+      child: SizedBox(
+        height: bottomInset + 98,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: 0,
+              child: Container(
+                width: math.min(MediaQuery.sizeOf(context).width - 28, 360),
+                height: 78,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.90),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.60),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 40,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-              );
-            }),
-          ),
+                child: Row(
+                  children: List.generate(items.length, (index) {
+                    final item = items[index];
+                    return Expanded(
+                      child: _BottomNavTile(
+                        item: item,
+                        selected: index == currentIndex,
+                        onTap: () => _goToTab(context, index),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -98,16 +118,12 @@ class AppBottomNavBar extends StatelessWidget {
 class _BottomNavItem {
   const _BottomNavItem({
     required this.label,
-    this.icon,
-    this.activeIcon,
-    this.assetPath,
+    required this.assetPath,
     this.isCenter = false,
   });
 
   final String label;
-  final IconData? icon;
-  final IconData? activeIcon;
-  final String? assetPath;
+  final String assetPath;
   final bool isCenter;
 }
 
@@ -124,47 +140,24 @@ class _BottomNavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppTheme.primaryColor : const Color(0xFF9E9E9E);
-
     if (item.isCenter) {
       return Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
           customBorder: const CircleBorder(),
+          onTap: onTap,
           child: Center(
             child: Transform.translate(
-              offset: const Offset(0, -15),
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFFFC58F),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.28),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFFFF7A00),
-                    ),
-                    child: Center(
-                      child: SvgPicture.asset(
-                        item.assetPath!,
-                        width: 26,
-                        height: 26,
-                      ),
-                    ),
-                  ),
+              offset: const Offset(0, -22),
+              child: OverflowBox(
+                minWidth: 0,
+                minHeight: 0,
+                maxWidth: 112,
+                maxHeight: 112,
+                child: SvgPicture.asset(
+                  item.assetPath,
+                  width: 106,
+                  height: 106,
                 ),
               ),
             ),
@@ -173,82 +166,42 @@ class _BottomNavTile extends StatelessWidget {
       );
     }
 
+    final color = selected ? _kActive : _kInactive;
+
     return Material(
       color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: selected ? 44 : 0,
-              height: 3,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.circular(4),
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.45),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              SvgPicture.asset(
+                item.assetPath,
+                width: 24,
+                height: 24,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    width: item.isCenter ? 46 : 38,
-                    height: item.isCenter ? 38 : 32,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppTheme.primaryColor.withValues(alpha: 0.12)
-                          : Colors.transparent,
-                      borderRadius:
-                          BorderRadius.circular(item.isCenter ? 18 : 12),
-                    ),
-                    child: Center(
-                      child: item.assetPath == null
-                          ? Icon(
-                              selected
-                                  ? (item.activeIcon ?? item.icon)
-                                  : item.icon,
-                              color: color,
-                              size: item.isCenter ? 26 : 24,
-                            )
-                          : SvgPicture.asset(
-                              item.assetPath!,
-                              width: item.isCenter ? 23 : 21,
-                              height: item.isCenter ? 23 : 21,
-                              colorFilter: ColorFilter.mode(
-                                color,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 5),
+              Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+                  height: 1.2,
+                  letterSpacing: 0.334,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
