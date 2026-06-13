@@ -75,6 +75,7 @@ class ProfileSettingsSection extends StatelessWidget {
                     ProfileSvgIcon(
                       'assets/svg/new-profile/logout.svg',
                       size: 17,
+                      color: _SettingsColors.orange,
                     ),
                     SizedBox(width: 8),
                     Text(
@@ -120,7 +121,11 @@ class _SettingsTile extends StatelessWidget {
                   color: _SettingsColors.orange.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: ProfileSvgIcon(item.assetPath, size: 17),
+                child: ProfileSvgIcon(
+                  item.assetPath,
+                  size: 17,
+                  color: _SettingsColors.orange,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
