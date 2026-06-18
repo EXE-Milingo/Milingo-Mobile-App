@@ -43,51 +43,37 @@ class VocabularyDashboardBackground extends StatelessWidget {
 class VocabularyDashboardHeader extends StatelessWidget {
   const VocabularyDashboardHeader({
     required this.title,
-    required this.onCreateDeck,
     super.key,
   });
 
   final String title;
-  final VoidCallback onCreateDeck;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const SizedBox(width: 44, height: 44),
-        Expanded(
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: VocabularyDashboardColors.ink,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  height: 1.2,
-                ),
-              ),
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
+          ],
+        ),
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: VocabularyDashboardColors.ink,
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            height: 1.2,
           ),
         ),
-        _RoundIconButton(
-          tooltip: 'Tạo bộ từ',
-          icon: Icons.add_rounded,
-          onTap: onCreateDeck,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -274,16 +260,18 @@ class VocabularyReviewBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final message = dueCount == null
         ? 'Đang kiểm tra từ cần ôn tập nè'
-        : 'Bạn có $dueCount từ cần ôn tập nè, bấm vào đây để ôn tập ngay';
+        : dueCount == 0
+            ? 'Hôm nay bạn đã học xong hết những từ cần học rồi, giỏi lắm!! o((>ω< ))o'
+            : 'Bạn có $dueCount từ cần ôn tập nè, bấm vào đây để ôn tập ngay';
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(32),
-        onTap: onTap,
+        onTap: (dueCount == 0) ? null : onTap,
         child: Ink(
           width: double.infinity,
-          height: 190,
+          height: (dueCount == 0) ? 140 : 190,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
@@ -372,41 +360,43 @@ class VocabularyReviewBanner extends StatelessWidget {
                         height: 1.25,
                       ),
                     ),
-                    const Spacer(),
-                    Container(
-                      height: 48,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.14),
-                            blurRadius: 14,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Ôn tập ngay',
-                            style: TextStyle(
-                              color: VocabularyDashboardColors.accentDeep,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
+                    if (dueCount == null || dueCount! > 0) ...[
+                      const Spacer(),
+                      Container(
+                        height: 48,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.14),
+                              blurRadius: 14,
+                              offset: const Offset(0, 8),
                             ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: VocabularyDashboardColors.accentDeep,
-                            size: 14,
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Ôn tập ngay',
+                              style: TextStyle(
+                                color: VocabularyDashboardColors.accentDeep,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: VocabularyDashboardColors.accentDeep,
+                              size: 14,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -429,7 +419,7 @@ class VocabularyDashboardLoading extends StatelessWidget {
         ListView(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
           children: const [
-            VocabularyDashboardHeader(title: 'Từ vựng', onCreateDeck: _noop),
+            VocabularyDashboardHeader(title: 'Từ vựng'),
             SizedBox(height: 16),
             _Skeleton(height: 292, radius: 36),
             SizedBox(height: 28),
@@ -690,8 +680,8 @@ class _EmptyCollectionCard extends StatelessWidget {
   }
 }
 
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
+class RoundIconButton extends StatelessWidget {
+  const RoundIconButton({
     required this.tooltip,
     required this.icon,
     required this.onTap,

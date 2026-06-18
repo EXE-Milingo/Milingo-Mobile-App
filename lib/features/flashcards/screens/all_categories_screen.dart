@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/features/flashcards/widgets/create_deck_sheet.dart';
+import 'package:milingo/features/flashcards/widgets/vocabulary_dashboard_widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -14,11 +16,28 @@ class AllCategoriesScreen extends ConsumerStatefulWidget {
   const AllCategoriesScreen({super.key});
 
   @override
-  ConsumerState<AllCategoriesScreen> createState() => _AllCategoriesScreenState();
+  ConsumerState<AllCategoriesScreen> createState() =>
+      _AllCategoriesScreenState();
 }
 
 class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
   String _query = '';
+
+  void _showCreateDeckSheet(BuildContext context, bool canCreate) {
+    if (!canCreate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đang tải danh sách bộ từ.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const CreateDeckSheet(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +110,15 @@ class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 16),
+                        RoundIconButton(
+                          tooltip: 'Tạo bộ từ',
+                          icon: Icons.add_rounded,
+                          onTap: () => _showCreateDeckSheet(
+                            context,
+                            asyncState.hasValue,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -113,18 +141,24 @@ class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
                       ),
                       child: TextField(
                         onChanged: (v) => setState(() => _query = v),
-                        style: const TextStyle(fontSize: 14, color: Color(0xFF1D1814)),
+                        style: const TextStyle(
+                            fontSize: 14, color: Color(0xFF1D1814)),
                         decoration: InputDecoration(
                           hintText: 'Tìm kiếm bộ từ...',
-                          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14, fontWeight: FontWeight.w500),
+                          hintStyle: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
                           prefixIcon: Padding(
                             padding: const EdgeInsets.only(left: 14, right: 8),
-                            child: Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
+                            child: Icon(Icons.search_rounded,
+                                color: Colors.grey[400], size: 20),
                           ),
-                          prefixIconConstraints: const BoxConstraints(minWidth: 0),
+                          prefixIconConstraints:
+                              const BoxConstraints(minWidth: 0),
                           border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
                         ),
                       ),
                     ),
@@ -135,7 +169,8 @@ class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
                     child: asyncState.when(
                       loading: () => const Center(
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6A00)),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Color(0xFFFF6A00)),
                         ),
                       ),
                       error: (error, _) => Center(
@@ -144,13 +179,16 @@ class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
                           child: Text(
                             'Không tải được dữ liệu\n$error',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 14),
                           ),
                         ),
                       ),
                       data: (state) {
                         final filteredDecks = state.decks.where((deck) {
-                          return deck.name.toLowerCase().contains(_query.toLowerCase());
+                          return deck.name
+                              .toLowerCase()
+                              .contains(_query.toLowerCase());
                         }).toList();
 
                         if (filteredDecks.isEmpty) {
@@ -168,7 +206,8 @@ class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
 
                         return GridView.builder(
                           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
@@ -181,7 +220,9 @@ class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
                               deck: deck,
                               index: i,
                               onTap: () {
-                                final learnedCount = deck.cards.where((entry) => !entry.isNewForStudy).length;
+                                final learnedCount = deck.cards
+                                    .where((entry) => !entry.isNewForStudy)
+                                    .length;
                                 context.push(
                                   AppConstants.deckRoute,
                                   extra: DeckArg(
@@ -253,13 +294,13 @@ class _DeckGridCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final gradientColors = _getDeckGradient(index);
     final accentColor = _getDeckAccentColor(index);
-    
+
     final total = deck.total;
     final learned = deck.cards.where((card) => !card.isNewForStudy).length;
     final progress = total == 0 ? 0.0 : (learned / total).clamp(0.0, 1.0);
     final percent = (progress * 100).round();
     final isCompleted = progress >= 1.0 && total > 0;
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -301,7 +342,8 @@ class _DeckGridCard extends StatelessWidget {
                 ),
                 if (isCompleted)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFFFF8A1F), Color(0xFFFF4D1A)],
@@ -311,7 +353,8 @@ class _DeckGridCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_rounded, color: Colors.white, size: 10),
+                        Icon(Icons.check_rounded,
+                            color: Colors.white, size: 10),
                         SizedBox(width: 2),
                         Text(
                           'Hoàn thành',

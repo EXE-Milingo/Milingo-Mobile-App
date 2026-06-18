@@ -334,10 +334,43 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
             ? SafeArea(
                 child: _loading
                     ? const _LoadingView()
-                    : _error != null
-                        ? _ErrorView(message: _error!, onRetry: _loadSession)
-                        : _EmptyDueView(
-                            deckName: _sessionTitle, onRetry: _loadSession),
+                    : Stack(
+                        children: [
+                          _error != null
+                              ? _ErrorView(
+                                  message: _error!, onRetry: _loadSession)
+                              : _EmptyDueView(
+                                  deckName: _sessionTitle),
+                          Positioned(
+                            left: 16,
+                            top: 12,
+                            child: InkWell(
+                              onTap: () => Navigator.of(context).pop(),
+                              borderRadius: BorderRadius.circular(22),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Color(0xFF1D1814),
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
               )
             : Stack(
                 children: [
@@ -1036,7 +1069,6 @@ class _GradeButton extends StatelessWidget {
   }
 }
 
-
 class _LoadingView extends StatelessWidget {
   const _LoadingView();
 
@@ -1067,10 +1099,9 @@ class _ErrorView extends StatelessWidget {
 }
 
 class _EmptyDueView extends StatelessWidget {
-  const _EmptyDueView({required this.deckName, required this.onRetry});
+  const _EmptyDueView({required this.deckName});
 
   final String deckName;
-  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -1078,8 +1109,6 @@ class _EmptyDueView extends StatelessWidget {
       icon: Icons.check_circle_outline_rounded,
       title: 'Hôm nay đã xong',
       message: 'Không còn từ nào đến hạn trong "$deckName".',
-      actionLabel: 'Tải lại',
-      onAction: onRetry,
     );
   }
 }
@@ -1089,15 +1118,15 @@ class _CenteredState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
-    required this.actionLabel,
-    required this.onAction,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String title;
   final String message;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1137,12 +1166,14 @@ class _CenteredState extends StatelessWidget {
                   height: 1.4,
                 ),
               ),
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: onAction,
-                style: FilledButton.styleFrom(backgroundColor: _kAccent),
-                child: Text(actionLabel),
-              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 18),
+                FilledButton(
+                  onPressed: onAction,
+                  style: FilledButton.styleFrom(backgroundColor: _kAccent),
+                  child: Text(actionLabel!),
+                ),
+              ],
             ],
           ),
         ),

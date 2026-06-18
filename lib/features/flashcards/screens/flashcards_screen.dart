@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
-import 'package:milingo/features/flashcards/widgets/create_deck_sheet.dart';
 import 'package:milingo/features/flashcards/widgets/vocabulary_dashboard_widgets.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
@@ -59,12 +58,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                           padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                           sliver: SliverList(
                             delegate: SliverChildListDelegate.fixed([
-                              VocabularyDashboardHeader(
+                              const VocabularyDashboardHeader(
                                 title: 'Từ vựng',
-                                onCreateDeck: () => _showCreateDeckSheet(
-                                  context,
-                                  asyncState.hasValue,
-                                ),
                               ),
                               const SizedBox(height: 16),
                               VocabularyHeroCard(totalWords: totalWords),
@@ -112,22 +107,6 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
       if (!mounted) return;
       ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
     });
-  }
-
-  void _showCreateDeckSheet(BuildContext context, bool canCreate) {
-    if (!canCreate) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đang tải danh sách bộ từ.')),
-      );
-      return;
-    }
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const CreateDeckSheet(),
-    );
   }
 
   void _openDeck(BuildContext context, DeckData deck) {
