@@ -224,7 +224,7 @@ class _ChooseLanguageScreenState extends ConsumerState<ChooseLanguageScreen> {
       if (mounted) setState(() => _isSaving = false);
     }
 
-    if (mounted) context.go(AppConstants.snapAndLearnRoute);
+    if (mounted) context.go(AppConstants.homeRoute);
   }
 }
 
