@@ -795,124 +795,77 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   }
 
   Widget _buildNextButton() {
-    final coinsAwarded = _coins;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Colors.black.withOpacity(0.05),
-            width: 1,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      color: Colors.transparent,
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: _answered ? _next : null,
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.zero,
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ).copyWith(
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.disabled)) {
+                return const Color(0xFF1D1814).withOpacity(0.12);
+              }
+              return null;
+            }),
           ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${_current + 1} / ${_cards.length} từ',
-                style: const TextStyle(
-                  color: Color(0xFF8E817A),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Color(0xFFFF6A00),
-                    size: 14,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '+$coinsAwarded xu',
-                    style: const TextStyle(
-                      color: Color(0xFFFF6A00),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(
-            width: 160,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: _answered ? _next : null,
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ).copyWith(
-                backgroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.disabled)) {
-                    return const Color(0xFF1D1814).withOpacity(0.12);
-                  }
-                  return null;
-                }),
-              ),
-              child: Ink(
-                decoration: BoxDecoration(
-                  gradient: _answered
-                      ? const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFFF8A1F), Color(0xFFFF4D1A)],
-                        )
-                      : null,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Container(
-                  alignment: Alignment.center,
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: _answered
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFFF8A1F), Color(0xFFFF4D1A)],
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              alignment: Alignment.center,
+              child: _submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _isLast ? 'Xem kết quả' : 'Tiếp tục',
+                          style: TextStyle(
+                            color: _answered
+                                ? Colors.white
+                                : const Color(0xFF8E817A).withOpacity(0.6),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
                           ),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _isLast ? 'Xem kết quả' : 'Tiếp tục',
-                              style: TextStyle(
-                                color: _answered
-                                    ? Colors.white
-                                    : const Color(0xFF8E817A).withOpacity(0.6),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: _answered
-                                  ? Colors.white
-                                  : const Color(0xFF8E817A).withOpacity(0.6),
-                              size: 13,
-                            ),
-                          ],
                         ),
-                ),
-              ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: _answered
+                              ? Colors.white
+                              : const Color(0xFF8E817A).withOpacity(0.6),
+                          size: 13,
+                        ),
+                      ],
+                    ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
