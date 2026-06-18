@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,15 +8,15 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
+import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/shared/utils/tts_locale.dart';
 
-const _kBg = Color(0xFFFFF8F4);
+const _kBg = Color(0xFFFBF7F2);
 const _kSurface = Colors.white;
 const _kAccent = AppTheme.primaryColor;
-const _kDark = Color(0xFF1F1B18);
+const _kDark = Color(0xFF1D1814);
 const _kMuted = Color(0xFF8E817A);
 const _kBorder = Color(0xFFF0E4DE);
-const _kSoft = Color(0xFFFFEDE7);
 const _kSuccess = Color(0xFF2EAD62);
 const _kDanger = Color(0xFFE14E43);
 
@@ -83,6 +84,27 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   String get _modeLabel {
     if (_card.isMcq) return 'Trắc nghiệm';
     return _card.isFirstReview ? 'Thẻ học lần đầu' : 'Thẻ học';
+  }
+
+  bool get _isOptionsEnglish {
+    if (_card.options == null || _card.options!.isEmpty) return true;
+    return _card.options!
+        .any((opt) => opt.term.toLowerCase() == _card.term.toLowerCase());
+  }
+
+  String get _promptText {
+    if (!_card.isMcq) return _card.term;
+    return _isOptionsEnglish ? _card.translation : _card.term;
+  }
+
+  String get _promptPronunciation {
+    if (!_card.isMcq) return _card.pronunciation;
+    return _isOptionsEnglish ? '' : _card.pronunciation;
+  }
+
+  String get _promptInstruction {
+    if (!_card.isMcq) return '';
+    return _isOptionsEnglish ? 'Chọn từ đúng' : 'Từ này có nghĩa là gì?';
   }
 
   Future<void> _loadSession() async {
@@ -267,57 +289,117 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     );
   }
 
+  List<Widget> _buildBackgroundDecorators() {
+    return [
+      Positioned(
+        right: -100,
+        top: -64,
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 64, sigmaY: 64),
+          child: Container(
+            width: 288,
+            height: 288,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF68A5C).withOpacity(0.20),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        left: -96,
+        top: 320,
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 64, sigmaY: 64),
+          child: Container(
+            width: 256,
+            height: 256,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF8016).withOpacity(0.16),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _kBg,
-        body: SafeArea(
-          child: _loading
-              ? const _LoadingView()
-              : _error != null
-                  ? _ErrorView(message: _error!, onRetry: _loadSession)
-                  : _cards.isEmpty
-                      ? _EmptyDueView(
-                          deckName: _sessionTitle, onRetry: _loadSession)
-                      : Column(
-                          children: [
-                            _buildTopBar(),
-                            _buildProgressBar(),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                padding:
-                                    const EdgeInsets.fromLTRB(20, 14, 20, 24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildPromptCard(),
-                                    const SizedBox(height: 18),
-                                    _card.isMcq
-                                        ? _buildMcqBody()
-                                        : _buildFlashcardBody(),
-                                  ],
-                                ),
-                              ),
+        body: _loading || _error != null || _cards.isEmpty
+            ? SafeArea(
+                child: _loading
+                    ? const _LoadingView()
+                    : _error != null
+                        ? _ErrorView(message: _error!, onRetry: _loadSession)
+                        : _EmptyDueView(
+                            deckName: _sessionTitle, onRetry: _loadSession),
+              )
+            : Stack(
+                children: [
+                  ..._buildBackgroundDecorators(),
+                  SafeArea(
+                    child: Column(
+                      children: [
+                        _buildTopBar(),
+                        _buildProgressBar(),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildPromptCard(),
+                                const SizedBox(height: 20),
+                                _card.isMcq
+                                    ? _buildMcqBody()
+                                    : _buildFlashcardBody(),
+                              ],
                             ),
-                            _buildNextButton(),
-                          ],
+                          ),
                         ),
-        ),
+                        _buildNextButton(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 20, 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 20, 4),
       child: Row(
         children: [
-          IconButton(
-            tooltip: 'Thoát',
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded, color: _kMuted),
+          InkWell(
+            onTap: () => Navigator.of(context).pop(),
+            borderRadius: BorderRadius.circular(22),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                color: Color(0xFF1D1814),
+                size: 20,
+              ),
+            ),
           ),
           Expanded(
             child: Column(
@@ -328,9 +410,9 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: _kDark,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1D1814),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -348,17 +430,28 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: _kDark,
+              gradient: const LinearGradient(
+                colors: [Color(0xFFEF9832), Color(0xFFE2442D)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(99),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF641C).withOpacity(0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Text(
-              '+$_coins',
+              '${_current + 1} / ${_cards.length}',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -370,75 +463,69 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   Widget _buildProgressBar() {
     final progress = (_current + 1) / _cards.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(99),
+        child: Container(
+          height: 8,
+          width: double.infinity,
+          color: Colors.black.withOpacity(0.06),
+          child: Stack(
             children: [
-              Text(
-                'Câu ${_current + 1}',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: _kDark,
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: progress),
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOut,
+                builder: (_, value, __) => FractionallySizedBox(
+                  widthFactor: value,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEF9832), Color(0xFFE2442D)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
                 ),
               ),
-              Text(
-                ' / ${_cards.length}',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  color: _kMuted,
-                ),
-              ),
-              const Spacer(),
-              _ModeChip(label: _srsLabel(_card.srsState)),
             ],
           ),
-          const SizedBox(height: 9),
-          _SrsStudyLine(card: _card),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: progress),
-              duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOut,
-              builder: (_, value, __) => LinearProgressIndicator(
-                value: value,
-                minHeight: 7,
-                backgroundColor: _kBorder,
-                color: _kAccent,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildPromptCard() {
     final hasImage = _card.imageUrl != null && _card.imageUrl!.isNotEmpty;
+    final pr = _promptPronunciation;
+
+    final decks = ref.watch(flashcardStateProvider).decks;
+    final deck = decks.firstWhere(
+      (d) => d.id == _card.deckId || d.name == _card.deckName,
+      orElse: () => DeckData(id: '', name: '', emoji: '📚'),
+    );
+    final emojiStr = deck.emoji.isNotEmpty ? deck.emoji : '📚';
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 214),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: _kDark,
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: _kDark.withValues(alpha: 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
+            color: const Color(0xFF1D1814).withOpacity(0.10),
+            blurRadius: 44,
+            offset: const Offset(0, 22),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (hasImage)
+          if (hasImage) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(18),
               child: Image.network(
@@ -446,35 +533,53 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                 width: double.infinity,
                 height: 138,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _FallbackPromptIcon(
-                  isMcq: _card.isMcq,
-                ),
+                errorBuilder: (_, __, ___) => _buildGradientEmojiBox(emojiStr),
               ),
-            )
-          else
-            _FallbackPromptIcon(isMcq: _card.isMcq),
-          const SizedBox(height: 16),
+            ),
+          ] else ...[
+            _buildGradientEmojiBox(emojiStr),
+          ],
+          const SizedBox(height: 20),
           Text(
-            _card.isMcq ? _card.translation : _card.term,
+            _promptText,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 27,
-              fontWeight: FontWeight.w900,
-              height: 1.12,
+              color: Color(0xFF1D1814),
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+              height: 1.15,
             ),
           ),
-          if (_card.pronunciation.isNotEmpty && !_card.isMcq) ...[
+          if (pr.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              _card.pronunciation,
+              pr,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+              style: TextStyle(
+                color: const Color(0xFF1D1814).withOpacity(0.55),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+          if (_card.deckName.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6B15C).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                _card.deckName,
+                style: const TextStyle(
+                  color: Color(0xFFFF6A00),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
           ],
@@ -483,35 +588,53 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     );
   }
 
+  Widget _buildGradientEmojiBox(String emoji) {
+    return Container(
+      width: 80,
+      height: 80,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEF9832), Color(0xFFDF462C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Text(
+        emoji,
+        style: const TextStyle(
+          fontSize: 40,
+        ),
+      ),
+    );
+  }
+
   Widget _buildMcqBody() {
+    final options = _card.options ?? const <StudyOption>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Chọn từ đúng',
-          style: TextStyle(
-            color: _kDark,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
         const SizedBox(height: 6),
-        const Text(
-          'Dựa vào hình ảnh hoặc nghĩa gợi ý ở trên.',
-          style: TextStyle(
-            color: _kMuted,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+        Center(
+          child: Text(
+            _promptInstruction,
+            style: const TextStyle(
+              color: Color(0xFF1D1814),
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
-        const SizedBox(height: 14),
-        for (final option in _card.options ?? const <StudyOption>[])
+        const SizedBox(height: 16),
+        for (var i = 0; i < options.length; i++)
           _McqOptionTile(
-            option: option,
-            selected: _selectedOptionId == option.id,
+            option: options[i],
+            prefixLetter: String.fromCharCode(65 + i),
+            selected: _selectedOptionId == options[i].id,
             answered: _answered,
             disabled: _submitting,
-            onTap: () => _submitMcq(option),
+            onTap: () => _submitMcq(options[i]),
           ),
       ],
     );
@@ -521,23 +644,32 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Bạn nhớ từ này đến mức nào?',
-          style: TextStyle(
-            color: _kDark,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
+        const Center(
+          child: Text(
+            'Bạn nhớ từ này đến mức nào?',
+            style: TextStyle(
+              color: Color(0xFF1D1814),
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           width: double.infinity,
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: _kSurface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _kBorder),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.black.withOpacity(0.06), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1D1814).withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +677,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
               const Text(
                 'Mặt sau',
                 style: TextStyle(
-                  color: _kMuted,
+                  color: Color(0xFF8E817A),
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -554,9 +686,11 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
               Text(
                 _revealed ? _card.translation : 'Nhấn để xem nghĩa',
                 style: TextStyle(
-                  color: _revealed ? _kDark : _kMuted,
+                  color: _revealed
+                      ? const Color(0xFF1D1814)
+                      : const Color(0xFF8E817A),
                   fontSize: _revealed ? 24 : 18,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               if (_revealed && _card.exampleSentence.isNotEmpty) ...[
@@ -564,31 +698,59 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                 Text(
                   _card.exampleSentence,
                   style: const TextStyle(
-                    color: _kMuted,
+                    color: Color(0xFF8E817A),
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     height: 1.35,
                   ),
                 ),
               ],
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _speak,
-                      icon: const Icon(Icons.volume_up_rounded, size: 18),
-                      label: const Text('Nghe'),
+                      icon: const Icon(Icons.volume_up_rounded,
+                          size: 18, color: Color(0xFFFF6A00)),
+                      label: const Text(
+                        'Nghe',
+                        style: TextStyle(
+                          color: Color(0xFFFF6A00),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: Color(0xFFFF6A00), width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: FilledButton(
+                    child: ElevatedButton(
                       onPressed: _revealed
                           ? null
                           : () => setState(() => _revealed = true),
-                      style: FilledButton.styleFrom(backgroundColor: _kDark),
-                      child: const Text('Lật thẻ'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1D1814),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                            const Color(0xFF1D1814).withOpacity(0.12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Lật thẻ',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ),
                 ],
@@ -596,16 +758,16 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         if (_revealed) _buildGradeButtons(),
       ],
     );
   }
 
   Widget _buildGradeButtons() {
-    const grades = [
+    final grades = [
       (0, 'Lại', _kDanger),
-      (2, 'Khó', Color(0xFFE1A43B)),
+      (2, 'Khó', const Color(0xFFE1A43B)),
       (4, 'Tốt', _kSuccess),
       (5, 'Dễ', _kAccent),
     ];
@@ -633,38 +795,124 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   }
 
   Widget _buildNextButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-      child: SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: FilledButton(
-          onPressed: _answered ? _next : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: _kDark,
-            disabledBackgroundColor: _kDark.withValues(alpha: 0.25),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(17),
+    final coinsAwarded = _coins;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: Colors.black.withOpacity(0.05),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${_current + 1} / ${_cards.length} từ',
+                style: const TextStyle(
+                  color: Color(0xFF8E817A),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Color(0xFFFF6A00),
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '+$coinsAwarded xu',
+                    style: const TextStyle(
+                      color: Color(0xFFFF6A00),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(
+            width: 160,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: _answered ? _next : null,
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ).copyWith(
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.disabled)) {
+                    return const Color(0xFF1D1814).withOpacity(0.12);
+                  }
+                  return null;
+                }),
+              ),
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: _answered
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFFF8A1F), Color(0xFFFF4D1A)],
+                        )
+                      : null,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  alignment: Alignment.center,
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _isLast ? 'Xem kết quả' : 'Tiếp tục',
+                              style: TextStyle(
+                                color: _answered
+                                    ? Colors.white
+                                    : const Color(0xFF8E817A).withOpacity(0.6),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: _answered
+                                  ? Colors.white
+                                  : const Color(0xFF8E817A).withOpacity(0.6),
+                              size: 13,
+                            ),
+                          ],
+                        ),
+                ),
+              ),
             ),
           ),
-          child: _submitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  _isLast ? 'Xem kết quả' : 'Câu tiếp theo',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-        ),
+        ],
       ),
     );
   }
@@ -673,6 +921,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
 class _McqOptionTile extends StatelessWidget {
   const _McqOptionTile({
     required this.option,
+    required this.prefixLetter,
     required this.selected,
     required this.answered,
     required this.disabled,
@@ -680,6 +929,7 @@ class _McqOptionTile extends StatelessWidget {
   });
 
   final StudyOption option;
+  final String prefixLetter;
   final bool selected;
   final bool answered;
   final bool disabled;
@@ -689,58 +939,101 @@ class _McqOptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final showCorrect = answered && option.isCorrect;
     final showWrong = answered && selected && !option.isCorrect;
-    final color = showCorrect
-        ? _kSuccess
-        : showWrong
-            ? _kDanger
-            : _kDark;
-    final bg = showCorrect
-        ? _kSuccess.withValues(alpha: 0.12)
-        : showWrong
-            ? _kDanger.withValues(alpha: 0.1)
-            : _kSurface;
+
+    // Determine colors based on state
+    Color tileBg;
+    Color borderColor;
+    Color textColor;
+    Color letterBg;
+    Color letterTextColor;
+
+    if (showCorrect) {
+      tileBg = const Color(0xFFE8F5E9);
+      borderColor = const Color(0xFF2EAD62);
+      textColor = const Color(0xFF2EAD62);
+      letterBg = const Color(0xFF2EAD62);
+      letterTextColor = Colors.white;
+    } else if (showWrong) {
+      tileBg = const Color(0xFFFFEBEE);
+      borderColor = const Color(0xFFE14E43);
+      textColor = const Color(0xFFE14E43);
+      letterBg = const Color(0xFFE14E43);
+      letterTextColor = Colors.white;
+    } else if (selected && !answered) {
+      tileBg = Colors.white;
+      borderColor = const Color(0xFFFF6A00);
+      textColor = const Color(0xFFFF6A00);
+      letterBg = const Color(0xFFFF6A00);
+      letterTextColor = Colors.white;
+    } else {
+      tileBg = Colors.white;
+      borderColor = Colors.black.withOpacity(0.06);
+      textColor = const Color(0xFF1D1814);
+      letterBg = const Color(0xFFFF8016).withOpacity(0.12);
+      letterTextColor = const Color(0xFFFF6A00);
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(17),
+        color: tileBg,
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
-          borderRadius: BorderRadius.circular(17),
+          borderRadius: BorderRadius.circular(20),
           onTap: disabled || answered ? null : onTap,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 58),
+            constraints: const BoxConstraints(minHeight: 62),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(17),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: showCorrect || showWrong ? color : _kBorder,
-                width: showCorrect || showWrong ? 1.6 : 1,
+                color: borderColor,
+                width: 2.0,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1D1814).withOpacity(0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Row(
               children: [
+                // Letter Prefix
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: letterBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    prefixLetter,
+                    style: TextStyle(
+                      color: letterTextColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     option.term,
                     style: TextStyle(
-                      color: color,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 if (showCorrect)
-                  const Icon(Icons.check_circle_rounded, color: _kSuccess)
+                  const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF2EAD62))
                 else if (showWrong)
-                  const Icon(Icons.cancel_rounded, color: _kDanger)
-                else
-                  Icon(
-                    selected
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: _kMuted,
-                  ),
+                  const Icon(Icons.cancel_rounded, color: Color(0xFFE14E43)),
               ],
             ),
           ),
@@ -790,150 +1083,6 @@ class _GradeButton extends StatelessWidget {
   }
 }
 
-class _SrsStudyLine extends StatelessWidget {
-  const _SrsStudyLine({required this.card});
-
-  final StudyCard card;
-
-  @override
-  Widget build(BuildContext context) {
-    final nextInterval = card.srsIntervalDays <= 0
-        ? 'đến hạn'
-        : 'chu kỳ ${card.srsIntervalDays} ngày';
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _MiniStudyBadge(
-          icon: _srsIcon(card.srsState),
-          label: _srsLabel(card.srsState),
-        ),
-        _MiniStudyBadge(
-          icon: Icons.repeat_rounded,
-          label: '${card.srsRepetitions} lần ôn',
-        ),
-        _MiniStudyBadge(
-          icon: Icons.schedule_rounded,
-          label: nextInterval,
-        ),
-        if (card.deckName.isNotEmpty)
-          _MiniStudyBadge(
-            icon: Icons.folder_rounded,
-            label: card.deckName,
-          ),
-      ],
-    );
-  }
-}
-
-class _MiniStudyBadge extends StatelessWidget {
-  const _MiniStudyBadge({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 30),
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-      decoration: BoxDecoration(
-        color: _kSurface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _kBorder),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: _kAccent, size: 14),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _kMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _srsLabel(String state) {
-  return switch (state) {
-    'learning' => 'Đang học',
-    'review' => 'Ôn tập',
-    'mastered' => 'Đã vững',
-    _ => 'Mới',
-  };
-}
-
-IconData _srsIcon(String state) {
-  return switch (state) {
-    'learning' => Icons.sync_rounded,
-    'review' => Icons.event_available_rounded,
-    'mastered' => Icons.verified_rounded,
-    _ => Icons.bolt_rounded,
-  };
-}
-
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: _kSoft,
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: _kAccent,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-}
-
-class _FallbackPromptIcon extends StatelessWidget {
-  const _FallbackPromptIcon({required this.isMcq});
-
-  final bool isMcq;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 124,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Icon(
-        isMcq ? Icons.quiz_rounded : Icons.style_rounded,
-        color: Colors.white,
-        size: 48,
-      ),
-    );
-  }
-}
 
 class _LoadingView extends StatelessWidget {
   const _LoadingView();
