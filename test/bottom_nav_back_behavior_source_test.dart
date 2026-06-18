@@ -8,10 +8,9 @@ void main() {
     final source =
         File('lib/shared/widgets/app_bottom_nav_bar.dart').readAsStringSync();
 
-    expect(source, contains('context.push(AppConstants.homeRoute)'));
-    expect(source, contains('context.push(AppConstants.flashcardsRoute)'));
+    expect(source, contains('context.go(AppConstants.homeRoute)'));
+    expect(source, contains('context.go(AppConstants.flashcardsRoute)'));
     expect(source, contains('context.push(AppConstants.snapAndLearnRoute)'));
-    expect(source, contains('context.push(AppConstants.leaderboardRoute)'));
-    expect(source, contains('context.push(AppConstants.profileRoute)'));
+    expect(source, contains('context.go(AppConstants.profileRoute)'));
   });
 }

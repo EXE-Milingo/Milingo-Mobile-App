@@ -24,13 +24,19 @@ class AppBottomNavBar extends StatelessWidget {
         context.go(AppConstants.homeRoute);
         return;
       case 1:
-        context.go(AppConstants.flashcardsRoute);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tính năng AI Tutor đang được phát triển.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
         return;
       case 2:
         context.push(AppConstants.snapAndLearnRoute);
         return;
       case 3:
-        context.go(AppConstants.leaderboardRoute);
+        context.go(AppConstants.flashcardsRoute);
         return;
       case 4:
         context.go(AppConstants.profileRoute);

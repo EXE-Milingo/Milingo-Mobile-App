@@ -212,7 +212,7 @@ class VocabularyCollectionSection extends StatelessWidget {
               TextButton(
                 onPressed: onSeeAll,
                 style: TextButton.styleFrom(
-                  foregroundColor: VocabularyDashboardColors.accentDeep,
+                  foregroundColor: const Color(0xFFFF6A00),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   minimumSize: Size.zero,
@@ -224,6 +224,7 @@ class VocabularyCollectionSection extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     decoration: TextDecoration.underline,
+                    decorationColor: Color(0xFFFF6A00),
                   ),
                 ),
               ),

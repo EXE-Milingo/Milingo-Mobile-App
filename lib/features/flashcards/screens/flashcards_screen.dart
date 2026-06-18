@@ -72,8 +72,9 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                               VocabularyCollectionSection(
                                 decks: visibleDecks,
                                 showSeeAll: true,
-                                onSeeAll: () =>
-                                    setState(() => _showAllDecks = true),
+                                onSeeAll: () => context.push(
+                                  AppConstants.allCategoriesRoute,
+                                ),
                                 onDeckTap: (deck) => _openDeck(context, deck),
                               ),
                               const SizedBox(height: 22),
@@ -99,7 +100,7 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
             },
           ),
         ),
-        bottomNavigationBar: const AppBottomNavBar(currentIndex: 1),
+        bottomNavigationBar: const AppBottomNavBar(currentIndex: 3),
       ),
     );
   }
