@@ -349,7 +349,8 @@ class _RestorePlanIcon extends StatelessWidget {
       ),
       child: Icon(
         active ? Icons.workspace_premium_rounded : Icons.star_border_rounded,
-        color: active ? _RestoreColors.primaryDark : _RestoreColors.disabledIcon,
+        color:
+            active ? _RestoreColors.primaryDark : _RestoreColors.disabledIcon,
         size: 27,
       ),
     );

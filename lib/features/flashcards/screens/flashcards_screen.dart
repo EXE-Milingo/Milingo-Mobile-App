@@ -16,7 +16,6 @@ class FlashcardsScreen extends ConsumerStatefulWidget {
 }
 
 class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
-  bool _requestedAllCards = false;
   bool _showAllDecks = false;
 
   @override
@@ -101,8 +100,12 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
   }
 
   void _requestCardsForReviewCount(AsyncValue<FlashcardState> asyncState) {
-    if (_requestedAllCards || !asyncState.hasValue) return;
-    _requestedAllCards = true;
+    if (!asyncState.hasValue) return;
+    final state = asyncState.value!;
+    final needsLoading =
+        state.decks.any((deck) => deck.total > 0 && deck.cards.isEmpty);
+    if (!needsLoading) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
@@ -138,6 +141,11 @@ int _dueReviewCount(FlashcardState state) {
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
+      if (entry.isNewForStudy) {
+        total++;
+        continue;
+      }
+
       final nextReview = DateTime.tryParse(entry.srsNextReviewAt ?? '');
       if (nextReview != null) {
         if (!nextReview.isAfter(now)) total++;

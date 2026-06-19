@@ -57,8 +57,9 @@ Lưu ý:
     // ── Step 1: strip markdown fences ────────────────────
     var cleaned = responseText.trim();
     if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
-    if (cleaned.startsWith('```'))     cleaned = cleaned.substring(3);
-    if (cleaned.endsWith('```'))       cleaned = cleaned.substring(0, cleaned.length - 3);
+    if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
+    if (cleaned.endsWith('```'))
+      cleaned = cleaned.substring(0, cleaned.length - 3);
     cleaned = cleaned.trim();
 
     // ── Step 2: try clean JSON decode ────────────────────
@@ -78,9 +79,12 @@ Lưu ý:
         }
         int braces = 0, brackets = 0;
         for (final ch in partial.runes) {
-          if (ch == '{'.codeUnitAt(0)) braces++;
-          else if (ch == '}'.codeUnitAt(0)) braces--;
-          else if (ch == '['.codeUnitAt(0)) brackets++;
+          if (ch == '{'.codeUnitAt(0))
+            braces++;
+          else if (ch == '}'.codeUnitAt(0))
+            braces--;
+          else if (ch == '['.codeUnitAt(0))
+            brackets++;
           else if (ch == ']'.codeUnitAt(0)) brackets--;
         }
         final sb = StringBuffer(partial);
@@ -106,8 +110,7 @@ Lưu ý:
     final rwMatch =
         RegExp(r'"relatedWords"\s*:\s*\[([\s\S]*?)\]').firstMatch(cleaned);
     if (rwMatch != null) {
-      final items =
-          RegExp(r'\{[^}]+\}').allMatches(rwMatch.group(1) ?? '');
+      final items = RegExp(r'\{[^}]+\}').allMatches(rwMatch.group(1) ?? '');
       for (final item in items) {
         try {
           relatedWords.add(RelatedWord.fromJson(
@@ -125,9 +128,8 @@ Lưu ý:
       keyword: keyword,
       translation: extract('translation'),
       pronunciation: extract('pronunciation'),
-      partOfSpeech: extract('partOfSpeech').isEmpty
-          ? 'Noun'
-          : extract('partOfSpeech'),
+      partOfSpeech:
+          extract('partOfSpeech').isEmpty ? 'Noun' : extract('partOfSpeech'),
       sentence: extract('sentence'),
       sentenceTranslation: extract('sentenceTranslation'),
       relatedWords: relatedWords,

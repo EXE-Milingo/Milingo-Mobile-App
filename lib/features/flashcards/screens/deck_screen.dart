@@ -148,11 +148,13 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                             child: Padding(
                               padding: EdgeInsets.symmetric(vertical: 40),
                               child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6A00)),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFFFF6A00)),
                               ),
                             ),
                           ),
-                          error: (error, _) => _DeckError(message: error.toString()),
+                          error: (error, _) =>
+                              _DeckError(message: error.toString()),
                           data: (_) {
                             if (entries.isEmpty) {
                               return const _DeckEmptyState();
@@ -169,7 +171,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                                       AppConstants.vocabDetailRoute,
                                       extra: VocabDetailArg(
                                         deckId: widget.deck.id,
-                                        deckName: liveDeck?.name ?? widget.deck.name,
+                                        deckName:
+                                            liveDeck?.name ?? widget.deck.name,
                                         entry: entry,
                                       ),
                                     ),
@@ -192,7 +195,6 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   ),
                 ],
               ),
-
             ],
           ),
         ),
@@ -215,7 +217,6 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           entry.pronunciation.toLowerCase().contains(trimmed);
     }).toList();
   }
-
 
   Future<void> _toggleCardFavorite(
     String deckId,
@@ -251,15 +252,19 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            child: const Text('Hủy',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Xóa', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Xóa',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -368,7 +373,8 @@ class _DeckBannerCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(999),
@@ -567,14 +573,16 @@ class _VocabRow extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: cardProgress,
                               backgroundColor: Colors.black.withOpacity(0.05),
-                              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(statusColor),
                               minHeight: 4,
                             ),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: statusColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(999),
@@ -600,8 +608,12 @@ class _VocabRow extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 onPressed: onFavorite,
                 icon: Icon(
-                  entry.isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-                  color: entry.isFavorite ? const Color(0xFFFFB300) : const Color(0x4D1D1814),
+                  entry.isFavorite
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: entry.isFavorite
+                      ? const Color(0xFFFFB300)
+                      : const Color(0x4D1D1814),
                   size: 24,
                 ),
               ),
@@ -679,14 +691,19 @@ class _SearchBox extends StatelessWidget {
         ),
         decoration: InputDecoration(
           hintText: 'Tìm kiếm từ trong bộ...',
-          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14, fontWeight: FontWeight.w500),
+          hintStyle: TextStyle(
+              color: Colors.grey[400],
+              fontSize: 14,
+              fontWeight: FontWeight.w500),
           prefixIcon: Padding(
             padding: const EdgeInsets.only(left: 14, right: 8),
-            child: Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
+            child:
+                Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
           ),
           prefixIconConstraints: const BoxConstraints(minWidth: 0),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );
@@ -710,7 +727,8 @@ class _DeckError extends StatelessWidget {
         child: Text(
           'Không tải được từ vựng\n$message',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.grey, fontSize: 14, height: 1.35),
+          style:
+              const TextStyle(color: Colors.grey, fontSize: 14, height: 1.35),
         ),
       ),
     );

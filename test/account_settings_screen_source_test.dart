@@ -7,9 +7,11 @@ void main() {
     final profileSource =
         File('lib/features/profile/screens/profile_screen.dart')
             .readAsStringSync();
-    final accountSource =
-        File('lib/features/profile/screens/account_settings_screen.dart').readAsStringSync() +
-        File('lib/features/profile/widgets/account_settings_components.dart').readAsStringSync();
+    final accountSource = File(
+                'lib/features/profile/screens/account_settings_screen.dart')
+            .readAsStringSync() +
+        File('lib/features/profile/widgets/account_settings_components.dart')
+            .readAsStringSync();
 
     expect(profileSource, contains('account_settings_screen.dart'));
     expect(profileSource, contains('AccountSettingsScreen'));
@@ -22,7 +24,8 @@ void main() {
     expect(accountSource, contains('Tài khoản liên kết'));
     expect(accountSource, contains('Xoá tài khoản'));
     expect(accountSource, contains('assets/svg/new-profile/account-back.svg'));
-    expect(accountSource, contains('assets/svg/new-profile/profile-account.svg'));
+    expect(
+        accountSource, contains('assets/svg/new-profile/profile-account.svg'));
     expect(accountSource, contains('assets/svg/new-profile/privacy.svg'));
     expect(accountSource, contains('assets/svg/new-profile/delete-acc.svg'));
   });

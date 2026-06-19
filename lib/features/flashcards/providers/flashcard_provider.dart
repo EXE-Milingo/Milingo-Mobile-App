@@ -276,7 +276,10 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
     // Optimistic add
     final updatedDecks = state.value!.decks.map((d) {
       if (d.id != deckId) return d;
-      return d.copyWith(cards: [...d.cards, cardToSave]);
+      return d.copyWith(
+        cards: [...d.cards, cardToSave],
+        vocabCount: d.vocabCount + 1,
+      );
     }).toList();
     state = AsyncValue.data(state.value!.copyWith(decks: updatedDecks));
 

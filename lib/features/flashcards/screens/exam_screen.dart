@@ -53,7 +53,6 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   bool _revealed = false;
   String? _selectedOptionId;
   int? _selectedQuality;
-  bool _closingResultDialogForRetry = false;
   bool _closingResultDialogForReviewRoot = false;
 
   @override
@@ -67,6 +66,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   @override
   void dispose() {
     _tts.stop();
+    ref.read(flashcardProvider.notifier).refresh();
     super.dispose();
   }
 
@@ -252,35 +252,24 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
           correct: _correct,
           total: _cards.length,
           coins: _coins,
-          onRetry: _retryResultSession,
-          onExit: _goToReviewRoot,
+          onExit: _goToHomeScreen,
         ),
       ),
     );
   }
 
-  void _retryResultSession() {
-    _closingResultDialogForRetry = true;
-    Navigator.of(context).pop();
-    _loadSession();
-  }
-
-  void _goToReviewRoot() {
+  void _goToHomeScreen() {
     _closingResultDialogForReviewRoot = true;
     Navigator.of(context).pop();
-    context.go(AppConstants.leaderboardRoute);
+    context.go(AppConstants.homeRoute);
   }
 
   void _handleResultDialogPop() {
-    if (_closingResultDialogForRetry) {
-      _closingResultDialogForRetry = false;
-      return;
-    }
     if (_closingResultDialogForReviewRoot) {
       _closingResultDialogForReviewRoot = false;
       return;
     }
-    context.go(AppConstants.leaderboardRoute);
+    context.go(AppConstants.homeRoute);
   }
 
   void _showError(Object error) {
@@ -339,8 +328,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                           _error != null
                               ? _ErrorView(
                                   message: _error!, onRetry: _loadSession)
-                              : _EmptyDueView(
-                                  deckName: _sessionTitle),
+                              : _EmptyDueView(deckName: _sessionTitle),
                           Positioned(
                             left: 16,
                             top: 12,
@@ -1187,14 +1175,12 @@ class _ResultDialog extends StatelessWidget {
     required this.correct,
     required this.total,
     required this.coins,
-    required this.onRetry,
     required this.onExit,
   });
 
   final int correct;
   final int total;
   final int coins;
-  final VoidCallback onRetry;
   final VoidCallback onExit;
 
   @override
@@ -1259,31 +1245,16 @@ class _ResultDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onExit,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _kAccent,
-                      side: const BorderSide(color: _kAccent),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Về ôn tập'),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onExit,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _kAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: onRetry,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _kAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Làm tiếp'),
-                  ),
-                ),
-              ],
+                child: const Text('Về trang chủ'),
+              ),
             ),
           ],
         ),

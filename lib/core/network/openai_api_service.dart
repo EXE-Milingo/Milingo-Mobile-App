@@ -36,8 +36,8 @@ class OpenAIService implements AIService {
     required String targetLanguage,
   }) async {
     try {
-      final langName =
-          AIResponseParser.languageDisplayNames[targetLanguage] ?? targetLanguage;
+      final langName = AIResponseParser.languageDisplayNames[targetLanguage] ??
+          targetLanguage;
       final prompt = AIResponseParser.buildPrompt(langName);
 
       // Encode image to base64 for OpenAI vision API

@@ -332,8 +332,7 @@ class _GoalLanguageSelector extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            for (final option in languages)
-              _LanguageOptionPill(option: option),
+            for (final option in languages) _LanguageOptionPill(option: option),
             const _AddLanguagePill(),
           ],
         ),
