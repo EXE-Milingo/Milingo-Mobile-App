@@ -6,6 +6,7 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/features/flashcards/widgets/vocabulary_dashboard_widgets.dart';
+import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class FlashcardsScreen extends ConsumerStatefulWidget {
@@ -23,6 +24,9 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
     final asyncState = ref.watch(flashcardProvider);
     _requestCardsForReviewCount(asyncState);
 
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final targetLang = profile?.targetLanguage ?? 'en';
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
@@ -36,8 +40,9 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
             ),
             data: (state) {
               final totalWords = _totalWords(state);
-              final reviewCount =
-                  _hasLoadedReviewData(state) ? _dueReviewCount(state) : null;
+              final reviewCount = _hasLoadedReviewData(state)
+                  ? _dueReviewCount(state, targetLang)
+                  : null;
               final visibleDecks =
                   _showAllDecks ? state.decks : state.decks.take(4).toList();
 
@@ -135,12 +140,17 @@ bool _hasLoadedReviewData(FlashcardState state) {
   return state.decks.every((deck) => deck.total == 0 || deck.cards.isNotEmpty);
 }
 
-int _dueReviewCount(FlashcardState state) {
+int _dueReviewCount(FlashcardState state, String targetLang) {
   final now = DateTime.now();
   var total = 0;
+  final normalizedLang = targetLang.trim().toLowerCase();
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
+      if (entry.langCode.trim().toLowerCase() != normalizedLang) {
+        continue;
+      }
+
       if (entry.isNewForStudy) {
         total++;
         continue;
