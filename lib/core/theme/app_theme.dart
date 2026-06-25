@@ -6,11 +6,11 @@ class AppTheme {
   static const Color primaryColor = Color(0xFFF25F36);
   static const Color secondaryColor = Color(0xFFFF6584);
   static const Color accentColor = Color(0xFF4CAF50);
-  
+
   static const Color backgroundColor = Color(0xFFF8F9FA);
   static const Color surfaceColor = Colors.white;
   static const Color errorColor = Color(0xFFEF5350);
-  
+
   // Text Colors
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);
@@ -29,7 +29,7 @@ class AppTheme {
         surface: surfaceColor,
       ),
       scaffoldBackgroundColor: backgroundColor,
-      
+
       // AppBar Theme
       appBarTheme: const AppBarTheme(
         elevation: 0,
@@ -83,7 +83,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: errorColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
 
       // Text Theme

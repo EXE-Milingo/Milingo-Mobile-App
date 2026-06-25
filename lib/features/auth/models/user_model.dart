@@ -1,10 +1,10 @@
 /// User model representing authenticated user data
 class UserModel {
-
   UserModel({
     required this.id,
     required this.email,
-    required this.createdAt, this.displayName,
+    required this.createdAt,
+    this.displayName,
     this.photoUrl,
     this.preferredLanguage = 'vi',
     this.miLingoCoins = 0,
@@ -89,7 +89,7 @@ class UserModel {
     if (lastActiveDate == null) return true;
     final now = DateTime.now();
     final lastActive = lastActiveDate!;
-    
+
     // Check if last active was yesterday or earlier
     return now.difference(lastActive).inDays >= 1;
   }
@@ -99,7 +99,7 @@ class UserModel {
     if (lastActiveDate == null) return false;
     final now = DateTime.now();
     final lastActive = lastActiveDate!;
-    
+
     // Reset if more than 1 day has passed
     return now.difference(lastActive).inDays > 1;
   }

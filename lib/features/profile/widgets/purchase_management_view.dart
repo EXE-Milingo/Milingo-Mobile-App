@@ -225,7 +225,8 @@ class _CurrentPlanCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
                 decoration: BoxDecoration(
                   color: _PurchaseColors.primarySoft,
                   borderRadius: BorderRadius.circular(99),

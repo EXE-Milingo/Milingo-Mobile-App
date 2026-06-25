@@ -175,8 +175,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       hintText: '••••••••',
                       obscureText: _obscurePassword,
                       suffixIcon: GestureDetector(
-                        onTap: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onTap: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
                         child: Icon(
                           _obscurePassword
                               ? Icons.visibility_outlined

@@ -50,8 +50,8 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Already logged in → go straight to camera
-        context.go(AppConstants.snapAndLearnRoute);
+        // Already logged in → go straight to home
+        context.go(AppConstants.homeRoute);
       } else {
         // Not logged in → show login
         context.go(AppConstants.authRoute);

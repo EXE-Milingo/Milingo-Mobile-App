@@ -35,8 +35,7 @@ class VocabCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
-                  child: Text(item.emoji,
-                      style: const TextStyle(fontSize: 26)),
+                  child: Text(item.emoji, style: const TextStyle(fontSize: 26)),
                 ),
               ),
               if (item.isNew)

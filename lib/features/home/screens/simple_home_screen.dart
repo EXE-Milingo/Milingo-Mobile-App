@@ -18,34 +18,27 @@ class SimpleHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
-  bool _requestedCards = false;
+  void _requestCardsIfNeeded(AsyncValue<FlashcardState> asyncState) {
+    if (!asyncState.hasValue) return;
+    final state = asyncState.value!;
+    final needsLoading =
+        state.decks.any((deck) => deck.total > 0 && deck.cards.isEmpty);
+    if (!needsLoading) return;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCardsOnce());
-  }
-
-  Future<void> _loadCardsOnce() async {
-    if (!mounted || _requestedCards) return;
-
-    final flashcards = ref.read(flashcardProvider).valueOrNull;
-    final hasServerCards =
-        flashcards?.decks.any((deck) => deck.total > 0) ?? false;
-    if (!hasServerCards) return;
-
-    _requestedCards = true;
-    await ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<FlashcardState>>(flashcardProvider, (_, __) {
-      _loadCardsOnce();
-    });
+    final asyncState = ref.watch(flashcardProvider);
+    _requestCardsIfNeeded(asyncState);
 
     final user = FirebaseAuth.instance.currentUser;
     final profile = ref.watch(userProfileProvider).valueOrNull;
+    final targetLang = profile?.targetLanguage ?? 'en';
     final stats = ref.watch(userStatsValueProvider);
     final flashcards = ref.watch(flashcardStateProvider);
     final name = _displayNameFor(
@@ -55,9 +48,11 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
     );
     final totalWords =
         flashcards.decks.fold<int>(0, (sum, deck) => sum + deck.total);
-    final recentWords = _recentVocabulary(flashcards);
-    final dueWords = _dueVocabulary(recentWords);
-    final featuredWord = recentWords.isEmpty ? null : recentWords.first;
+    final recentWords = _recentVocabulary(flashcards, targetLang);
+    final dueWords = _allDueVocabulary(flashcards, targetLang);
+    final featuredWord = dueWords.isNotEmpty
+        ? dueWords.first
+        : (recentWords.isEmpty ? null : recentWords.first);
 
     return Scaffold(
       backgroundColor: _HomeColors.background,
@@ -1249,12 +1244,17 @@ class _RecentVocabularyItem {
   final int index;
 }
 
-List<_RecentVocabularyItem> _recentVocabulary(FlashcardState state) {
+List<_RecentVocabularyItem> _recentVocabulary(
+    FlashcardState state, String targetLang) {
   final items = <_RecentVocabularyItem>[];
   var index = 0;
+  final normalizedLang = targetLang.trim().toLowerCase();
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
+      if (entry.langCode.trim().toLowerCase() != normalizedLang) {
+        continue;
+      }
       items.add(
         _RecentVocabularyItem(
           deckId: deck.id,
@@ -1275,8 +1275,30 @@ List<_RecentVocabularyItem> _recentVocabulary(FlashcardState state) {
   return items.take(8).toList(growable: false);
 }
 
-List<_RecentVocabularyItem> _dueVocabulary(List<_RecentVocabularyItem> items) {
-  return items.where((item) => _isDueForReview(item.entry)).toList();
+List<_RecentVocabularyItem> _allDueVocabulary(
+    FlashcardState state, String targetLang) {
+  final items = <_RecentVocabularyItem>[];
+  var index = 0;
+  final normalizedLang = targetLang.trim().toLowerCase();
+
+  for (final deck in state.decks) {
+    for (final entry in deck.cards) {
+      if (entry.langCode.trim().toLowerCase() != normalizedLang) {
+        continue;
+      }
+      if (_isDueForReview(entry)) {
+        items.add(
+          _RecentVocabularyItem(
+            deckId: deck.id,
+            deckName: deck.name,
+            entry: entry,
+            index: index++,
+          ),
+        );
+      }
+    }
+  }
+  return items;
 }
 
 bool _isDueForReview(FlashcardEntry entry) {

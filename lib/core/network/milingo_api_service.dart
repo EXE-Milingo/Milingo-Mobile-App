@@ -86,6 +86,11 @@ class MilingoApiService {
                   : 'Không tìm thấy tài nguyên yêu cầu.';
             case 409:
               message = 'Dữ liệu đã tồn tại.';
+            case 422:
+              final body422 = error.response?.data;
+              message = (body422 is Map && body422['message'] != null)
+                  ? body422['message'].toString()
+                  : 'Không thể nhận dạng vật thể. Vui lòng thử ảnh khác.';
             case 429:
               final body429 = error.response?.data;
               message = (body429 is Map && body429['message'] != null)

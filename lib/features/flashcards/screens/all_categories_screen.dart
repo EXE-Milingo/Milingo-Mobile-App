@@ -1,214 +1,247 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Data model
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _Category {
-  final String id;
-  final String nameVi;
-  final int wordCount;
-  final IconData icon;
-  // Unsplash photo (no-API-key required format)
-  final String imageUrl;
-
-  const _Category({
-    required this.id,
-    required this.nameVi,
-    required this.wordCount,
-    required this.icon,
-    required this.imageUrl,
-  });
-}
-
-const _kCategories = [
-  _Category(
-    id: 'nha-bep',
-    nameVi: 'Nhà bếp',
-    wordCount: 42,
-    icon: Icons.soup_kitchen_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80',
-  ),
-  _Category(
-    id: 'thien-nhien',
-    nameVi: 'Thiên nhiên',
-    wordCount: 128,
-    icon: Icons.nature_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&q=80',
-  ),
-  _Category(
-    id: 'thanh-pho',
-    nameVi: 'Thành phố',
-    wordCount: 85,
-    icon: Icons.location_city_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&q=80',
-  ),
-  _Category(
-    id: 'quan-ca-phe',
-    nameVi: 'Quán cà phê',
-    wordCount: 36,
-    icon: Icons.coffee_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400&q=80',
-  ),
-  _Category(
-    id: 'van-phong',
-    nameVi: 'Văn phòng',
-    wordCount: 54,
-    icon: Icons.business_center_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80',
-  ),
-  _Category(
-    id: 'phong-ngu',
-    nameVi: 'Phòng ngủ',
-    wordCount: 28,
-    icon: Icons.bed_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400&q=80',
-  ),
-  _Category(
-    id: 'san-vuon',
-    nameVi: 'Sân vườn',
-    wordCount: 63,
-    icon: Icons.yard_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=80',
-  ),
-  _Category(
-    id: 'duong-pho',
-    nameVi: 'Đường phố',
-    wordCount: 47,
-    icon: Icons.directions_car_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&q=80',
-  ),
-  _Category(
-    id: 'truong-hoc',
-    nameVi: 'Trường học',
-    wordCount: 91,
-    icon: Icons.school_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400&q=80',
-  ),
-  _Category(
-    id: 'du-lich',
-    nameVi: 'Du lịch',
-    wordCount: 76,
-    icon: Icons.sailing_rounded,
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80',
-  ),
-];
+import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/features/flashcards/widgets/create_deck_sheet.dart';
+import 'package:milingo/features/flashcards/widgets/vocabulary_dashboard_widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-class AllCategoriesScreen extends StatefulWidget {
+class AllCategoriesScreen extends ConsumerStatefulWidget {
   const AllCategoriesScreen({super.key});
 
   @override
-  State<AllCategoriesScreen> createState() => _AllCategoriesScreenState();
+  ConsumerState<AllCategoriesScreen> createState() =>
+      _AllCategoriesScreenState();
 }
 
-class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
+class _AllCategoriesScreenState extends ConsumerState<AllCategoriesScreen> {
   String _query = '';
 
-  List<_Category> get _filtered => _kCategories
-      .where((c) => c.nameVi.toLowerCase().contains(_query.toLowerCase()))
-      .toList();
+  void _showCreateDeckSheet(BuildContext context, bool canCreate) {
+    if (!canCreate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đang tải danh sách bộ từ.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const CreateDeckSheet(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final asyncState = ref.watch(flashcardProvider);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: const Color(0xFFFBF7F2),
         body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              // ── Top bar ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
-                  children: [
-                    // Back button
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.06),
-                          shape: BoxShape.circle,
+              // Glassmorphic glows in the background
+              const _GlowBackground(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Top Bar with back button & header ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Back button
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              size: 16,
+                              color: Color(0xFF1D1814),
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 16,
-                          color: Color(0xFF1A1A1A),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bộ sưu tập',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF1D1814),
+                                  letterSpacing: -0.45,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Khám phá tất cả chủ đề từ vựng',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0x991D1814),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        RoundIconButton(
+                          tooltip: 'Tạo bộ từ',
+                          icon: Icons.add_rounded,
+                          onTap: () => _showCreateDeckSheet(
+                            context,
+                            asyncState.hasValue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Search Bar ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFEFECE8)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        onChanged: (v) => setState(() => _query = v),
+                        style: const TextStyle(
+                            fontSize: 14, color: Color(0xFF1D1814)),
+                        decoration: InputDecoration(
+                          hintText: 'Tìm kiếm bộ từ...',
+                          hintStyle: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.only(left: 14, right: 8),
+                            child: Icon(Icons.search_rounded,
+                                color: Colors.grey[400], size: 20),
+                          ),
+                          prefixIconConstraints:
+                              const BoxConstraints(minWidth: 0),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    const Text(
-                      'Tất cả danh mục',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A1A),
+                  ),
+
+                  // ── Decks Grid ──
+                  Expanded(
+                    child: asyncState.when(
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Color(0xFFFF6A00)),
+                        ),
                       ),
+                      error: (error, _) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(28),
+                          child: Text(
+                            'Không tải được dữ liệu\n$error',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                      data: (state) {
+                        final filteredDecks = state.decks.where((deck) {
+                          return deck.name
+                              .toLowerCase()
+                              .contains(_query.toLowerCase());
+                        }).toList();
+
+                        if (filteredDecks.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'Không tìm thấy bộ sưu tập nào.',
+                              style: TextStyle(
+                                color: Color(0x8C1D1814),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.82,
+                          ),
+                          itemCount: filteredDecks.length,
+                          itemBuilder: (context, i) {
+                            final deck = filteredDecks[i];
+                            return _DeckGridCard(
+                              deck: deck,
+                              index: i,
+                              onTap: () {
+                                final learnedCount = deck.cards
+                                    .where((entry) => !entry.isNewForStudy)
+                                    .length;
+                                context.push(
+                                  AppConstants.deckRoute,
+                                  extra: DeckArg(
+                                    id: deck.id,
+                                    name: deck.name,
+                                    nameVi: deck.name,
+                                    total: deck.total,
+                                    learned: learnedCount,
+                                    emoji: deck.emoji,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
                     ),
-                  ],
-                ),
-              ),
-
-              // ── Search bar ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
-                  child: TextField(
-                    onChanged: (v) => setState(() => _query = v),
-                    style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
-                    decoration: InputDecoration(
-                      hintText: 'Tìm kiếm danh mục...',
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.only(left: 14, right: 8),
-                        child: Icon(Icons.search_rounded, color: Colors.grey[400], size: 20),
-                      ),
-                      prefixIconConstraints: const BoxConstraints(minWidth: 0),
-                      border: InputBorder.none,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // ── Grid ──
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 0.875,
-                  ),
-                  itemCount: _filtered.length,
-                  itemBuilder: (context, i) => _CategoryCard(category: _filtered[i]),
-                ),
+                ],
               ),
             ],
           ),
@@ -219,132 +252,222 @@ class _AllCategoriesScreenState extends State<AllCategoriesScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Category card
+// Deck grid card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.category});
-  final _Category category;
+class _DeckGridCard extends StatelessWidget {
+  const _DeckGridCard({
+    required this.deck,
+    required this.index,
+    required this.onTap,
+  });
+
+  final DeckData deck;
+  final int index;
+  final VoidCallback onTap;
+
+  List<Color> _getDeckGradient(int index) {
+    final gradients = [
+      [const Color(0xFFFFF1E6), const Color(0xFFFFE2CC)], // Orange/Peach
+      [const Color(0xFFE8F1FF), const Color(0xFFD5E6FF)], // Blue
+      [const Color(0xFFF0EAFF), const Color(0xFFE2D6FF)], // Purple
+      [const Color(0xFFE9F7EC), const Color(0xFFD4F0DC)], // Green
+      [const Color(0xFFFFEAF2), const Color(0xFFFFD6E6)], // Pink
+      [const Color(0xFFFFFAEC), const Color(0xFFFFE9C2)], // Yellow
+    ];
+    return gradients[index % gradients.length];
+  }
+
+  Color _getDeckAccentColor(int index) {
+    final colors = [
+      const Color(0xFFFF6A00), // Orange
+      const Color(0xFF2E7DEB), // Blue
+      const Color(0xFF5B5BD6), // Indigo
+      const Color(0xFF3CA45C), // Green
+      const Color(0xFFE5468A), // Pink
+      const Color(0xFFD69E00), // Gold
+    ];
+    return colors[index % colors.length];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final gradientColors = _getDeckGradient(index);
+    final accentColor = _getDeckAccentColor(index);
+
+    final total = deck.total;
+    final learned = deck.cards.where((card) => !card.isNewForStudy).length;
+    final progress = total == 0 ? 0.0 : (learned / total).clamp(0.0, 1.0);
+    final percent = (progress * 100).round();
+    final isCompleted = progress >= 1.0 && total > 0;
+
     return GestureDetector(
-      onTap: () {
-        context.push(
-          AppConstants.deckRoute,
-          extra: DeckArg(
-            id: category.id,
-            name: category.nameVi,
-            nameVi: category.nameVi,
-            total: category.wordCount,
-            learned: 0,
-            emoji: '',
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: gradientColors,
           ),
-        );
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          fit: StackFit.expand,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1D1814).withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Background photo ──
-            Image.network(
-              category.imageUrl,
-              fit: BoxFit.cover,
-              // Fallback placeholder while loading
-              loadingBuilder: (ctx, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  color: const Color(0xFFD8D8D8),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.45),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    deck.emoji.isEmpty ? '📚' : deck.emoji,
+                    style: const TextStyle(fontSize: 22),
+                  ),
+                ),
+                if (isCompleted)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF8A1F), Color(0xFFFF4D1A)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                );
-              },
-              errorBuilder: (ctx, _, __) => Container(
-                color: const Color(0xFFCCCCCC),
-                child: const Icon(Icons.image_not_supported_rounded,
-                    color: Colors.white54, size: 40),
-              ),
-            ),
-
-            // ── Dark overlay tint ──
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0x33000000),
-              ),
-            ),
-
-            // ── Bottom gradient for text legibility ──
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 90,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xCC000000)],
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Centered icon chip ──
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.22),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.35),
-                    width: 1.5,
-                  ),
-                ),
-                child: Icon(category.icon, color: Colors.white, size: 22),
-              ),
-            ),
-
-            // ── Text labels (bottom-left) ──
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 11,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    category.nameVi,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      shadows: [
-                        Shadow(blurRadius: 6, color: Colors.black54),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_rounded,
+                            color: Colors.white, size: 10),
+                        SizedBox(width: 2),
+                        Text(
+                          'Hoàn thành',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${category.wordCount} từ',
+              ],
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    deck.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF1D1814),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                ],
+                ),
+                Text(
+                  '$percent%',
+                  style: TextStyle(
+                    color: accentColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$total từ',
+              style: TextStyle(
+                color: const Color(0xFF1D1814).withOpacity(0.5),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.black.withOpacity(0.05),
+                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                minHeight: 6,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Glow background components
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _GlowBackground extends StatelessWidget {
+  const _GlowBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          right: -64,
+          top: -64,
+          child: _GlowBlob(size: 288, color: const Color(0x33FF8A1F)),
+        ),
+        Positioned(
+          left: -96,
+          top: 320,
+          child: _GlowBlob(size: 256, color: const Color(0x1AFF4D1A)),
+        ),
+      ],
+    );
+  }
+}
+
+class _GlowBlob extends StatelessWidget {
+  const _GlowBlob({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: 64,
+            spreadRadius: 20,
+          ),
+        ],
       ),
     );
   }

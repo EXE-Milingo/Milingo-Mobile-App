@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
-import 'package:milingo/features/flashcards/widgets/create_deck_sheet.dart';
 import 'package:milingo/features/flashcards/widgets/vocabulary_dashboard_widgets.dart';
+import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class FlashcardsScreen extends ConsumerStatefulWidget {
@@ -17,13 +17,15 @@ class FlashcardsScreen extends ConsumerStatefulWidget {
 }
 
 class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
-  bool _requestedAllCards = false;
   bool _showAllDecks = false;
 
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(flashcardProvider);
     _requestCardsForReviewCount(asyncState);
+
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final targetLang = profile?.targetLanguage ?? 'en';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -38,8 +40,9 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
             ),
             data: (state) {
               final totalWords = _totalWords(state);
-              final reviewCount =
-                  _hasLoadedReviewData(state) ? _dueReviewCount(state) : null;
+              final reviewCount = _hasLoadedReviewData(state)
+                  ? _dueReviewCount(state, targetLang)
+                  : null;
               final visibleDecks =
                   _showAllDecks ? state.decks : state.decks.take(4).toList();
 
@@ -59,12 +62,8 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                           padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                           sliver: SliverList(
                             delegate: SliverChildListDelegate.fixed([
-                              VocabularyDashboardHeader(
+                              const VocabularyDashboardHeader(
                                 title: 'Từ vựng',
-                                onCreateDeck: () => _showCreateDeckSheet(
-                                  context,
-                                  asyncState.hasValue,
-                                ),
                               ),
                               const SizedBox(height: 16),
                               VocabularyHeroCard(totalWords: totalWords),
@@ -72,8 +71,9 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                               VocabularyCollectionSection(
                                 decks: visibleDecks,
                                 showSeeAll: true,
-                                onSeeAll: () =>
-                                    setState(() => _showAllDecks = true),
+                                onSeeAll: () => context.push(
+                                  AppConstants.allCategoriesRoute,
+                                ),
                                 onDeckTap: (deck) => _openDeck(context, deck),
                               ),
                               const SizedBox(height: 22),
@@ -99,34 +99,22 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
             },
           ),
         ),
-        bottomNavigationBar: const AppBottomNavBar(currentIndex: 1),
+        bottomNavigationBar: const AppBottomNavBar(currentIndex: 3),
       ),
     );
   }
 
   void _requestCardsForReviewCount(AsyncValue<FlashcardState> asyncState) {
-    if (_requestedAllCards || !asyncState.hasValue) return;
-    _requestedAllCards = true;
+    if (!asyncState.hasValue) return;
+    final state = asyncState.value!;
+    final needsLoading =
+        state.decks.any((deck) => deck.total > 0 && deck.cards.isEmpty);
+    if (!needsLoading) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
     });
-  }
-
-  void _showCreateDeckSheet(BuildContext context, bool canCreate) {
-    if (!canCreate) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đang tải danh sách bộ từ.')),
-      );
-      return;
-    }
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const CreateDeckSheet(),
-    );
   }
 
   void _openDeck(BuildContext context, DeckData deck) {
@@ -152,12 +140,22 @@ bool _hasLoadedReviewData(FlashcardState state) {
   return state.decks.every((deck) => deck.total == 0 || deck.cards.isNotEmpty);
 }
 
-int _dueReviewCount(FlashcardState state) {
+int _dueReviewCount(FlashcardState state, String targetLang) {
   final now = DateTime.now();
   var total = 0;
+  final normalizedLang = targetLang.trim().toLowerCase();
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
+      if (entry.langCode.trim().toLowerCase() != normalizedLang) {
+        continue;
+      }
+
+      if (entry.isNewForStudy) {
+        total++;
+        continue;
+      }
+
       final nextReview = DateTime.tryParse(entry.srsNextReviewAt ?? '');
       if (nextReview != null) {
         if (!nextReview.isAfter(now)) total++;

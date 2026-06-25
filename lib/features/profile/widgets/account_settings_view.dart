@@ -40,7 +40,8 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
   @override
   void initState() {
     super.initState();
-    _firstNameController = TextEditingController(text: widget.profile.firstName);
+    _firstNameController =
+        TextEditingController(text: widget.profile.firstName);
     _lastNameController = TextEditingController(text: widget.profile.lastName);
     _emailController = TextEditingController(text: widget.profile.email);
   }
@@ -178,7 +179,8 @@ class _AccountSettingsViewState extends State<AccountSettingsView> {
                       height: 44,
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                        icon:
+                            const Icon(Icons.delete_outline_rounded, size: 18),
                         label: const Text('Xóa tài khoản'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFE13224),

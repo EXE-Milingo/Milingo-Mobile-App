@@ -13,8 +13,7 @@ class SaveFlashcardSheet extends ConsumerStatefulWidget {
   final FlashcardEntry entry;
 
   @override
-  ConsumerState<SaveFlashcardSheet> createState() =>
-      _SaveFlashcardSheetState();
+  ConsumerState<SaveFlashcardSheet> createState() => _SaveFlashcardSheetState();
 }
 
 class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
@@ -25,7 +24,16 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
   bool _isBusy = false;
 
   static const _kEmojiOptions = [
-    '📚', '⭐', '🎯', '🔥', '💡', '🌟', '📝', '🎓', '🗂️', '🧠',
+    '📚',
+    '⭐',
+    '🎯',
+    '🔥',
+    '💡',
+    '🌟',
+    '📝',
+    '🎓',
+    '🗂️',
+    '🧠',
   ];
 
   @override
@@ -160,16 +168,15 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: Text(deck.emoji,
-                        style: const TextStyle(fontSize: 22)),
+                    child:
+                        Text(deck.emoji, style: const TextStyle(fontSize: 22)),
                   ),
                 ),
                 title: Text(deck.name,
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w600)),
                 subtitle: Text('${deck.total} từ',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 trailing: alreadySaved
                     ? const Icon(Icons.check_circle_rounded,
                         color: Colors.green, size: 22)
@@ -300,8 +307,7 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  BorderSide(color: AppTheme.primaryColor, width: 1.5),
+              borderSide: BorderSide(color: AppTheme.primaryColor, width: 1.5),
             ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

@@ -24,13 +24,19 @@ class AppBottomNavBar extends StatelessWidget {
         context.go(AppConstants.homeRoute);
         return;
       case 1:
-        context.go(AppConstants.flashcardsRoute);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tính năng AI Tutor đang được phát triển.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
         return;
       case 2:
         context.push(AppConstants.snapAndLearnRoute);
         return;
       case 3:
-        context.go(AppConstants.leaderboardRoute);
+        context.go(AppConstants.flashcardsRoute);
         return;
       case 4:
         context.go(AppConstants.profileRoute);
@@ -69,13 +75,13 @@ class AppBottomNavBar extends StatelessWidget {
     return ColoredBox(
       color: Colors.transparent,
       child: SizedBox(
-        height: bottomInset + 98,
+        height: bottomInset + 106,
         child: Stack(
           alignment: Alignment.topCenter,
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              top: 0,
+              top: 28,
               child: Container(
                 width: math.min(MediaQuery.sizeOf(context).width - 28, 360),
                 height: 78,
@@ -105,6 +111,30 @@ class AppBottomNavBar extends StatelessWidget {
                       ),
                     );
                   }),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: 106,
+                  height: 106,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _goToTab(context, 2),
+                      child: SvgPicture.asset(
+                        'assets/svg/snap.svg',
+                        width: 106,
+                        height: 106,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -141,29 +171,7 @@ class _BottomNavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (item.isCenter) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: Center(
-            child: Transform.translate(
-              offset: const Offset(0, -22),
-              child: OverflowBox(
-                minWidth: 0,
-                minHeight: 0,
-                maxWidth: 112,
-                maxHeight: 112,
-                child: SvgPicture.asset(
-                  item.assetPath,
-                  width: 106,
-                  height: 106,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+      return const SizedBox();
     }
 
     final color = selected ? _kActive : _kInactive;

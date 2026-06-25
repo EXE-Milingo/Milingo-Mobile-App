@@ -14,9 +14,7 @@ void main() {
     );
     expect(source, contains('AppConstants.snapAndLearnRoute'));
     expect(source, contains('AppConstants.examRoute'));
-    expect(source, contains('scannedWords'));
-    expect(source, contains("value: 'Xu'"));
-    expect(source, isNot(contains("value: 'xu")));
-    expect(source, contains('assets/images/nothing.png'));
+    expect(source, contains('coins'));
+    expect(source, contains('_LeaderboardEmptyCard'));
   });
 }

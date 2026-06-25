@@ -1,5 +1,6 @@
 /// Model representing a learned vocabulary item from Snap & Learn
-class VocabularyItem { // 0.0 to 1.0
+class VocabularyItem {
+  // 0.0 to 1.0
 
   VocabularyItem({
     required this.id,
@@ -8,7 +9,8 @@ class VocabularyItem { // 0.0 to 1.0
     required this.pronunciation,
     required this.exampleSentence,
     required this.languageCode,
-    required this.learnedAt, this.imageUrl,
+    required this.learnedAt,
+    this.imageUrl,
     this.reviewCount = 0,
     this.masteryLevel = 0.0,
   });

@@ -14,9 +14,10 @@ class ImageUtils {
       // Check if running on web
       if (kIsWeb) {
         print('? [ImageUtils] Camera is not supported on Web platform');
-        throw Exception('Camera is not supported on Web. Please use "Pick from Gallery" instead.');
+        throw Exception(
+            'Camera is not supported on Web. Please use "Pick from Gallery" instead.');
       }
-      
+
       print('?? [ImageUtils] Starting pickFromCamera...');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
@@ -31,7 +32,7 @@ class ImageUtils {
       if (image != null) {
         print('? [ImageUtils] Image captured: ${image.path}');
         final file = File(image.path);
-        
+
         // Verify file exists
         if (await file.exists()) {
           print('? [ImageUtils] File exists and is accessible');
@@ -64,7 +65,7 @@ class ImageUtils {
 
       if (image != null) {
         print('? [ImageUtils] Image picked: ${image.path}');
-        
+
         // On web, we need to handle differently
         if (kIsWeb) {
           print('?? [ImageUtils] Running on Web platform');
@@ -74,9 +75,9 @@ class ImageUtils {
           // Return a mock File object for web (will be handled differently in the controller)
           return File(image.path);
         }
-        
+
         final file = File(image.path);
-        
+
         // Verify file exists (only for non-web platforms)
         if (await file.exists()) {
           print('? [ImageUtils] File exists and is accessible');

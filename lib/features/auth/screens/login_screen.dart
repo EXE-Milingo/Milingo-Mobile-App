@@ -52,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Login successful → navigate to main app
       if (mounted) {
-        context.go(AppConstants.snapAndLearnRoute);
+        context.go(AppConstants.homeRoute);
       }
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
