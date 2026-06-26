@@ -90,8 +90,12 @@ class UserModel {
     final now = DateTime.now();
     final lastActive = lastActiveDate!;
 
-    // Check if last active was yesterday or earlier
-    return now.difference(lastActive).inDays >= 1;
+    // Compare calendar dates (midnight of each day)
+    final today = DateTime(now.year, now.month, now.day);
+    final lastActiveDay = DateTime(lastActive.year, lastActive.month, lastActive.day);
+
+    // Update if last active day was before today
+    return lastActiveDay.isBefore(today);
   }
 
   /// Check if streak should be reset
@@ -100,7 +104,12 @@ class UserModel {
     final now = DateTime.now();
     final lastActive = lastActiveDate!;
 
-    // Reset if more than 1 day has passed
-    return now.difference(lastActive).inDays > 1;
+    // Compare calendar dates (midnight of each day)
+    final today = DateTime(now.year, now.month, now.day);
+    final lastActiveDay = DateTime(lastActive.year, lastActive.month, lastActive.day);
+
+    // Reset if the last active day was before yesterday (meaning they missed yesterday entirely)
+    final yesterday = today.subtract(const Duration(days: 1));
+    return lastActiveDay.isBefore(yesterday);
   }
 }

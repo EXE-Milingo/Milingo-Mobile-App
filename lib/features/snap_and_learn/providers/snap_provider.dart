@@ -442,6 +442,9 @@ class SnapController extends StateNotifier<SnapState> {
         showVocabulary: true,
         error: null,
       );
+
+      // Refresh user stats (streak, coins, total points) from backend after a successful snap
+      _ref.read(userStatsProvider.notifier).refresh();
     } on MilingoApiException catch (e) {
       if (_isQuotaExceeded(e)) {
         state = state.copyWith(

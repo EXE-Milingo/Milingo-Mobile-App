@@ -54,11 +54,25 @@ lib/
 |   |-- gamification/providers/user_stats_provider.dart
 |   |-- home/screens/simple_home_screen.dart
 |   |-- leaderboard/screens/leaderboard_screen.dart
+|   |-- premium/
+|   |   |-- providers/subscription_provider.dart
+|   |   |-- screens/payment_method_screen.dart
+|   |   |-- screens/payment_result_screen.dart
+|   |   |-- screens/subscription_management_screen.dart
+|   |   |-- screens/transaction_history_screen.dart
+|   |   `-- widgets/
+|   |       |-- payment_method_view.dart
+|   |       `-- premium_upgrade_view.dart
 |   |-- profile/
 |   |   |-- providers/profile_provider.dart
 |   |   |-- screens/language_settings_screen.dart
 |   |   |-- screens/profile_screen.dart
-|   |   `-- widgets/language_settings_components.dart
+|   |   `-- widgets/
+|   |       |-- language_settings_components.dart
+|   |       |-- profile_premium_card.dart
+|   |       |-- profile_settings_section.dart
+|   |       |-- profile_stats_section.dart
+|   |       `-- profile_view_data.dart
 |   |-- snap_and_learn/
 |   |   |-- models/milingo_result.dart
 |   |   |-- models/vocabulary_item.dart
@@ -102,12 +116,16 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 /flashcards/vocabulary    -> Vocabulary detail screen
 /profile                  -> Profile Settings
 /leaderboard              -> Progress Leaderboard
+/payment/success          -> Checkout Success Screen
+/payment/cancel           -> Checkout Cancel Screen
+/subscription             -> Manage Subscription Screen
+/payment-history          -> Payment History Screen
 ```
 
 ## State Management Rules
 
 - Use Riverpod. Keep backend state mutations out of UI files.
-- Prefer `AsyncNotifier` for fetching/updating remote data (e.g., decks, user stats).
+- Prefer `AsyncNotifier` or `FutureProvider` for fetching/updating remote data (e.g., subscription details, decks, user stats).
 - Use code generation (`build_runner`) when modifying files that use `@riverpod` annotations:
   ```powershell
   dart run build_runner build --delete-conflicting-outputs
@@ -119,6 +137,22 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 - Communicate with the backend only via `MilingoApiService`.
 - Attach Firebase ID tokens via the API service interceptor.
 - Never write secrets directly into code or configuration files.
+
+## Payment & PayOS Integration Rules
+
+- **Redirection Bridge**: PayOS return and cancel URLs must route through the backend redirect endpoint (`/api/v1/payments/payos/redirect?status=success`). This endpoint serves an HTML bridge containing a JavaScript redirect targeting the custom app scheme (`milingo://payment/payment/success?orderCode=...`) to reopen the mobile app on checkout completion.
+- **Verification Fallback**: When the app handles the deep-linked `/payment/success` path, it must capture the `orderCode` parameter and explicitly request direct verification via `verifyPayOSOrder(orderCode)` in `PaymentResultScreen`.
+- **Self-Healing Sync**: The backend auto-synchronizes pending transactions when querying the user's premium status. The mobile app can query active premium tier info dynamically using `subscriptionOverviewProvider` to render active details and expiration dates on screens like [profile_screen.dart](file:///C:/FPTUniversity/MILINGO/PROJECT/APP/Milingo-Mobile-App/lib/features/profile/screens/profile_screen.dart).
+- **Local Webhook Testing**: PayOS webhooks require a public URL. For local webhook delivery testing, a tunneling tool (like `ngrok` or VS Dev Tunnels) must be used.
+
+## Gamification & Daily Streak Rules
+
+- **Streak Logic**: Daily streaks are calculated using Vietnam Local Time (UTC+7) calendar boundaries to align with the primary user base.
+- **Expiry Check**: Streaks are dynamically checked for expiration (older than yesterday) on GET reads (`/api/v1/users/stats`) so the UI displays 0 if the user missed a day.
+- **Triggers**: Daily streaks are updated/incremented when a user performs a learning activity:
+  1. Studying a flashcard deck (`/api/v1/users/record-study`).
+  2. Snapping and analyzing an object (`/api/v1/snap/analyze-detected`).
+- **Frontend Sync**: After a successful snap analysis, the frontend must refresh the `userStatsProvider` state via `ref.read(userStatsProvider.notifier).refresh()` to fetch the updated daily streak and coins from the backend.
 
 ## Verification
 
