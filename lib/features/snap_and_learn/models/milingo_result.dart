@@ -77,7 +77,20 @@ ExampleSentencePair? _splitJoinedExampleSentence(String text) {
     }
   }
 
-  const dashSeparators = [' \u2014 ', ' \u2013 ', ' -- ', ' - '];
+  const dashSeparators = [
+    ' \u2014 ',
+    '\u2014 ',
+    ' \u2014',
+    ' \u2013 ',
+    '\u2013 ',
+    ' \u2013',
+    ' -- ',
+    '-- ',
+    ' --',
+    ' - ',
+    '- ',
+    ' -',
+  ];
   for (final separator in dashSeparators) {
     final index = trimmed.indexOf(separator);
     if (index <= 0 || index >= trimmed.length - separator.length) continue;

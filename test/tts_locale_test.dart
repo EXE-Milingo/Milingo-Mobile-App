@@ -21,8 +21,8 @@ void main() {
     expect(
       targetSpeechTextForLanguage(
         langCode: 'ja',
-        englishText: 'cup',
-        translatedText: 'koppu',
+        englishText: 'koppu',
+        translatedText: 'cai coc',
       ),
       'koppu',
     );

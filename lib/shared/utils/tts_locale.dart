@@ -24,11 +24,7 @@ String targetSpeechTextForLanguage({
   required String englishText,
   required String translatedText,
 }) {
-  final baseCode = langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
-  final primary = baseCode == 'en' ? englishText.trim() : translatedText.trim();
-  if (primary.isNotEmpty) return primary;
-
-  final fallback =
-      baseCode == 'en' ? translatedText.trim() : englishText.trim();
-  return fallback;
+  final targetText = englishText.trim();
+  if (targetText.isNotEmpty) return targetText;
+  return translatedText.trim();
 }
