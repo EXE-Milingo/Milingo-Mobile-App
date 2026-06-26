@@ -16,6 +16,7 @@ import 'package:milingo/features/profile/widgets/profile_settings_section.dart';
 import 'package:milingo/features/profile/widgets/profile_stats_section.dart';
 import 'package:milingo/features/profile/widgets/profile_view_data.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
+import 'package:milingo/features/premium/providers/subscription_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -28,17 +29,26 @@ class ProfileScreen extends ConsumerWidget {
     final flashcards = ref.watch(flashcardStateProvider);
     final wordsLearned =
         flashcards.decks.fold<int>(0, (sum, deck) => sum + deck.total);
+
+    final isPremium = profile?.isPremium ?? false;
+    final subscriptionAsync = isPremium
+        ? ref.watch(subscriptionOverviewProvider)
+        : null;
+    final subscription = subscriptionAsync?.valueOrNull;
+
     final data = ProfileViewData(
       displayName: _displayNameFor(user, profile),
       email: _emailFor(user, profile),
       memberSince: _memberSinceLabel(user),
-      isPremium: profile?.isPremium ?? false,
+      isPremium: isPremium,
       currentStreak: stats.currentStreak,
       coins: stats.coins,
       totalPoints: stats.totalPoints,
       wordsLearned: wordsLearned,
       photoUrl: profile?.photoUrl ?? user?.photoURL,
       localAvatarPath: profile?.localAvatarPath,
+      premiumPlanName: subscription?.planName,
+      premiumExpiresAt: subscription?.expiresAt,
     );
 
     return Scaffold(
@@ -59,8 +69,13 @@ class ProfileScreen extends ConsumerWidget {
                       const SizedBox(height: 20),
                       ProfilePremiumCard(
                         data: data,
-                        onUpgradeTap: () =>
-                            context.push(AppConstants.premiumRoute),
+                        onUpgradeTap: () {
+                          if (data.isPremium) {
+                            context.push(AppConstants.subscriptionRoute);
+                          } else {
+                            context.push(AppConstants.premiumRoute);
+                          }
+                        },
                       ),
                       const SizedBox(height: 20),
                       ProfileStatsSection(data: data),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:milingo/features/profile/widgets/profile_svg_icon.dart';
 import 'package:milingo/features/profile/widgets/profile_view_data.dart';
 
@@ -14,6 +15,8 @@ class ProfilePremiumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPremium = data.isPremium;
+
     return Container(
       height: 247,
       decoration: BoxDecoration(
@@ -72,11 +75,11 @@ class ProfilePremiumCard extends StatelessWidget {
                 children: [
                   const _MembershipPill(),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Mở khoá toàn bộ Milingo',
+                  Text(
+                    isPremium ? (data.premiumPlanName ?? 'Gói Premium') : 'Mở khoá toàn bộ Milingo',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -84,9 +87,25 @@ class ProfilePremiumCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const _PremiumBullet('AI Tutor không giới hạn'),
-                  const _PremiumBullet('Quét từ không giới hạn'),
-                  const _PremiumBullet('Ôn tập nâng cao'),
+                  if (isPremium) ...[
+                    Text(
+                      data.premiumExpiresAt != null
+                          ? 'Hạn dùng: ${DateFormat('dd/MM/yyyy').format(data.premiumExpiresAt!)}'
+                          : 'Trạng thái: Đang hoạt động',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const _PremiumBullet('Đã mở khóa AI Tutor không giới hạn'),
+                    const _PremiumBullet('Đã mở khóa quét từ không giới hạn'),
+                  ] else ...[
+                    const _PremiumBullet('AI Tutor không giới hạn'),
+                    const _PremiumBullet('Quét từ không giới hạn'),
+                    const _PremiumBullet('Ôn tập nâng cao'),
+                  ],
                   const Spacer(),
                   Center(
                     child: SizedBox(
@@ -102,15 +121,15 @@ class ProfilePremiumCard extends StatelessWidget {
                           child: InkWell(
                             onTap: onUpgradeTap,
                             borderRadius: BorderRadius.circular(16),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Flexible(
                                   child: Text(
-                                    'Nâng cấp Premium',
+                                    isPremium ? 'Quản lý gói đăng ký' : 'Nâng cấp Premium',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: Color(0xFFFF4D1A),
                                       fontSize: 15,
                                       fontWeight: FontWeight.w800,
@@ -118,8 +137,8 @@ class ProfilePremiumCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                SizedBox(width: 10),
-                                Icon(
+                                const SizedBox(width: 10),
+                                const Icon(
                                   Icons.chevron_right_rounded,
                                   color: Color(0xFFFF4D1A),
                                   size: 17,

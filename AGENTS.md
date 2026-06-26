@@ -56,7 +56,9 @@ lib/
 |   |-- leaderboard/screens/leaderboard_screen.dart
 |   |-- profile/
 |   |   |-- providers/profile_provider.dart
-|   |   `-- screens/profile_screen.dart
+|   |   |-- screens/language_settings_screen.dart
+|   |   |-- screens/profile_screen.dart
+|   |   `-- widgets/language_settings_components.dart
 |   |-- snap_and_learn/
 |   |   |-- models/milingo_result.dart
 |   |   |-- models/vocabulary_item.dart
@@ -110,6 +112,7 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
   ```powershell
   dart run build_runner build --delete-conflicting-outputs
   ```
+- **State lifecycle and cleanup**: Always prefer using `.autoDispose` providers for screen-specific states (such as camera capture, search queries, or temporary forms). This ensures state is discarded and resources are cleaned up immediately when the user navigates away from the screen, preventing stale data leaks, residual caches, or out-of-sync states across different sessions.
 
 ## Backend and API Rules
 

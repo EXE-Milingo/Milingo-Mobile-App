@@ -15,10 +15,12 @@ const _resultLine = Color(0xFFE1E7DF);
 class PaymentResultScreen extends ConsumerStatefulWidget {
   const PaymentResultScreen({
     required this.isSuccess,
+    this.orderCode,
     super.key,
   });
 
   final bool isSuccess;
+  final int? orderCode;
 
   @override
   ConsumerState<PaymentResultScreen> createState() =>
@@ -45,8 +47,18 @@ class _PaymentResultScreenState extends ConsumerState<PaymentResultScreen> {
     });
 
     try {
-      final status =
-          await ref.read(milingoApiServiceProvider).getPremiumStatus();
+      final api = ref.read(milingoApiServiceProvider);
+      
+      final orderCode = widget.orderCode;
+      if (orderCode != null) {
+        try {
+          await api.verifyPayOSOrder(orderCode);
+        } catch (e) {
+          debugPrint('Verification error during status sync: $e');
+        }
+      }
+
+      final status = await api.getPremiumStatus();
       if (!mounted) return;
       setState(() => _status = status);
     } catch (e) {

@@ -204,8 +204,7 @@ class SnapController extends StateNotifier<SnapState> {
   }
 
   void setProfileLanguageIfIdle(String languageCode) {
-    if (state.selectedLanguage != 'en' ||
-        state.isLoading ||
+    if (state.isLoading ||
         state.capturedImage != null ||
         state.capturedImageBytes != null ||
         state.detectedObjects.isNotEmpty ||
@@ -470,7 +469,7 @@ class SnapController extends StateNotifier<SnapState> {
 // ─────────────────────────────────────────────────────────
 
 final snapControllerProvider =
-    StateNotifierProvider<SnapController, SnapState>((ref) {
+    StateNotifierProvider.autoDispose<SnapController, SnapState>((ref) {
   final api = ref.watch(milingoApiServiceProvider);
   final controller = SnapController(
     api,

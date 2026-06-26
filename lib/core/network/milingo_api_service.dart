@@ -328,6 +328,18 @@ class MilingoApiService {
     }
   }
 
+  Future<bool> verifyPayOSOrder(int orderCode) async {
+    try {
+      final response = await _dio.post('/api/v1/payments/payos/verify-order/$orderCode');
+      return _unwrap(
+        response,
+        (_) => true,
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   Future<SubscriptionOverviewResponse> getSubscriptionOverview() async {
     try {
       final response = await _dio.get('/api/v1/payments/subscription');

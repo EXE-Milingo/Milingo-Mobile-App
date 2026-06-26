@@ -10,6 +10,8 @@ class ProfileViewData {
     required this.wordsLearned,
     this.photoUrl,
     this.localAvatarPath,
+    this.premiumPlanName,
+    this.premiumExpiresAt,
   });
 
   final String displayName;
@@ -22,6 +24,8 @@ class ProfileViewData {
   final int wordsLearned;
   final String? photoUrl;
   final String? localAvatarPath;
+  final String? premiumPlanName;
+  final DateTime? premiumExpiresAt;
 }
 
 class ProfileSettingsItemData {

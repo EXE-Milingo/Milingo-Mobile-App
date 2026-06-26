@@ -210,16 +210,26 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: AppConstants.paymentSuccessRoute,
         name: 'payment-success',
-        builder: (context, state) => const PaymentResultScreen(
-          isSuccess: true,
-        ),
+        builder: (context, state) {
+          final orderCodeStr = state.uri.queryParameters['orderCode'];
+          final orderCode = orderCodeStr != null ? int.tryParse(orderCodeStr) : null;
+          return PaymentResultScreen(
+            isSuccess: true,
+            orderCode: orderCode,
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.paymentCancelRoute,
         name: 'payment-cancel',
-        builder: (context, state) => const PaymentResultScreen(
-          isSuccess: false,
-        ),
+        builder: (context, state) {
+          final orderCodeStr = state.uri.queryParameters['orderCode'];
+          final orderCode = orderCodeStr != null ? int.tryParse(orderCodeStr) : null;
+          return PaymentResultScreen(
+            isSuccess: false,
+            orderCode: orderCode,
+          );
+        },
       ),
       GoRoute(
         path: AppConstants.leaderboardRoute,
