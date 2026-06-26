@@ -22,6 +22,7 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
   String _selectedEmoji = '📚';
   String? _savedToDeckName;
   bool _isBusy = false;
+  String? _savingDeckId;
 
   static const _kEmojiOptions = [
     '📚',
@@ -180,7 +181,7 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
                 trailing: alreadySaved
                     ? const Icon(Icons.check_circle_rounded,
                         color: Colors.green, size: 22)
-                    : (_isBusy
+                    : (_savingDeckId == deck.id
                         ? const SizedBox(
                             width: 22,
                             height: 22,
@@ -227,7 +228,10 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
 
   Future<void> _saveToExistingDeck(
       FlashcardNotifier notifier, DeckData deck) async {
-    setState(() => _isBusy = true);
+    setState(() {
+      _isBusy = true;
+      _savingDeckId = deck.id;
+    });
     try {
       final added = await notifier.addCardToDeck(deck.id, widget.entry);
       if (!mounted) return;
@@ -235,13 +239,17 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
         setState(() {
           _savedToDeckName = deck.name;
           _isBusy = false;
+          _savingDeckId = null;
         });
         Future.delayed(const Duration(milliseconds: 1400), () {
           if (mounted) Navigator.of(context).pop();
         });
       } else {
         // Card already exists in this deck
-        setState(() => _isBusy = false);
+        setState(() {
+          _isBusy = false;
+          _savingDeckId = null;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Từ này đã có trong bộ thẻ rồi!'),
@@ -252,7 +260,10 @@ class _SaveFlashcardSheetState extends ConsumerState<SaveFlashcardSheet> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isBusy = false);
+      setState(() {
+        _isBusy = false;
+        _savingDeckId = null;
+      });
       final msg = e.toString().contains('MilingoApiException')
           ? e.toString().split(': ').last
           : 'Không thể lưu. Vui lòng thử lại.';

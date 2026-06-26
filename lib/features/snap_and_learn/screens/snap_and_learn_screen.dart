@@ -1220,7 +1220,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
       child: Column(
         children: [
           // ── Top Bar ──
-          _buildTopBar(hasResult || hasDetection, ctrl),
+          _buildTopBar(hasResult || hasDetection, ctrl, snap),
 
           // ── "Hoàn thành" chip (shown after capture) ──
           if (hasImage)
@@ -1331,7 +1331,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
   // TOP BAR
   // ═══════════════════════════════════════════════════════════════
 
-  Widget _buildTopBar(bool hasResult, SnapController ctrl) {
+  Widget _buildTopBar(bool hasResult, SnapController ctrl, SnapState snap) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -1339,8 +1339,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
           // Back button
           GestureDetector(
             onTap: () {
+              final hasImage = snap.capturedImage != null;
               ctrl.reset();
-              context.go(AppConstants.homeRoute);
+              if (!hasImage) {
+                context.go(AppConstants.homeRoute);
+              }
             },
             child: Container(
               padding: const EdgeInsets.all(10),

@@ -38,8 +38,10 @@ class StorageService {
       // 1. Decode base64 → raw bytes
       final Uint8List originalBytes = base64Decode(base64Image);
 
-      // 2. Resize and lower JPEG quality before upload.
-      final Uint8List compressedBytes = _compressImage(originalBytes);
+      // 2. Only resize/compress if the image is large (> 200 KB) to save CPU cycles
+      final Uint8List compressedBytes = originalBytes.length > 200 * 1024
+          ? _compressImage(originalBytes)
+          : originalBytes;
 
       // 3. Build storage path
       final timestamp = DateTime.now().millisecondsSinceEpoch;
