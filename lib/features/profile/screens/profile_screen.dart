@@ -9,6 +9,7 @@ import 'package:milingo/features/gamification/providers/user_stats_provider.dart
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/features/profile/screens/account_settings_screen.dart';
 import 'package:milingo/features/profile/screens/language_goal_screen.dart';
+import 'package:milingo/features/profile/screens/language_settings_screen.dart';
 import 'package:milingo/features/profile/widgets/profile_header_section.dart';
 import 'package:milingo/features/profile/widgets/profile_premium_card.dart';
 import 'package:milingo/features/profile/widgets/profile_settings_section.dart';
@@ -107,7 +108,7 @@ class ProfileScreen extends ConsumerWidget {
       ProfileSettingsItemData(
         label: 'Ngôn ngữ',
         assetPath: 'assets/svg/new-profile/language.svg',
-        onTap: () => _openLanguageGoal(context),
+        onTap: () => _openLanguageSettings(context),
       ),
       const ProfileSettingsItemData(
         label: 'Hỗ trợ',
@@ -163,6 +164,14 @@ class ProfileScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => const LanguageGoalScreen(),
+      ),
+    );
+  }
+
+  static void _openLanguageSettings(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const LanguageSettingsScreen(),
       ),
     );
   }
