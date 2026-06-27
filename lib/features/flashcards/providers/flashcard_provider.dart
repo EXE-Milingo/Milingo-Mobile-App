@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/services/storage_service.dart';
+import 'package:milingo/features/auth/providers/auth_provider.dart';
 import 'package:milingo/features/flashcards/models/flashcard_models.dart';
 
 export 'package:milingo/features/flashcards/models/flashcard_models.dart';
@@ -48,7 +49,7 @@ class FlashcardNotifier extends AsyncNotifier<FlashcardState> {
 
   @override
   Future<FlashcardState> build() async {
-    final authUser = ref.watch(_flashcardAuthUserProvider).valueOrNull ??
+    final authUser = ref.watch(authStateProvider).valueOrNull ??
         FirebaseAuth.instance.currentUser;
     if (authUser == null) {
       return FlashcardState(decks: const []);
@@ -474,10 +475,6 @@ final flashcardProvider =
     AsyncNotifierProvider<FlashcardNotifier, FlashcardState>(
   FlashcardNotifier.new,
 );
-
-final _flashcardAuthUserProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
-});
 
 // Convenience sync accessor — returns empty state while loading.
 // Existing widgets that call `ref.watch(flashcardProvider)` need

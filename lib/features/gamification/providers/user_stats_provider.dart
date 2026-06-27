@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
+import 'package:milingo/features/auth/providers/auth_provider.dart';
 
 // ─────────────────────────────────────────────────────────
 // UserStatsNotifier — fetch từ backend, cache trong memory
@@ -8,8 +10,18 @@ import 'package:milingo/core/network/milingo_api_service.dart';
 class UserStatsNotifier extends AsyncNotifier<UserStatsResponse> {
   @override
   Future<UserStatsResponse> build() async {
+    final authUser = ref.watch(authStateProvider).valueOrNull ??
+        FirebaseAuth.instance.currentUser;
+    if (authUser == null) {
+      return const UserStatsResponse(
+        coins: 0,
+        currentStreak: 0,
+        totalPoints: 0,
+      );
+    }
     return _fetchFromBackend();
   }
+
 
   Future<UserStatsResponse> _fetchFromBackend() async {
     final api = ref.read(milingoApiServiceProvider);
