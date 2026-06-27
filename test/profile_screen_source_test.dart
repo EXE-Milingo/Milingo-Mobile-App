@@ -12,7 +12,6 @@ void main() {
     expect(source, contains('ProfileStatsSection'));
     expect(source, contains('ProfileSettingsSection'));
     expect(source, contains('assets/svg/new-profile/profile-account.svg'));
-    expect(source, contains('assets/svg/new-profile/aim.svg'));
     expect(source, contains('assets/svg/new-profile/premium.svg'));
     expect(source, contains('AppBottomNavBar(currentIndex: 4)'));
   });

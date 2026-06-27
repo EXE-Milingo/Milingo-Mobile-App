@@ -8,7 +8,6 @@ import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/features/profile/screens/account_settings_screen.dart';
-import 'package:milingo/features/profile/screens/language_goal_screen.dart';
 import 'package:milingo/features/profile/screens/language_settings_screen.dart';
 import 'package:milingo/features/profile/widgets/profile_header_section.dart';
 import 'package:milingo/features/profile/widgets/profile_premium_card.dart';
@@ -107,11 +106,6 @@ class ProfileScreen extends ConsumerWidget {
         onTap: () => _openAccountSettings(context, user, profile),
       ),
       ProfileSettingsItemData(
-        label: 'Mục tiêu học tập',
-        assetPath: 'assets/svg/new-profile/aim.svg',
-        onTap: () => _openLanguageGoal(context),
-      ),
-      ProfileSettingsItemData(
         label: 'Gói Premium',
         assetPath: 'assets/svg/new-profile/premium.svg',
         onTap: () => context.push(AppConstants.subscriptionRoute),
@@ -171,14 +165,6 @@ class ProfileScreen extends ConsumerWidget {
       MaterialPageRoute<void>(
         builder: (_) =>
             AccountSettingsScreen(profile: _accountProfile(user, profile)),
-      ),
-    );
-  }
-
-  static void _openLanguageGoal(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const LanguageGoalScreen(),
       ),
     );
   }
