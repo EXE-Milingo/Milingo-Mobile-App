@@ -133,6 +133,7 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 - **State lifecycle and cleanup**: Always prefer using `.autoDispose` providers for screen-specific states (such as camera capture, search queries, or temporary forms). This ensures state is discarded and resources are cleaned up immediately when the user navigates away from the screen, preventing stale data leaks, residual caches, or out-of-sync states across different sessions.
 - **Authentication-Scoped State & Preferences**: User-specific state providers (like `userProfileProvider` and `userStatsProvider`) must watch the global `authStateProvider` in their `build()` method. This automatically clears/refetches data upon logout/login. Additionally, `SharedPreferences` keys must be scoped by user ID (e.g., `profile.${uid}.local_avatar_path`) to avoid leaking cached profile data and settings across accounts on the same device.
 - **Dead Code & Screen Redundancy**: Keep the codebase clean by removing redundant or deprecated screens and views (e.g., deleted `LanguageGoalScreen` and `LanguageGoalView` to centralize all native/target language configuration inside `LanguageSettingsScreen`).
+- **Responsive Scrollable Layouts**: To prevent UI overlaps, text clipping, and layout overflows on varying screen heights (such as in analysis result screens), wrap detailed results and information blocks inside a vertical `SingleChildScrollView` instead of using fixed-height parents or unconstrained flex widgets.
 
 ## Backend and API Rules
 

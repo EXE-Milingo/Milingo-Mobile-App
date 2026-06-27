@@ -58,6 +58,8 @@ class SnapAndLearnScreen extends ConsumerStatefulWidget {
 class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     with TickerProviderStateMixin {
   final FlutterTts _tts = FlutterTts();
+  final ScrollController _resultScrollController = ScrollController();
+  bool _showResultExample = false;
 
   // Camera
   CameraController? _cameraController;
@@ -262,6 +264,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     _cameraController?.dispose();
     _bubbleCtrl.dispose();
     _scanCtrl.dispose();
+    _resultScrollController.dispose();
     super.dispose();
   }
 
@@ -290,6 +293,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
       // When vocabulary view opens → trigger bubble animation
       if (!(prev?.showVocabulary ?? false) && next.showVocabulary) {
         _bubbleCtrl.forward(from: 0);
+      }
+      if (prev?.result != null && next.result == null) {
+        setState(() {
+          _showResultExample = false;
+        });
       }
     });
 
@@ -380,20 +388,26 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         ? null
         : base64Decode(result.objectImageBase64!);
     final compact = MediaQuery.sizeOf(context).height < 760;
-    final objectHeight = compact ? 310.0 : 390.0;
+    final objectHeight = compact ? 260.0 : 320.0;
+    final langCode = snap.selectedLanguage;
 
     return SafeArea(
       child: Container(
-        color: const Color(0xFFFFEFDA),
+        color: const Color(0xFFFBF7F2),
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               child: Row(
                 children: [
                   _SoftCircleButton(
                     icon: Icons.arrow_back_rounded,
-                    onTap: ctrl.reset,
+                    onTap: () {
+                      setState(() {
+                        _showResultExample = false;
+                      });
+                      ctrl.reset();
+                    },
                   ),
                   Expanded(
                     child: Column(
@@ -401,9 +415,10 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                         Text(
                           'BÓC TÁCH VẬT THỂ',
                           style: TextStyle(
-                            color: Color(0xFF806B58),
+                            color: Color(0xFF1D1814),
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
                           ),
                         ),
                         SizedBox(height: 5),
@@ -416,176 +431,326 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               ),
             ),
             Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  ..._buildObjectHaloBubbles(snap, result, objectHeight),
-                  SizedBox(
-                    height: objectHeight,
-                    width: double.infinity,
-                    child: _buildResultObjectPreview(
-                      snap: snap,
-                      result: result,
-                      objectBytes: objectBytes,
+              child: SingleChildScrollView(
+                controller: _resultScrollController,
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: objectHeight + 100,
+                      width: double.infinity,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          ..._buildObjectHaloBubbles(snap, result, objectHeight),
+                          SizedBox(
+                            height: objectHeight,
+                            width: double.infinity,
+                            child: _buildResultObjectPreview(
+                              snap: snap,
+                              result: result,
+                              objectBytes: objectBytes,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    _buildWordCard(result),
+                    const SizedBox(height: 20),
+                    _buildActionsRow(result, langCode),
+                    if (_showResultExample) ...[
+                      const SizedBox(height: 32),
+                      _buildAiSuggestedSentencesSection(result, langCode),
+                    ],
+                  ],
+                ),
               ),
             ),
-            _buildResultVocabularyPanel(snap, ctrl, result),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildResultVocabularyPanel(
-    SnapState snap,
-    SnapController ctrl,
-    MilingoResult result,
-  ) {
-    final langCode = snap.selectedLanguage;
-    final bottomInset = MediaQuery.of(context).padding.bottom;
-
+  Widget _buildWordCard(MilingoResult result) {
     return Container(
-      height: 218 + bottomInset,
-      constraints: const BoxConstraints(minHeight: 212),
-      padding: EdgeInsets.fromLTRB(
-        18,
-        12,
-        18,
-        bottomInset + 10,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFEFDA),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        color: const Color(0xCCFFFFFF),
+        borderRadius: BorderRadius.circular(32),
         border: Border.all(color: Colors.white, width: 1.5),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          Row(
-            children: [
-              const Spacer(),
-              _ExampleAssetButton(
-                label: 'Xem câu ví dụ',
-                onTap: () => _showExampleSentence(result),
-                child: SvgPicture.asset(
-                  'assets/svg/Overlay+Border.svg',
-                  width: 131,
-                  height: 24,
-                ),
-              ),
-            ],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F221914),
+            blurRadius: 44,
+            offset: Offset(0, 20),
+            spreadRadius: -8,
           ),
-          const SizedBox(height: 34),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                children: [
-                  const SizedBox(height: 34),
-                  _MiniActionButton(
-                    icon: Icons.bookmark_add_outlined,
-                    onTap: () {
-                      _saveResultToFlashcard(result, langCode);
-                    },
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _AdaptiveResultText(
+                  text: result.keyword,
+                  maxLines: 2,
+                  minFontSize: 16,
+                  style: const TextStyle(
+                    color: Color(0xFF1D1814),
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
                   ),
-                  const SizedBox(height: 16),
-                  _MiniActionButton(
-                    icon: Icons.volume_up_rounded,
-                    onTap: () => _speakResultTerm(result, langCode),
+                ),
+                const SizedBox(height: 6),
+                if (result.pronunciation.isNotEmpty) ...[
+                  _AdaptiveResultText(
+                    text: '/${result.pronunciation}/',
+                    maxLines: 2,
+                    minFontSize: 12,
+                    style: const TextStyle(
+                      color: Color(0xFF77716B),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+                  const SizedBox(height: 10),
                 ],
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _AdaptiveResultText(
-                            text: result.keyword,
-                            maxLines: 3,
-                            minFontSize: 14,
-                            style: const TextStyle(
-                              color: Color(0xFF2A2928),
-                              fontSize: 25,
-                              fontWeight: FontWeight.w900,
-                              height: 1.05,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _AdaptiveResultText(
-                            text: result.pronunciation.isEmpty
-                                ? ''
-                                : '/${result.pronunciation}/',
-                            maxLines: 2,
-                            minFontSize: 11,
-                            style: const TextStyle(
-                              color: Color(0xFF77716B),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3EDE7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              result.partOfSpeech.trim().isEmpty
-                                  ? 'Noun'
-                                  : result.partOfSpeech,
-                              style: const TextStyle(
-                                color: Color(0xFF7B7168),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEADF),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    result.partOfSpeech.trim().isEmpty
+                        ? 'Noun'
+                        : result.partOfSpeech,
+                    style: const TextStyle(
+                      color: Color(0xFFFF6A00),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
                     ),
-                  ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'NGHĨA',
+                  style: TextStyle(
+                    color: Color(0xFFFF8A1F),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _AdaptiveResultText(
+                  text: result.translation,
+                  textAlign: TextAlign.left,
+                  maxLines: 3,
+                  minFontSize: 16,
+                  style: const TextStyle(
+                    color: Color(0xFF1D1814),
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionsRow(MilingoResult result, String langCode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildActionButtonItem(
+            label: 'Lưu lại',
+            iconPath: 'assets/svg/return-result-new/save-icon.svg',
+            isGradient: false,
+            onTap: () => _saveResultToFlashcard(result, langCode),
+          ),
+          _buildActionButtonItem(
+            label: 'Phát âm',
+            iconPath: 'assets/svg/return-result-new/pronunciation.svg',
+            isGradient: true,
+            onTap: () => _speakResultTerm(result, langCode),
+          ),
+          _buildActionButtonItem(
+            label: 'Ví dụ',
+            iconPath: 'assets/svg/return-result-new/example-sentence-icon.svg',
+            isGradient: false,
+            onTap: () {
+              setState(() {
+                _showResultExample = true;
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_resultScrollController.hasClients) {
+                  _resultScrollController.animateTo(
+                    _resultScrollController.position.maxScrollExtent,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtonItem({
+    required String label,
+    required String iconPath,
+    required bool isGradient,
+    required VoidCallback onTap,
+  }) {
+    final labelColor = isGradient ? const Color(0xFFFF6A00) : const Color(0xFF9A8E84);
+    final isLargeSvg = iconPath.contains('save-icon') || iconPath.contains('example-sentence-icon');
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: isLargeSvg
+                ? OverflowBox(
+                    minWidth: 96,
+                    maxWidth: 96,
+                    minHeight: 96,
+                    maxHeight: 96,
+                    child: SvgPicture.asset(iconPath),
+                  )
+                : SvgPicture.asset(iconPath),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: labelColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiSuggestedSentencesSection(MilingoResult result, String langCode) {
+    final example = _examplePairForResult(result);
+    if (example.original.isEmpty && example.translation.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              'Gợi ý từ AI',
+              style: TextStyle(
+                color: Color(0xFFFF3F00),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _AdaptiveResultText(
-                            text: result.translation,
-                            textAlign: TextAlign.left,
-                            maxLines: 3,
-                            minFontSize: 14,
-                            style: const TextStyle(
-                              color: Color(0xFF292725),
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              height: 1.06,
-                            ),
-                          ),
-                        ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0x66FFFFFF),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: const Color(0x66FFFFFF), width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0A1D1814),
+                  blurRadius: 24,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        example.original,
+                        style: const TextStyle(
+                          color: Color(0xFF1D1814),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          height: 1.24,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (example.translation.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          example.translation,
+                          style: const TextStyle(
+                            color: Color(0xCC59413A),
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w500,
+                            height: 1.28,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () => _speak(example.original, langCode),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: Color(0x0D1D1814),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.volume_up_rounded,
+                      color: Color(0xFF1D1814),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
