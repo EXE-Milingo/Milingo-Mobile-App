@@ -388,7 +388,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         ? null
         : base64Decode(result.objectImageBase64!);
     final compact = MediaQuery.sizeOf(context).height < 760;
-    final objectHeight = compact ? 260.0 : 320.0;
+    final objectHeight = compact ? 290.0 : 360.0;
     final langCode = snap.selectedLanguage;
 
     return SafeArea(
@@ -431,40 +431,53 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
+              child: CustomScrollView(
                 controller: _resultScrollController,
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: objectHeight + 100,
-                      width: double.infinity,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          ..._buildObjectHaloBubbles(snap, result, objectHeight),
-                          SizedBox(
-                            height: objectHeight,
-                            width: double.infinity,
-                            child: _buildResultObjectPreview(
-                              snap: snap,
-                              result: result,
-                              objectBytes: objectBytes,
-                            ),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: objectHeight + 120,
+                          width: double.infinity,
+                          child: Stack(
+                            children: [
+                              ..._buildObjectHaloBubbles(snap, result, objectHeight),
+                              Positioned(
+                                bottom: 16,
+                                left: 0,
+                                right: 0,
+                                height: objectHeight,
+                                child: _buildResultObjectPreview(
+                                  snap: snap,
+                                  result: result,
+                                  objectBytes: objectBytes,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildWordCard(result),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildWordCard(result),
-                    const SizedBox(height: 20),
-                    _buildActionsRow(result, langCode),
-                    if (_showResultExample) ...[
-                      const SizedBox(height: 32),
-                      _buildAiSuggestedSentencesSection(result, langCode),
-                    ],
-                  ],
-                ),
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        const SizedBox(height: 32),
+                        _buildActionsRow(result, langCode),
+                        const SizedBox(height: 40),
+                        if (_showResultExample) ...[
+                          _buildAiSuggestedSentencesSection(result, langCode),
+                          const SizedBox(height: 24),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -550,6 +563,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 18),
                 const Text(
                   'NGHĨA',
                   style: TextStyle(
@@ -604,17 +618,19 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             isGradient: false,
             onTap: () {
               setState(() {
-                _showResultExample = true;
+                _showResultExample = !_showResultExample;
               });
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (_resultScrollController.hasClients) {
-                  _resultScrollController.animateTo(
-                    _resultScrollController.position.maxScrollExtent,
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              });
+              if (_showResultExample) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_resultScrollController.hasClients) {
+                    _resultScrollController.animateTo(
+                      _resultScrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                });
+              }
             },
           ),
         ],
@@ -793,7 +809,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               constraints.maxHeight,
             );
             final previewHeight = math.min(objectHeight, areaSize.height);
-            final previewTop = (areaSize.height - previewHeight) / 2;
+            final previewTop = areaSize.height - previewHeight - 16.0;
             final objectRect = _estimatedResultObjectRect(
               snap: snap,
               result: result,
