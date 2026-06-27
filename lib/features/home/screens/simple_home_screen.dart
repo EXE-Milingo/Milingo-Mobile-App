@@ -82,7 +82,7 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
                     onReview: () => context.push(AppConstants.examRoute),
                     onScan: () => context.push(AppConstants.snapAndLearnRoute),
                     onFlashcards: () =>
-                        context.go(AppConstants.flashcardsRoute),
+                        context.push(AppConstants.flashcardsRoute),
                   ),
                   const SizedBox(height: 27),
                   _SectionHeader(
@@ -105,7 +105,7 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
                   _SectionHeader(
                     title: 'Top học viên tuần',
                     actionLabel: 'Xem tất cả',
-                    onAction: () => context.go(AppConstants.leaderboardRoute),
+                    onAction: () => context.push(AppConstants.leaderboardRoute),
                   ),
                   const SizedBox(height: 12),
                   const _LeaderboardEmptyCard(),

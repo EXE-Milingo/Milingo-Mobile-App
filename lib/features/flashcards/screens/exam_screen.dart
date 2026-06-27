@@ -261,7 +261,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   void _goToHomeScreen() {
     _closingResultDialogForReviewRoot = true;
     Navigator.of(context).pop();
-    context.go(AppConstants.homeRoute);
+    _returnToPreviousScreen();
   }
 
   void _handleResultDialogPop() {
@@ -269,7 +269,15 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       _closingResultDialogForReviewRoot = false;
       return;
     }
-    context.go(AppConstants.homeRoute);
+    _returnToPreviousScreen();
+  }
+
+  void _returnToPreviousScreen() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppConstants.homeRoute);
+    }
   }
 
   void _showError(Object error) {

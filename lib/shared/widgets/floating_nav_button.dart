@@ -66,7 +66,7 @@ class _FloatingNavButtonState extends State<FloatingNavButton>
   void _navigate(String route) {
     _close();
     Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) context.go(route);
+      if (mounted) context.push(route);
     });
   }
 

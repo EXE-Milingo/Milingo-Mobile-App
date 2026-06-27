@@ -1523,7 +1523,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
               final hasImage = snap.capturedImage != null;
               ctrl.reset();
               if (!hasImage) {
-                context.go(AppConstants.homeRoute);
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(AppConstants.homeRoute);
+                }
               }
             },
             child: Container(
