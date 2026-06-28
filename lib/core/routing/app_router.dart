@@ -24,6 +24,7 @@ import 'package:milingo/features/premium/screens/terms_of_service_screen.dart';
 import 'package:milingo/features/premium/screens/transaction_history_screen.dart';
 import 'package:milingo/features/premium/widgets/premium_upgrade_view.dart';
 import 'package:milingo/features/profile/screens/about_screen.dart';
+import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
 import 'package:milingo/features/splash/screens/splash_screen.dart';
@@ -96,11 +97,42 @@ GoRouter appRouter(AppRouterRef ref) {
         name: 'exam',
         builder: (context, state) {
           final extra = state.extra as Map<String, String>?;
+
+          // Retrieve user profile's active target language as dynamic fallback
+          final profile = ref.read(userProfileProvider).valueOrNull;
+          final targetLang = (profile?.targetLanguage ?? 'en').trim().toLowerCase().split(RegExp('[-_]')).first;
+          final currentTargetCode = targetLang == 'jp' ? 'ja' : targetLang;
+
+          String defaultLangName = 'English';
+          switch (currentTargetCode) {
+            case 'ja':
+              defaultLangName = 'Japanese';
+              break;
+            case 'zh':
+              defaultLangName = 'Chinese';
+              break;
+            case 'ko':
+              defaultLangName = 'Korean';
+              break;
+            case 'fr':
+              defaultLangName = 'French';
+              break;
+            case 'de':
+              defaultLangName = 'German';
+              break;
+            case 'es':
+              defaultLangName = 'Spanish';
+              break;
+            case 'it':
+              defaultLangName = 'Italian';
+              break;
+          }
+
           return ExamScreen(
             deckId: extra?['deckId'] ?? 'all',
             deckName: extra?['deckName'] ?? 'Ôn tập hôm nay',
-            langCode: extra?['langCode'] ?? 'en',
-            langName: extra?['langName'] ?? 'English',
+            langCode: extra?['langCode'] ?? currentTargetCode,
+            langName: extra?['langName'] ?? defaultLangName,
           );
         },
       ),

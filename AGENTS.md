@@ -155,7 +155,8 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 - **Triggers**: Daily streaks are updated/incremented when a user performs a learning activity:
   1. Studying a flashcard deck (`/api/v1/users/record-study`).
   2. Snapping and analyzing an object (`/api/v1/snap/analyze-detected`).
-- **Frontend Sync**: After a successful snap analysis, the frontend must refresh the `userStatsProvider` state via `ref.read(userStatsProvider.notifier).refresh()` to fetch the updated daily streak and coins from the backend.
+- **Frontend Sync**: After a successful snap analysis or when exiting a study/review session, the frontend must refresh `userStatsProvider` (and `flashcardProvider` to clear reviewed cards from due counts) via their respective `.notifier.refresh()` methods to keep dashboard metrics in sync.
+- **SRS Review Rescheduling**: Incorrect review answers (quality < 3 or wrong MCQ) schedule cards for immediate review on the backend (due date set to `DateTime.UtcNow`). This ensures they remain in the user's daily due queue until answered correctly.
 
 ## Verification
 

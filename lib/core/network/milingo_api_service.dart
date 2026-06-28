@@ -649,6 +649,7 @@ class MilingoApiService {
   Future<StudySessionResponse> getStudySession(
     String deckId, {
     int limit = 20,
+    String? targetLanguage,
   }) async {
     try {
       final response = await _dio.get(
@@ -656,6 +657,7 @@ class MilingoApiService {
         queryParameters: {
           'deckId': deckId,
           'limit': limit,
+          if (targetLanguage != null) 'targetLanguage': targetLanguage,
         },
       );
       return _unwrap(
@@ -667,11 +669,17 @@ class MilingoApiService {
     }
   }
 
-  Future<StudySessionResponse> getDailyStudySession({int limit = 30}) async {
+  Future<StudySessionResponse> getDailyStudySession({
+    int limit = 30,
+    String? targetLanguage,
+  }) async {
     try {
       final response = await _dio.get(
         '/api/v1/study/daily-session',
-        queryParameters: {'limit': limit},
+        queryParameters: {
+          'limit': limit,
+          if (targetLanguage != null) 'targetLanguage': targetLanguage,
+        },
       );
       return _unwrap(
         response,

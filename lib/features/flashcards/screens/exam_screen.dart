@@ -9,6 +9,7 @@ import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/shared/utils/tts_locale.dart';
 
 const _kBg = Color(0xFFFBF7F2);
@@ -124,8 +125,8 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     try {
       final api = ref.read(milingoApiServiceProvider);
       final session = _isDailySession
-          ? await api.getDailyStudySession(limit: 30)
-          : await api.getStudySession(widget.deckId, limit: 20);
+          ? await api.getDailyStudySession(limit: 30, targetLanguage: widget.langCode)
+          : await api.getStudySession(widget.deckId, limit: 20, targetLanguage: widget.langCode);
       if (!mounted) return;
       setState(() {
         _session = session;
@@ -261,7 +262,14 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   void _goToHomeScreen() {
     _closingResultDialogForReviewRoot = true;
     Navigator.of(context).pop();
-    _returnToPreviousScreen();
+
+    // Refresh states in background to update counts and coins
+    ref.read(flashcardProvider.notifier).refresh().then((_) {
+      ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
+    });
+    ref.read(userStatsProvider.notifier).refresh();
+
+    context.go(AppConstants.homeRoute);
   }
 
   void _handleResultDialogPop() {
@@ -273,6 +281,12 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   }
 
   void _returnToPreviousScreen() {
+    // Refresh states in background to update counts and coins
+    ref.read(flashcardProvider.notifier).refresh().then((_) {
+      ref.read(flashcardProvider.notifier).loadCardsForAllDecks();
+    });
+    ref.read(userStatsProvider.notifier).refresh();
+
     if (context.canPop()) {
       context.pop();
     } else {

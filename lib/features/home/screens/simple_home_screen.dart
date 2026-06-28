@@ -46,8 +46,20 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
       user?.displayName,
       user?.email,
     );
-    final totalWords =
-        flashcards.decks.fold<int>(0, (sum, deck) => sum + deck.total);
+    final targetLangBase = targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
+    final normalizedTargetLang = targetLangBase == 'jp' ? 'ja' : targetLangBase;
+
+    final totalWords = flashcards.decks.fold<int>(0, (sum, deck) {
+      if (deck.cards.isEmpty) {
+        return sum + deck.total;
+      }
+      final matchCount = deck.cards.where((card) {
+        final cardLang = card.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
+        final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
+        return normalizedCardLang == normalizedTargetLang;
+      }).length;
+      return sum + matchCount;
+    });
     final recentWords = _recentVocabulary(flashcards, targetLang);
     final dueWords = _allDueVocabulary(flashcards, targetLang);
     final featuredWord = dueWords.isNotEmpty
@@ -1248,11 +1260,14 @@ List<_RecentVocabularyItem> _recentVocabulary(
     FlashcardState state, String targetLang) {
   final items = <_RecentVocabularyItem>[];
   var index = 0;
-  final normalizedLang = targetLang.trim().toLowerCase();
+  final targetLangBase = targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
+  final normalizedTargetLang = targetLangBase == 'jp' ? 'ja' : targetLangBase;
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
-      if (entry.langCode.trim().toLowerCase() != normalizedLang) {
+      final cardLang = entry.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
+      final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
+      if (normalizedCardLang != normalizedTargetLang) {
         continue;
       }
       items.add(
@@ -1279,11 +1294,14 @@ List<_RecentVocabularyItem> _allDueVocabulary(
     FlashcardState state, String targetLang) {
   final items = <_RecentVocabularyItem>[];
   var index = 0;
-  final normalizedLang = targetLang.trim().toLowerCase();
+  final targetLangBase = targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
+  final normalizedTargetLang = targetLangBase == 'jp' ? 'ja' : targetLangBase;
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
-      if (entry.langCode.trim().toLowerCase() != normalizedLang) {
+      final cardLang = entry.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
+      final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
+      if (normalizedCardLang != normalizedTargetLang) {
         continue;
       }
       if (_isDueForReview(entry)) {
@@ -1302,12 +1320,14 @@ List<_RecentVocabularyItem> _allDueVocabulary(
 }
 
 bool _isDueForReview(FlashcardEntry entry) {
-  final nextReviewAt = DateTime.tryParse(entry.srsNextReviewAt ?? '');
-  if (nextReviewAt == null) {
-    return entry.isNewForStudy || entry.isLearning || entry.isReviewing;
+  final raw = entry.srsNextReviewAt?.trim();
+  if (raw != null && raw.isNotEmpty) {
+    final nextReview = DateTime.tryParse(raw);
+    if (nextReview != null) {
+      return !nextReview.toUtc().isAfter(DateTime.now().toUtc());
+    }
   }
-
-  return !nextReviewAt.isAfter(DateTime.now());
+  return entry.isNewForStudy || entry.isLearning || entry.isReviewing;
 }
 
 DateTime _createdAtOf(FlashcardEntry entry) {

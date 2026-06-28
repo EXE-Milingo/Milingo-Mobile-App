@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 const _kBg = Color(0xFFF6F8FB);
@@ -43,13 +44,43 @@ class _ReviewExamScreenState extends ConsumerState<ReviewExamScreen> {
 
   void _startDailyReview() {
     HapticFeedback.mediumImpact();
+
+    final profile = ref.read(userProfileProvider).valueOrNull;
+    final targetLang = (profile?.targetLanguage ?? 'en').trim().toLowerCase().split(RegExp('[-_]')).first;
+    final currentTargetCode = targetLang == 'jp' ? 'ja' : targetLang;
+
+    String langName = 'English';
+    switch (currentTargetCode) {
+      case 'ja':
+        langName = 'Japanese';
+        break;
+      case 'zh':
+        langName = 'Chinese';
+        break;
+      case 'ko':
+        langName = 'Korean';
+        break;
+      case 'fr':
+        langName = 'French';
+        break;
+      case 'de':
+        langName = 'German';
+        break;
+      case 'es':
+        langName = 'Spanish';
+        break;
+      case 'it':
+        langName = 'Italian';
+        break;
+    }
+
     context.push(
       AppConstants.examRoute,
-      extra: const {
+      extra: {
         'deckId': 'all',
         'deckName': 'Ôn tập hôm nay',
-        'langCode': 'en',
-        'langName': 'English',
+        'langCode': currentTargetCode,
+        'langName': langName,
       },
     );
   }
@@ -57,6 +88,9 @@ class _ReviewExamScreenState extends ConsumerState<ReviewExamScreen> {
   @override
   Widget build(BuildContext context) {
     final flashcards = ref.watch(flashcardProvider);
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final targetLang = (profile?.targetLanguage ?? 'en').trim().toLowerCase().split(RegExp('[-_]')).first;
+    final currentTarget = targetLang == 'jp' ? 'ja' : targetLang;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -64,14 +98,34 @@ class _ReviewExamScreenState extends ConsumerState<ReviewExamScreen> {
         backgroundColor: _kBg,
         body: SafeArea(
           child: flashcards.when(
-            data: (data) => RefreshIndicator(
-              color: _kAccent,
-              onRefresh: _reload,
-              child: _ReviewContent(
-                decks: data.decks,
-                onStart: _startDailyReview,
-              ),
-            ),
+            data: (data) {
+              // Filter decks and cards by target language code in-memory
+              final filteredDecks = data.decks.map((deck) {
+                final filteredCards = deck.cards.where((card) {
+                  final cardLang = card.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
+                  final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
+                  return normalizedCardLang == currentTarget;
+                }).toList();
+                return DeckData(
+                  id: deck.id,
+                  name: deck.name,
+                  emoji: deck.emoji,
+                  cards: filteredCards,
+                  vocabCount: filteredCards.length,
+                  isDefault: deck.isDefault,
+                  isFavorite: deck.isFavorite,
+                );
+              }).where((deck) => deck.total > 0).toList();
+
+              return RefreshIndicator(
+                color: _kAccent,
+                onRefresh: _reload,
+                child: _ReviewContent(
+                  decks: filteredDecks,
+                  onStart: _startDailyReview,
+                ),
+              );
+            },
             loading: () => const _ReviewLoading(),
             error: (error, _) => _ReviewError(
               message: error.toString(),
@@ -730,13 +784,12 @@ int _deckDueCount(DeckData deck) {
 }
 
 bool _isDueForReview(FlashcardEntry card) {
-  if (card.isNewForStudy) return true;
-
   final raw = card.srsNextReviewAt?.trim();
-  if (raw == null || raw.isEmpty) return true;
-
-  final nextReview = DateTime.tryParse(raw);
-  if (nextReview == null) return true;
-
-  return !nextReview.toUtc().isAfter(DateTime.now().toUtc());
+  if (raw != null && raw.isNotEmpty) {
+    final nextReview = DateTime.tryParse(raw);
+    if (nextReview != null) {
+      return !nextReview.toUtc().isAfter(DateTime.now().toUtc());
+    }
+  }
+  return card.isNewForStudy || card.isLearning || card.isReviewing;
 }
