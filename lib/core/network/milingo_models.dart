@@ -987,3 +987,57 @@ class PaymentTransactionResponse {
         normalized == 'COMPLETED';
   }
 }
+
+// ── Leaderboard / Ranking ──────────────────────────────────
+
+class LeaderboardUser {
+  const LeaderboardUser({
+    required this.id,
+    required this.displayName,
+    required this.totalPoints,
+    required this.rank,
+    this.photoUrl,
+  });
+
+  factory LeaderboardUser.fromJson(Map<String, dynamic> json) {
+    return LeaderboardUser(
+      id: (json['id'] ?? '').toString(),
+      displayName: (json['displayName'] ?? '').toString(),
+      photoUrl: json['photoUrl'] as String?,
+      totalPoints: (json['totalPoints'] as num?)?.toInt() ?? 0,
+      rank: (json['rank'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final String id;
+  final String displayName;
+  final String? photoUrl;
+  final int totalPoints;
+  final int rank;
+}
+
+class LeaderboardResponse {
+  const LeaderboardResponse({
+    required this.users,
+    this.currentUser,
+  });
+
+  factory LeaderboardResponse.fromJson(Map<String, dynamic> json) {
+    final rawUsers = json['users'] as List<dynamic>?;
+    final rawCurrentUser = json['currentUser'] as Map<String, dynamic>?;
+
+    return LeaderboardResponse(
+      users: rawUsers
+              ?.whereType<Map>()
+              .map((e) => LeaderboardUser.fromJson(Map<String, dynamic>.from(e)))
+              .toList() ??
+          [],
+      currentUser: rawCurrentUser != null
+          ? LeaderboardUser.fromJson(rawCurrentUser)
+          : null,
+    );
+  }
+
+  final List<LeaderboardUser> users;
+  final LeaderboardUser? currentUser;
+}

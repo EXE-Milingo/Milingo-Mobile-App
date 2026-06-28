@@ -274,6 +274,24 @@ class MilingoApiService {
     }
   }
 
+  Future<LeaderboardResponse> getLeaderboard({int limit = 5, int offset = 0}) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/users/leaderboard',
+        queryParameters: {
+          'limit': limit,
+          'offset': offset,
+        },
+      );
+      return _unwrap(
+        response,
+        (data) => LeaderboardResponse.fromJson(data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
   Future<List<SubscriptionPlanResponse>> getSubscriptionPlans() async {
     try {
       final response = await _dio.get('/api/v1/payments/plans');

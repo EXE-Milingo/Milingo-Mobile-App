@@ -53,7 +53,10 @@ lib/
 |   |   `-- widgets/vocab_card.dart
 |   |-- gamification/providers/user_stats_provider.dart
 |   |-- home/screens/simple_home_screen.dart
-|   |-- leaderboard/screens/leaderboard_screen.dart
+|   |-- leaderboard/
+|   |   |-- providers/leaderboard_provider.dart
+|   |   |-- screens/exam_screen.dart
+|   |   `-- screens/leaderboard_screen.dart
 |   |-- premium/
 |   |   |-- providers/subscription_provider.dart
 |   |   |-- screens/payment_method_screen.dart

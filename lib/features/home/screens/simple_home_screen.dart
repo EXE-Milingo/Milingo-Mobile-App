@@ -8,6 +8,8 @@ import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
 import 'package:milingo/features/gamification/providers/user_stats_provider.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
+import 'package:milingo/features/leaderboard/providers/leaderboard_provider.dart';
+import 'package:milingo/core/network/milingo_models.dart';
 import 'package:milingo/shared/widgets/app_bottom_nav_bar.dart';
 
 class SimpleHomeScreen extends ConsumerStatefulWidget {
@@ -41,6 +43,7 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
     final targetLang = profile?.targetLanguage ?? 'en';
     final stats = ref.watch(userStatsValueProvider);
     final flashcards = ref.watch(flashcardStateProvider);
+    final topThreeAsync = ref.watch(topThreeLeaderboardProvider);
     final name = _displayNameFor(
       profile?.displayName,
       user?.displayName,
@@ -120,7 +123,23 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
                     onAction: () => context.push(AppConstants.leaderboardRoute),
                   ),
                   const SizedBox(height: 12),
-                  const _LeaderboardEmptyCard(),
+                  topThreeAsync.when(
+                    data: (users) {
+                      if (users.isEmpty) {
+                        return const _LeaderboardEmptyCard();
+                      }
+                      return _LeaderboardPodiumSection(users: users);
+                    },
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(
+                          color: _HomeColors.orange,
+                        ),
+                      ),
+                    ),
+                    error: (_, __) => const _LeaderboardEmptyCard(),
+                  ),
                 ],
               ),
             ),
@@ -1346,4 +1365,193 @@ class _HomeColors {
   static const secondaryText = Color(0xFF64748B);
   static const mutedText = Color(0xFF9AA0AB);
   static const orange = Color(0xFFFF6A00);
+}
+
+class _LeaderboardPodiumSection extends StatelessWidget {
+  const _LeaderboardPodiumSection({required this.users});
+
+  final List<LeaderboardUser> users;
+
+  @override
+  Widget build(BuildContext context) {
+    // Sort just in case (highest first)
+    final gold = users.isNotEmpty ? users[0] : null;
+    final silver = users.length > 1 ? users[1] : null;
+    final bronze = users.length > 2 ? users[2] : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // 2nd Place (Silver) - Render on Left
+          if (silver != null)
+            Expanded(child: _PodiumItem(user: silver, rank: 2))
+          else
+            const Expanded(child: SizedBox()),
+
+          // 1st Place (Gold) - Render in Middle
+          if (gold != null)
+            Expanded(child: _PodiumItem(user: gold, rank: 1))
+          else
+            const Expanded(child: SizedBox()),
+
+          // 3rd Place (Bronze) - Render on Right
+          if (bronze != null)
+            Expanded(child: _PodiumItem(user: bronze, rank: 3))
+          else
+            const Expanded(child: SizedBox()),
+        ],
+      ),
+    );
+  }
+}
+
+class _PodiumItem extends StatelessWidget {
+  const _PodiumItem({
+    required this.user,
+    required this.rank,
+  });
+
+  final LeaderboardUser user;
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarName = user.displayName;
+    final pointsText = _formatNumber(user.totalPoints);
+
+    final isTop1 = rank == 1;
+    final double width = isTop1 ? 90.0 : 70.0;
+    final double height = isTop1 ? 120.0 : 75.6;
+    final double avatarSize = isTop1 ? 76.0 : 58.0;
+    final double avatarLeft = isTop1 ? 7.0 : 6.0;
+    final double avatarTop = isTop1 ? 31.0 : 6.0;
+
+    final svgPath = 'assets/svg/ranking/top$rank.svg';
+
+    Widget avatarWidget;
+    final photoUrl = user.photoUrl;
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      if (photoUrl.runes.length <= 2 && photoUrl.runes.first > 127) {
+        // Emoji avatar
+        avatarWidget = Center(
+          child: Text(
+            photoUrl,
+            style: TextStyle(fontSize: isTop1 ? 36 : 28),
+          ),
+        );
+      } else {
+        // Network avatar image
+        avatarWidget = Image.network(
+          photoUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _AvatarFallbackText(name: avatarName, isTop1: isTop1),
+        );
+      }
+    } else {
+      avatarWidget = _AvatarFallbackText(name: avatarName, isTop1: isTop1);
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            children: [
+              // Avatar
+              Positioned(
+                left: avatarLeft,
+                top: avatarTop,
+                width: avatarSize,
+                height: avatarSize,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFF6F7FB),
+                  ),
+                  child: ClipOval(
+                    child: avatarWidget,
+                  ),
+                ),
+              ),
+              // SVG Ring
+              Positioned.fill(
+                child: SvgPicture.asset(
+                  svgPath,
+                  fit: BoxFit.fill,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          avatarName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFF1F2430),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '$pointsText XP',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFFFF8A1F),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AvatarFallbackText extends StatelessWidget {
+  const _AvatarFallbackText({
+    required this.name,
+    required this.isTop1,
+  });
+
+  final String name;
+  final bool isTop1;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty ? 'M' : name.trim()[0].toUpperCase();
+    return Container(
+      color: const Color(0xFFFFE2CC),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: const Color(0xFFFF6A00),
+          fontSize: isTop1 ? 24 : 20,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
 }

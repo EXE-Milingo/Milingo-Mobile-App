@@ -21,7 +21,7 @@ class AppBottomNavBar extends StatelessWidget {
 
     switch (index) {
       case 0:
-        context.push(AppConstants.homeRoute);
+        context.go(AppConstants.homeRoute);
         return;
       case 1:
         ScaffoldMessenger.of(context).clearSnackBars();
@@ -36,10 +36,10 @@ class AppBottomNavBar extends StatelessWidget {
         context.push(AppConstants.snapAndLearnRoute);
         return;
       case 3:
-        context.push(AppConstants.flashcardsRoute);
+        context.go(AppConstants.flashcardsRoute);
         return;
       case 4:
-        context.push(AppConstants.profileRoute);
+        context.go(AppConstants.profileRoute);
         return;
     }
   }

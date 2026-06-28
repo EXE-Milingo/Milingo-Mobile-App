@@ -78,6 +78,7 @@ flutter:
     - assets/svg/flag/
     - assets/svg/new-profile/
     - assets/svg/return-result-new/
+    - assets/svg/ranking/
     - .env
 
   # Fonts
