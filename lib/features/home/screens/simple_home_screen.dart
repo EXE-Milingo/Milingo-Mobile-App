@@ -98,6 +98,7 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
                     onScan: () => context.push(AppConstants.snapAndLearnRoute),
                     onFlashcards: () =>
                         context.push(AppConstants.flashcardsRoute),
+                    onAiTutor: () => context.push(AppConstants.aiTutorRoute),
                   ),
                   const SizedBox(height: 27),
                   _SectionHeader(
@@ -503,11 +504,13 @@ class _QuickActionsGrid extends StatelessWidget {
     required this.onReview,
     required this.onScan,
     required this.onFlashcards,
+    required this.onAiTutor,
   });
 
   final VoidCallback onReview;
   final VoidCallback onScan;
   final VoidCallback onFlashcards;
+  final VoidCallback onAiTutor;
 
   @override
   Widget build(BuildContext context) {
@@ -530,6 +533,7 @@ class _QuickActionsGrid extends StatelessWidget {
               label: 'AI Tutor',
               assetPath: 'assets/svg/new-ai-tutor.svg',
               colors: const [Color(0xFFF0EAFF), Color(0xFFE2D6FF)],
+              onTap: onAiTutor,
             ),
             _QuickActionTile(
               width: itemWidth,

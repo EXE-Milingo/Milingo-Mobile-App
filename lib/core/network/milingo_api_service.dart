@@ -773,7 +773,60 @@ class MilingoApiService {
       throw MilingoApiException(_userFriendlyError(e));
     }
   }
+
+  // ── AI Tutor ────────────────────────────────────────────
+
+  /// Sends a chat message to the AI Tutor and returns the reply/quota info.
+  ///
+  /// [message] — the user's latest message.
+  /// [history] — previous turns as `[{'role': 'user'|'assistant', 'content': '...'}]`.
+  /// [targetLanguage] — BCP-47 code (e.g. 'en', 'ja').
+  /// [cefrLevel] — student's CEFR level (e.g. 'A1', 'B2').
+  Future<ChatResponseInfo> sendChatMessage({
+    required String message,
+    required List<Map<String, dynamic>> history,
+    required String targetLanguage,
+    required String cefrLevel,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/v1/ai-tutor/chat',
+        data: {
+          'message': message,
+          'history': history,
+          'targetLanguage': targetLanguage,
+          'cefrLevel': cefrLevel,
+        },
+      );
+      return _unwrap(response, (data) {
+        final map = data as Map<String, dynamic>?;
+        if (map == null) {
+          throw const MilingoApiException('Phản hồi không hợp lệ từ AI Tutor.');
+        }
+        return ChatResponseInfo.fromJson(map);
+      });
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  /// Gets the current daily AI Tutor quota status for the user.
+  Future<ChatQuotaInfo> getChatQuotaStatus() async {
+    try {
+      final response = await _dio.get('/api/v1/ai-tutor/quota');
+      return _unwrap(response, (data) {
+        final map = data as Map<String, dynamic>?;
+        if (map == null) {
+          throw const MilingoApiException('Phản hồi không hợp lệ từ máy chủ.');
+        }
+        return ChatQuotaInfo.fromJson(map);
+      });
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
 }
+
 
 // ─────────────────────────────────────────────────────────
 // Riverpod Provider

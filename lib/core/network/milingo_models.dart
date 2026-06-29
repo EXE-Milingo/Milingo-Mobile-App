@@ -1041,3 +1041,57 @@ class LeaderboardResponse {
   final List<LeaderboardUser> users;
   final LeaderboardUser? currentUser;
 }
+
+// ─────────────────────────────────────────────────────────
+//  AI Tutor Chat Quota and Response Models
+// ─────────────────────────────────────────────────────────
+
+class ChatQuotaInfo {
+  const ChatQuotaInfo({
+    required this.isPremium,
+    required this.freeLimit,
+    required this.usedToday,
+    required this.remainingToday,
+    required this.isLimitReached,
+  });
+
+  factory ChatQuotaInfo.fromJson(Map<String, dynamic> json) {
+    return ChatQuotaInfo(
+      isPremium: json['isPremium'] as bool? ?? false,
+      freeLimit: (json['freeLimit'] as num?)?.toInt() ?? 20,
+      usedToday: (json['usedToday'] as num?)?.toInt() ?? 0,
+      remainingToday: (json['remainingToday'] as num?)?.toInt() ?? 0,
+      isLimitReached: json['isLimitReached'] as bool? ?? false,
+    );
+  }
+
+  final bool isPremium;
+  final int freeLimit;
+  final int usedToday;
+  final int remainingToday;
+  final bool isLimitReached;
+}
+
+class ChatResponseInfo {
+  const ChatResponseInfo({
+    required this.reply,
+    required this.role,
+    this.quota,
+  });
+
+  factory ChatResponseInfo.fromJson(Map<String, dynamic> json) {
+    final rawQuota = json['quota'];
+    return ChatResponseInfo(
+      reply: json['reply'] as String? ?? '',
+      role: json['role'] as String? ?? 'assistant',
+      quota: rawQuota != null && rawQuota is Map
+          ? ChatQuotaInfo.fromJson(Map<String, dynamic>.from(rawQuota))
+          : null,
+    );
+  }
+
+  final String reply;
+  final String role;
+  final ChatQuotaInfo? quota;
+}
+

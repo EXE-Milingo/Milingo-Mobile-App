@@ -30,6 +30,14 @@ lib/
 |   |   `-- app_router.g.dart
 |   `-- theme/app_theme.dart
 |-- features/
+|   |-- ai_tutor/
+|   |   |-- models/chat_message_model.dart
+|   |   |-- providers/chat_provider.dart
+|   |   |-- screens/ai_tutor_screen.dart
+|   |   `-- widgets/
+|   |       |-- chat_bubble.dart
+|   |       |-- chat_input_bar.dart
+|   |       `-- suggestion_chips.dart
 |   |-- auth/
 |   |   |-- models/user_model.dart
 |   |   |-- providers/auth_provider.dart
@@ -160,6 +168,13 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
   2. Snapping and analyzing an object (`/api/v1/snap/analyze-detected`).
 - **Frontend Sync**: After a successful snap analysis or when exiting a study/review session, the frontend must refresh `userStatsProvider` (and `flashcardProvider` to clear reviewed cards from due counts) via their respective `.notifier.refresh()` methods to keep dashboard metrics in sync.
 - **SRS Review Rescheduling**: Incorrect review answers (quality < 3 or wrong MCQ) schedule cards for immediate review on the backend (due date set to `DateTime.UtcNow`). This ensures they remain in the user's daily due queue until answered correctly.
+
+## AI Tutor Integration Rules
+
+- **Access Policy**: AI Tutor is a premium feature. Free tier users are capped at 20 free daily messages (calculated using Vietnam Local Time UTC+7 calendar boundaries). Premium users have unlimited messages.
+- **Session-Only History**: Chat history is kept in memory only (`Option A`). The state provider (`chatProvider`) uses `.autoDispose` to ensure that when the user leaves the screen, the history is deleted completely, and resources are freed.
+- **Backend Routing**: For security and API key protection, the mobile application does not invoke OpenAI directly. It must call the backend `Milingo` endpoints (`/api/v1/ai-tutor/chat` and `/api/v1/ai-tutor/quota`).
+- **Quota Exceeded (HTTP 402)**: When the 20 daily free message limit is exceeded, the backend returns a `402 Payment Required` status code. The frontend handles this by disabling the text field and send button, displaying a message in the input bar, and showing a Premium Upgrade dialog directing the user to `/premium`.
 
 ## Verification
 

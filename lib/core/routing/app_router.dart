@@ -14,6 +14,7 @@ import 'package:milingo/features/flashcards/screens/exam_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcard_study_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
 import 'package:milingo/features/flashcards/screens/vocab_detail_screen.dart';
+import 'package:milingo/features/ai_tutor/screens/ai_tutor_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/leaderboard/screens/leaderboard_screen.dart';
 import 'package:milingo/features/premium/screens/payment_method_screen.dart';
@@ -267,6 +268,11 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.leaderboardRoute,
         name: 'leaderboard',
         builder: (context, state) => const LeaderboardScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.aiTutorRoute,
+        name: 'ai-tutor',
+        builder: (context, state) => const AiTutorScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
