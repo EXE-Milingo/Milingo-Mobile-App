@@ -234,7 +234,7 @@ class _AiTutorHeader extends ConsumerWidget {
             children: [
               // Back button
               _HeaderButton(
-                onTap: () => Navigator.of(context).maybePop(),
+                onTap: () => context.go(AppConstants.homeRoute),
                 child: const Icon(
                   Icons.arrow_back_ios_new_rounded,
                   size: 18,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 // ─────────────────────────────────────────────────────────
 //  Chat Input Bar — Pill-shaped, frosted glass style
@@ -71,24 +72,23 @@ class _ChatInputBarState extends State<ChatInputBar> {
           color: widget.isLimitReached ? Colors.grey.shade100 : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: widget.isLimitReached ? Colors.grey.shade300 : _kBorderColor,
+            color: widget.isLimitReached ? Colors.grey.shade300 : Colors.transparent,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1D1814).withValues(alpha: 0.10),
-              blurRadius: 24,
-              spreadRadius: -8,
+              color: const Color(0xFF1D1814).withValues(alpha: 0.08),
+              blurRadius: 20,
               offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Text field
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 4, 8, 4),
+                padding: const EdgeInsets.fromLTRB(20, 4, 8, 4),
                 child: TextField(
                   controller: _controller,
                   enabled: isEnabled,
@@ -106,16 +106,20 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   decoration: InputDecoration(
                     hintText: widget.isLimitReached
                         ? 'Đã hết lượt nhắn tin miễn phí.'
-                        : 'Hỏi AI Tutor điều gì đó...',
+                        : 'Nhập tin nhắn...',
                     hintStyle: TextStyle(
                       color: widget.isLimitReached ? Colors.grey.shade400 : _kHintText,
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
                     ),
+                    filled: false,
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
                     counterText: '', // hide character counter
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   onSubmitted: (_) => _submit(),
                 ),
@@ -124,39 +128,59 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
             // Send button
             Padding(
-              padding: const EdgeInsets.all(5),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: _hasText && isEnabled
-                      ? _kSendActive
-                      : _kSendInactive,
-                  shape: BoxShape.circle,
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: (_hasText && isEnabled) ? _submit : null,
-                    child: widget.isLoading
-                        ? const Padding(
-                            padding: EdgeInsets.all(11),
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.arrow_upward_rounded,
-                            color: Colors.white,
-                            size: 20,
+              padding: const EdgeInsets.only(right: 8),
+              child: widget.isLoading
+                  ? const SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFFF8A1F), Color(0xFFFF6A00)],
                           ),
-                  ),
-                ),
-              ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFFFF6A00),
+                              blurRadius: 12,
+                              offset: Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        ),
+                      ),
+                    )
+                  : GestureDetector(
+                      onTap: (_hasText && isEnabled) ? _submit : null,
+                      child: Opacity(
+                        opacity: (_hasText && isEnabled) ? 1.0 : 0.5,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Transform.translate(
+                            offset: const Offset(0.0, 6.05),
+                            child: OverflowBox(
+                              minWidth: 79.2,
+                              maxWidth: 79.2,
+                              minHeight: 73.7,
+                              maxHeight: 73.7,
+                              child: SvgPicture.asset(
+                                'assets/svg/send-message.svg',
+                                fit: BoxFit.fill,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),

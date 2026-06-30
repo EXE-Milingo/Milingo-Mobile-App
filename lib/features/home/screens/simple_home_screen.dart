@@ -1441,9 +1441,9 @@ class _PodiumItem extends StatelessWidget {
     final isTop1 = rank == 1;
     final double width = isTop1 ? 90.0 : 70.0;
     final double height = isTop1 ? 120.0 : 75.6;
-    final double avatarSize = isTop1 ? 76.0 : 58.0;
-    final double avatarLeft = isTop1 ? 7.0 : 6.0;
-    final double avatarTop = isTop1 ? 31.0 : 6.0;
+    final double avatarSize = isTop1 ? 80.0 : 62.0;
+    final double avatarLeft = isTop1 ? 5.0 : 4.0;
+    final double avatarTop = isTop1 ? 27.0 : 4.0;
 
     final svgPath = 'assets/svg/ranking/top$rank.svg';
 

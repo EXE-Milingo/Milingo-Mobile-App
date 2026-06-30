@@ -109,6 +109,7 @@ lib/
 - Preserve existing patterns (Riverpod state management, GoRouter routing, Dio-based networking) unless a change is justified.
 - Add or update tests when behavior changes.
 - On Windows, use PowerShell syntax.
+- **UI & Asset Guidelines**: Ensure vector assets (like ranking SVGs in `assets/svg/ranking/`) intended to overlay other widgets (like user avatars in a `Stack`) use `fill="none"` inside their main circle paths. This ensures the background layer (e.g. user images, initials) is visible under the ring frame.
 
 ## Navigation & Routing Rules
 
