@@ -92,7 +92,8 @@ class UserModel {
 
     // Compare calendar dates (midnight of each day)
     final today = DateTime(now.year, now.month, now.day);
-    final lastActiveDay = DateTime(lastActive.year, lastActive.month, lastActive.day);
+    final lastActiveDay =
+        DateTime(lastActive.year, lastActive.month, lastActive.day);
 
     // Update if last active day was before today
     return lastActiveDay.isBefore(today);
@@ -106,7 +107,8 @@ class UserModel {
 
     // Compare calendar dates (midnight of each day)
     final today = DateTime(now.year, now.month, now.day);
-    final lastActiveDay = DateTime(lastActive.year, lastActive.month, lastActive.day);
+    final lastActiveDay =
+        DateTime(lastActive.year, lastActive.month, lastActive.day);
 
     // Reset if the last active day was before yesterday (meaning they missed yesterday entirely)
     final yesterday = today.subtract(const Duration(days: 1));

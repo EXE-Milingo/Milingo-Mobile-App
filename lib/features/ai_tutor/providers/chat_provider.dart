@@ -58,8 +58,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       messages: [
         ChatMessageModel(
           role: ChatRole.assistant,
-          content:
-              'Xin chào! Tôi là AI Tutor của MiLingo 👋\n\n'
+          content: 'Xin chào! Tôi là AI Tutor của MiLingo 👋\n\n'
               'Tôi có thể giúp bạn về ngữ pháp, từ vựng, phát âm và các mẹo học $langName. '
               'Hỏi tôi bất cứ điều gì về $langName nhé!',
           timestamp: DateTime.now(),
@@ -86,7 +85,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     // Pre-check if quota was already exceeded
     if (state.quota != null && state.quota!.isLimitReached) {
       state = state.copyWith(
-        error: 'Bạn đã dùng hết ${state.quota!.freeLimit} tin nhắn miễn phí hôm nay. '
+        error:
+            'Bạn đã dùng hết ${state.quota!.freeLimit} tin nhắn miễn phí hôm nay. '
             'Nâng cấp lên Premium để nhắn không giới hạn!',
       );
       return;
@@ -167,7 +167,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// Clears conversation history and shows the welcome message again.
   void clearHistory() {
-    state = const ChatState(quota: null); // Keep/reset quota on close/reopen, but provider autoDisposes anyway
+    state = const ChatState(
+        quota:
+            null); // Keep/reset quota on close/reopen, but provider autoDisposes anyway
     _addWelcomeMessage();
     loadQuota();
   }

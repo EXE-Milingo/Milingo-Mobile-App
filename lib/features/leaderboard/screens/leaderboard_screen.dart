@@ -25,7 +25,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          onRefresh: () => ref.read(leaderboardNotifierProvider.notifier).refresh(),
+          onRefresh: () =>
+              ref.read(leaderboardNotifierProvider.notifier).refresh(),
           color: const Color(0xFFFF6A00),
           child: CustomScrollView(
             slivers: [
@@ -47,7 +48,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                           child: const SizedBox(
                             width: 44,
                             height: 44,
-                            child: Icon(Icons.arrow_back_rounded, color: Color(0xFF1D1814), size: 21),
+                            child: Icon(Icons.arrow_back_rounded,
+                                color: Color(0xFF1D1814), size: 21),
                           ),
                         ),
                       ),
@@ -67,7 +69,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                           Text(
                             'Thi đua cùng cộng đồng Milingo',
                             style: TextStyle(
-                              color: const Color(0xFF1D1814).withValues(alpha: 0.6),
+                              color: const Color(0xFF1D1814)
+                                  .withValues(alpha: 0.6),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -94,7 +97,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   final bronze = users.length > 2 ? users[2] : null;
 
                   // Remaining users starting from rank 4
-                  final listUsers = users.length > 3 ? users.sublist(3) : <LeaderboardUser>[];
+                  final listUsers =
+                      users.length > 3 ? users.sublist(3) : <LeaderboardUser>[];
 
                   return SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
@@ -134,7 +138,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _RankRow(
                                 user: user,
-                                isMe: currentUser != null && user.id == currentUser.id,
+                                isMe: currentUser != null &&
+                                    user.id == currentUser.id,
                               ),
                             )),
 
@@ -156,12 +161,15 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                 width: double.infinity,
                                 child: OutlinedButton(
                                   onPressed: () => ref
-                                      .read(leaderboardNotifierProvider.notifier)
+                                      .read(
+                                          leaderboardNotifierProvider.notifier)
                                       .loadMore(),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFFFF6A00),
-                                    side: const BorderSide(color: Color(0xFFFF6A00)),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: const BorderSide(
+                                        color: Color(0xFFFF6A00)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -193,17 +201,20 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 48),
+                          const Icon(Icons.error_outline_rounded,
+                              color: Colors.red, size: 48),
                           const SizedBox(height: 12),
                           const Text(
                             'Không thể tải bảng xếp hạng.',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             err.toString(),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
@@ -244,7 +255,7 @@ class _UserRankProgressCard extends StatelessWidget {
     // Logic to determine level or promotion threshold
     // Let's compute progress dynamically
     final points = user.totalPoints;
-    
+
     // Find next rank milestone: e.g. next multiple of 1000 XP
     final nextMilestone = ((points / 1000).floor() + 1) * 1000;
     final xpNeeded = nextMilestone - points;
@@ -291,7 +302,8 @@ class _UserRankProgressCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(999),
@@ -360,7 +372,8 @@ class _UserRankProgressCard extends StatelessWidget {
                     value: progress,
                     minHeight: 8,
                     backgroundColor: Colors.black.withValues(alpha: 0.20),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
               ],
@@ -467,7 +480,8 @@ class _ScreenPodiumSpot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarName = user.displayName;
-    final pointsText = NumberFormat.decimalPattern('vi_VN').format(user.totalPoints);
+    final pointsText =
+        NumberFormat.decimalPattern('vi_VN').format(user.totalPoints);
 
     final isTop1 = rank == 1;
     final double width = isTop1 ? 90.0 : 70.0;
@@ -494,7 +508,8 @@ class _ScreenPodiumSpot extends StatelessWidget {
         avatarWidget = Image.network(
           photoUrl,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _ScreenAvatarFallback(name: avatarName, isTop1: isTop1),
+          errorBuilder: (_, __, ___) =>
+              _ScreenAvatarFallback(name: avatarName, isTop1: isTop1),
         );
       }
     } else {
@@ -629,7 +644,8 @@ class _RankRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarName = isMe ? 'Bạn' : user.displayName;
-    final pointsText = NumberFormat.decimalPattern('vi_VN').format(user.totalPoints);
+    final pointsText =
+        NumberFormat.decimalPattern('vi_VN').format(user.totalPoints);
 
     // Static/Deterministic trend for aesthetic completeness (matching Figma design)
     String trendText = '●';
@@ -668,8 +684,11 @@ class _RankRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isMe ? const Color(0xFFFFECE0) : Colors.white.withValues(alpha: 0.85),
-        border: Border.all(color: isMe ? const Color(0xFFFF8A1F) : Colors.white),
+        color: isMe
+            ? const Color(0xFFFFECE0)
+            : Colors.white.withValues(alpha: 0.85),
+        border:
+            Border.all(color: isMe ? const Color(0xFFFF8A1F) : Colors.white),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           if (isMe)

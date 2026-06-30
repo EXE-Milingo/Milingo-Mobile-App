@@ -65,6 +65,7 @@ class AppConstants {
   static const String examRoute = '/flashcards/exam';
   static const String profileRoute = '/profile';
   static const String aboutRoute = '/profile/about';
+  static const String supportRoute = '/profile/support';
   static const String premiumRoute = '/premium';
   static const String paymentMethodRoute = '/premium/payment-method';
   static const String termsOfServiceRoute = '/terms-of-service';

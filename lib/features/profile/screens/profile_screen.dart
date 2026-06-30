@@ -30,9 +30,8 @@ class ProfileScreen extends ConsumerWidget {
         flashcards.decks.fold<int>(0, (sum, deck) => sum + deck.total);
 
     final isPremium = profile?.isPremium ?? false;
-    final subscriptionAsync = isPremium
-        ? ref.watch(subscriptionOverviewProvider)
-        : null;
+    final subscriptionAsync =
+        isPremium ? ref.watch(subscriptionOverviewProvider) : null;
     final subscription = subscriptionAsync?.valueOrNull;
 
     final data = ProfileViewData(
@@ -119,9 +118,10 @@ class ProfileScreen extends ConsumerWidget {
         assetPath: 'assets/svg/new-profile/language.svg',
         onTap: () => _openLanguageSettings(context),
       ),
-      const ProfileSettingsItemData(
+      ProfileSettingsItemData(
         label: 'Hỗ trợ',
         assetPath: 'assets/svg/new-profile/support.svg',
+        onTap: () => context.push(AppConstants.supportRoute),
       ),
       ProfileSettingsItemData(
         label: 'About',

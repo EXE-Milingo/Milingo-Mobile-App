@@ -1029,7 +1029,8 @@ class LeaderboardResponse {
     return LeaderboardResponse(
       users: rawUsers
               ?.whereType<Map>()
-              .map((e) => LeaderboardUser.fromJson(Map<String, dynamic>.from(e)))
+              .map(
+                  (e) => LeaderboardUser.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           [],
       currentUser: rawCurrentUser != null
@@ -1094,4 +1095,3 @@ class ChatResponseInfo {
   final String role;
   final ChatQuotaInfo? quota;
 }
-

@@ -21,12 +21,31 @@ class SuggestionChips extends StatelessWidget {
   List<_Chip> _chips() {
     final langName = _languageDisplayName(targetLanguage);
     return [
-      _Chip(emoji: '📖', label: 'Ngữ pháp cơ bản', prompt: 'Giải thích cho tôi ngữ pháp cơ bản trong $langName.'),
-      _Chip(emoji: '🔤', label: 'Từ vựng thường dùng', prompt: 'Liệt kê 10 từ vựng thông dụng nhất trong $langName kèm nghĩa.'),
-      _Chip(emoji: '🗣️', label: 'Phát âm', prompt: 'Hướng dẫn tôi cách phát âm chuẩn trong $langName.'),
-      _Chip(emoji: '✍️', label: 'Câu ví dụ', prompt: 'Tạo 3 câu ví dụ đơn giản trong $langName với giải thích.'),
-      _Chip(emoji: '🎯', label: 'Mẹo học', prompt: 'Cho tôi các mẹo học $langName hiệu quả nhất.'),
-      _Chip(emoji: '❓', label: 'So sánh từ', prompt: 'Giải thích sự khác biệt giữa hai từ trong $langName.'),
+      _Chip(
+          emoji: '📖',
+          label: 'Ngữ pháp cơ bản',
+          prompt: 'Giải thích cho tôi ngữ pháp cơ bản trong $langName.'),
+      _Chip(
+          emoji: '🔤',
+          label: 'Từ vựng thường dùng',
+          prompt:
+              'Liệt kê 10 từ vựng thông dụng nhất trong $langName kèm nghĩa.'),
+      _Chip(
+          emoji: '🗣️',
+          label: 'Phát âm',
+          prompt: 'Hướng dẫn tôi cách phát âm chuẩn trong $langName.'),
+      _Chip(
+          emoji: '✍️',
+          label: 'Câu ví dụ',
+          prompt: 'Tạo 3 câu ví dụ đơn giản trong $langName với giải thích.'),
+      _Chip(
+          emoji: '🎯',
+          label: 'Mẹo học',
+          prompt: 'Cho tôi các mẹo học $langName hiệu quả nhất.'),
+      _Chip(
+          emoji: '❓',
+          label: 'So sánh từ',
+          prompt: 'Giải thích sự khác biệt giữa hai từ trong $langName.'),
     ];
   }
 

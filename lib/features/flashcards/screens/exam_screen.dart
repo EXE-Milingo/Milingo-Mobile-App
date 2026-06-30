@@ -125,8 +125,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     try {
       final api = ref.read(milingoApiServiceProvider);
       final session = _isDailySession
-          ? await api.getDailyStudySession(limit: 30, targetLanguage: widget.langCode)
-          : await api.getStudySession(widget.deckId, limit: 20, targetLanguage: widget.langCode);
+          ? await api.getDailyStudySession(
+              limit: 30, targetLanguage: widget.langCode)
+          : await api.getStudySession(widget.deckId,
+              limit: 20, targetLanguage: widget.langCode);
       if (!mounted) return;
       setState(() {
         _session = session;

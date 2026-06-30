@@ -274,7 +274,8 @@ class MilingoApiService {
     }
   }
 
-  Future<LeaderboardResponse> getLeaderboard({int limit = 5, int offset = 0}) async {
+  Future<LeaderboardResponse> getLeaderboard(
+      {int limit = 5, int offset = 0}) async {
     try {
       final response = await _dio.get(
         '/api/v1/users/leaderboard',
@@ -348,7 +349,8 @@ class MilingoApiService {
 
   Future<bool> verifyPayOSOrder(int orderCode) async {
     try {
-      final response = await _dio.post('/api/v1/payments/payos/verify-order/$orderCode');
+      final response =
+          await _dio.post('/api/v1/payments/payos/verify-order/$orderCode');
       return _unwrap(
         response,
         (_) => true,
@@ -826,7 +828,6 @@ class MilingoApiService {
     }
   }
 }
-
 
 // ─────────────────────────────────────────────────────────
 // Riverpod Provider

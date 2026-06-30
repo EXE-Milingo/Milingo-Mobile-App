@@ -442,7 +442,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                           width: double.infinity,
                           child: Stack(
                             children: [
-                              ..._buildObjectHaloBubbles(snap, result, objectHeight),
+                              ..._buildObjectHaloBubbles(
+                                  snap, result, objectHeight),
                               Positioned(
                                 bottom: 16,
                                 left: 0,
@@ -644,9 +645,11 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     required bool isGradient,
     required VoidCallback onTap,
   }) {
-    final labelColor = isGradient ? const Color(0xFFFF6A00) : const Color(0xFF9A8E84);
-    final isLargeSvg = iconPath.contains('save-icon') || iconPath.contains('example-sentence-icon');
-    
+    final labelColor =
+        isGradient ? const Color(0xFFFF6A00) : const Color(0xFF9A8E84);
+    final isLargeSvg = iconPath.contains('save-icon') ||
+        iconPath.contains('example-sentence-icon');
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -679,7 +682,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     );
   }
 
-  Widget _buildAiSuggestedSentencesSection(MilingoResult result, String langCode) {
+  Widget _buildAiSuggestedSentencesSection(
+      MilingoResult result, String langCode) {
     final example = _examplePairForResult(result);
     if (example.original.isEmpty && example.translation.isEmpty) {
       return const SizedBox.shrink();

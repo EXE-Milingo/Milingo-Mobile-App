@@ -142,7 +142,6 @@ class UserProfileNotifier extends AsyncNotifier<UserProfileResponse> {
   }
 }
 
-
 final userProfileProvider =
     AsyncNotifierProvider<UserProfileNotifier, UserProfileResponse>(
   UserProfileNotifier.new,

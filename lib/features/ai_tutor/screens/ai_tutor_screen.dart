@@ -76,12 +76,15 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
         content: const Text(
           'Bạn đã dùng hết 20 tin nhắn miễn phí hôm nay. '
           'Hãy nâng cấp lên Premium để nhắn tin không giới hạn với AI Tutor!',
-          style: TextStyle(fontSize: 14.5, height: 1.5, color: Color(0xFF4A3728)),
+          style:
+              TextStyle(fontSize: 14.5, height: 1.5, color: Color(0xFF4A3728)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+            child: const Text('Đóng',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -92,10 +95,12 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
               backgroundColor: const Color(0xFFFF6A00),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(99)),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
-            child: const Text('Nâng cấp Premium', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Nâng cấp Premium',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -208,7 +213,8 @@ class _AiTutorHeader extends ConsumerWidget {
       if (quota.isPremium) {
         statusText = 'Đang hoạt động • Premium';
       } else {
-        statusText = 'Còn lại ${quota.remainingToday}/${quota.freeLimit} tin nhắn';
+        statusText =
+            'Còn lại ${quota.remainingToday}/${quota.freeLimit} tin nhắn';
       }
     }
 

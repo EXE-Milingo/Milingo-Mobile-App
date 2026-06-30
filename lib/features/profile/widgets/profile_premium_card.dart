@@ -76,7 +76,9 @@ class ProfilePremiumCard extends StatelessWidget {
                   const _MembershipPill(),
                   const SizedBox(height: 8),
                   Text(
-                    isPremium ? (data.premiumPlanName ?? 'Gói Premium') : 'Mở khoá toàn bộ Milingo',
+                    isPremium
+                        ? (data.premiumPlanName ?? 'Gói Premium')
+                        : 'Mở khoá toàn bộ Milingo',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -126,7 +128,9 @@ class ProfilePremiumCard extends StatelessWidget {
                               children: [
                                 Flexible(
                                   child: Text(
-                                    isPremium ? 'Quản lý gói đăng ký' : 'Nâng cấp Premium',
+                                    isPremium
+                                        ? 'Quản lý gói đăng ký'
+                                        : 'Nâng cấp Premium',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(

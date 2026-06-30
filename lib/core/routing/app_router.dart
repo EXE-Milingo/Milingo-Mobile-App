@@ -27,6 +27,7 @@ import 'package:milingo/features/premium/widgets/premium_upgrade_view.dart';
 import 'package:milingo/features/profile/screens/about_screen.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 import 'package:milingo/features/profile/screens/profile_screen.dart';
+import 'package:milingo/features/profile/screens/support_screen.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
 import 'package:milingo/features/splash/screens/splash_screen.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -101,7 +102,11 @@ GoRouter appRouter(AppRouterRef ref) {
 
           // Retrieve user profile's active target language as dynamic fallback
           final profile = ref.read(userProfileProvider).valueOrNull;
-          final targetLang = (profile?.targetLanguage ?? 'en').trim().toLowerCase().split(RegExp('[-_]')).first;
+          final targetLang = (profile?.targetLanguage ?? 'en')
+              .trim()
+              .toLowerCase()
+              .split(RegExp('[-_]'))
+              .first;
           final currentTargetCode = targetLang == 'jp' ? 'ja' : targetLang;
 
           String defaultLangName = 'English';
@@ -210,6 +215,11 @@ GoRouter appRouter(AppRouterRef ref) {
         builder: (context, state) => const AboutScreen(),
       ),
       GoRoute(
+        path: AppConstants.supportRoute,
+        name: 'support',
+        builder: (context, state) => const SupportScreen(),
+      ),
+      GoRoute(
         path: AppConstants.premiumRoute,
         name: 'premium',
         builder: (context, state) => const PremiumScreen(),
@@ -245,7 +255,8 @@ GoRouter appRouter(AppRouterRef ref) {
         name: 'payment-success',
         builder: (context, state) {
           final orderCodeStr = state.uri.queryParameters['orderCode'];
-          final orderCode = orderCodeStr != null ? int.tryParse(orderCodeStr) : null;
+          final orderCode =
+              orderCodeStr != null ? int.tryParse(orderCodeStr) : null;
           return PaymentResultScreen(
             isSuccess: true,
             orderCode: orderCode,
@@ -257,7 +268,8 @@ GoRouter appRouter(AppRouterRef ref) {
         name: 'payment-cancel',
         builder: (context, state) {
           final orderCodeStr = state.uri.queryParameters['orderCode'];
-          final orderCode = orderCodeStr != null ? int.tryParse(orderCodeStr) : null;
+          final orderCode =
+              orderCodeStr != null ? int.tryParse(orderCodeStr) : null;
           return PaymentResultScreen(
             isSuccess: false,
             orderCode: orderCode,

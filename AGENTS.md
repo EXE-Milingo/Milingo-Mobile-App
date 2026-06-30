@@ -78,12 +78,14 @@ lib/
 |   |   |-- providers/profile_provider.dart
 |   |   |-- screens/language_settings_screen.dart
 |   |   |-- screens/profile_screen.dart
+|   |   |-- screens/support_screen.dart
 |   |   `-- widgets/
 |   |       |-- language_settings_components.dart
 |   |       |-- profile_premium_card.dart
 |   |       |-- profile_settings_section.dart
 |   |       |-- profile_stats_section.dart
-|   |       `-- profile_view_data.dart
+|   |       |-- profile_view_data.dart
+|   |       `-- support_screen_components.dart
 |   |-- snap_and_learn/
 |   |   |-- models/milingo_result.dart
 |   |   |-- models/vocabulary_item.dart
@@ -127,6 +129,7 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 /flashcards/deck          -> Deck detail screen
 /flashcards/vocabulary    -> Vocabulary detail screen
 /profile                  -> Profile Settings
+/profile/support          -> Help & FAQ Support Screen
 /leaderboard              -> Progress Leaderboard
 /payment/success          -> Checkout Success Screen
 /payment/cancel           -> Checkout Cancel Screen

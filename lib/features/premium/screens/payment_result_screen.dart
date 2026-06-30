@@ -48,7 +48,7 @@ class _PaymentResultScreenState extends ConsumerState<PaymentResultScreen> {
 
     try {
       final api = ref.read(milingoApiServiceProvider);
-      
+
       final orderCode = widget.orderCode;
       if (orderCode != null) {
         try {

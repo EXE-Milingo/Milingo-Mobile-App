@@ -22,7 +22,9 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return message.isUser ? _UserBubble(message: message) : _AiBubble(message: message);
+    return message.isUser
+        ? _UserBubble(message: message)
+        : _AiBubble(message: message);
   }
 }
 
@@ -125,7 +127,8 @@ class _AiBubble extends StatelessWidget {
               ],
             ),
             child: const Center(
-              child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 13)),
+              child: Text('✦',
+                  style: TextStyle(color: Colors.white, fontSize: 13)),
             ),
           ),
           // Bubble
@@ -236,7 +239,8 @@ class _TypingIndicatorState extends State<TypingIndicator>
               shape: BoxShape.circle,
             ),
             child: const Center(
-              child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 13)),
+              child: Text('✦',
+                  style: TextStyle(color: Colors.white, fontSize: 13)),
             ),
           ),
           Container(

@@ -23,7 +23,8 @@ void main() {
     expect(pair.translation, 'Toi uong ca phe tu mot cai coc.');
   });
 
-  test('example sentence pair splits Japanese sentence with space-hyphen-space', () {
+  test('example sentence pair splits Japanese sentence with space-hyphen-space',
+      () {
     final pair = exampleSentencePairFor(
       sentence: '犬がいます。 - Có một con chó.',
       sentenceTranslation: '',
@@ -33,7 +34,9 @@ void main() {
     expect(pair.translation, 'Có một con chó.');
   });
 
-  test('example sentence pair splits Japanese sentence with no-space-hyphen-space', () {
+  test(
+      'example sentence pair splits Japanese sentence with no-space-hyphen-space',
+      () {
     final pair = exampleSentencePairFor(
       sentence: '犬がいます。- Có một con chó.',
       sentenceTranslation: '',

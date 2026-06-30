@@ -22,7 +22,6 @@ class UserStatsNotifier extends AsyncNotifier<UserStatsResponse> {
     return _fetchFromBackend();
   }
 
-
   Future<UserStatsResponse> _fetchFromBackend() async {
     final api = ref.read(milingoApiServiceProvider);
     return api.getUserStats();

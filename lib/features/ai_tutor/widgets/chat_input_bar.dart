@@ -72,7 +72,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
           color: widget.isLimitReached ? Colors.grey.shade100 : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: widget.isLimitReached ? Colors.grey.shade300 : Colors.transparent,
+            color: widget.isLimitReached
+                ? Colors.grey.shade300
+                : Colors.transparent,
           ),
           boxShadow: [
             BoxShadow(
@@ -98,7 +100,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   textInputAction: TextInputAction.newline,
                   keyboardType: TextInputType.multiline,
                   style: TextStyle(
-                    color: widget.isLimitReached ? Colors.grey.shade500 : _kInputText,
+                    color: widget.isLimitReached
+                        ? Colors.grey.shade500
+                        : _kInputText,
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                     height: 1.5,
@@ -108,7 +112,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         ? 'Đã hết lượt nhắn tin miễn phí.'
                         : 'Nhập tin nhắn...',
                     hintStyle: TextStyle(
-                      color: widget.isLimitReached ? Colors.grey.shade400 : _kHintText,
+                      color: widget.isLimitReached
+                          ? Colors.grey.shade400
+                          : _kHintText,
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
                     ),

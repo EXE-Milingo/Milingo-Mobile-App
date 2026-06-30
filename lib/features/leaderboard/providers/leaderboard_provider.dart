@@ -56,7 +56,8 @@ class LeaderboardNotifier extends AsyncNotifier<LeaderboardState> {
 
     try {
       final api = ref.read(milingoApiServiceProvider);
-      final response = await api.getLeaderboard(limit: 5, offset: current.offset);
+      final response =
+          await api.getLeaderboard(limit: 5, offset: current.offset);
 
       state = AsyncData(current.copyWith(
         users: [...current.users, ...response.users],

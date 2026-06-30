@@ -46,7 +46,11 @@ class _ReviewExamScreenState extends ConsumerState<ReviewExamScreen> {
     HapticFeedback.mediumImpact();
 
     final profile = ref.read(userProfileProvider).valueOrNull;
-    final targetLang = (profile?.targetLanguage ?? 'en').trim().toLowerCase().split(RegExp('[-_]')).first;
+    final targetLang = (profile?.targetLanguage ?? 'en')
+        .trim()
+        .toLowerCase()
+        .split(RegExp('[-_]'))
+        .first;
     final currentTargetCode = targetLang == 'jp' ? 'ja' : targetLang;
 
     String langName = 'English';
@@ -89,7 +93,11 @@ class _ReviewExamScreenState extends ConsumerState<ReviewExamScreen> {
   Widget build(BuildContext context) {
     final flashcards = ref.watch(flashcardProvider);
     final profile = ref.watch(userProfileProvider).valueOrNull;
-    final targetLang = (profile?.targetLanguage ?? 'en').trim().toLowerCase().split(RegExp('[-_]')).first;
+    final targetLang = (profile?.targetLanguage ?? 'en')
+        .trim()
+        .toLowerCase()
+        .split(RegExp('[-_]'))
+        .first;
     final currentTarget = targetLang == 'jp' ? 'ja' : targetLang;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -100,22 +108,30 @@ class _ReviewExamScreenState extends ConsumerState<ReviewExamScreen> {
           child: flashcards.when(
             data: (data) {
               // Filter decks and cards by target language code in-memory
-              final filteredDecks = data.decks.map((deck) {
-                final filteredCards = deck.cards.where((card) {
-                  final cardLang = card.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
-                  final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
-                  return normalizedCardLang == currentTarget;
-                }).toList();
-                return DeckData(
-                  id: deck.id,
-                  name: deck.name,
-                  emoji: deck.emoji,
-                  cards: filteredCards,
-                  vocabCount: filteredCards.length,
-                  isDefault: deck.isDefault,
-                  isFavorite: deck.isFavorite,
-                );
-              }).where((deck) => deck.total > 0).toList();
+              final filteredDecks = data.decks
+                  .map((deck) {
+                    final filteredCards = deck.cards.where((card) {
+                      final cardLang = card.langCode
+                          .trim()
+                          .toLowerCase()
+                          .split(RegExp('[-_]'))
+                          .first;
+                      final normalizedCardLang =
+                          cardLang == 'jp' ? 'ja' : cardLang;
+                      return normalizedCardLang == currentTarget;
+                    }).toList();
+                    return DeckData(
+                      id: deck.id,
+                      name: deck.name,
+                      emoji: deck.emoji,
+                      cards: filteredCards,
+                      vocabCount: filteredCards.length,
+                      isDefault: deck.isDefault,
+                      isFavorite: deck.isFavorite,
+                    );
+                  })
+                  .where((deck) => deck.total > 0)
+                  .toList();
 
               return RefreshIndicator(
                 color: _kAccent,

@@ -84,15 +84,21 @@ class LanguageSettingsScreen extends ConsumerWidget {
                       const LanguageSectionTitle(title: '🌐 NGÔN NGỮ ỨNG DỤNG'),
                       LanguageCardContainer(
                         children: [
-                          for (var index = 0; index < _appLanguages.length; index++) ...[
+                          for (var index = 0;
+                              index < _appLanguages.length;
+                              index++) ...[
                             LanguageRowItem(
                               option: _appLanguages[index],
-                              isSelected: _normalizeCode(_appLanguages[index].code) == currentNative,
+                              isSelected:
+                                  _normalizeCode(_appLanguages[index].code) ==
+                                      currentNative,
                               customIconAsset: 'assets/svg/globe.svg',
                               onTap: () {
-                                ref.read(userProfileProvider.notifier).updateLanguages(
-                                  nativeLanguage: _appLanguages[index].code,
-                                );
+                                ref
+                                    .read(userProfileProvider.notifier)
+                                    .updateLanguages(
+                                      nativeLanguage: _appLanguages[index].code,
+                                    );
                               },
                             ),
                             if (index != _appLanguages.length - 1)
@@ -107,14 +113,21 @@ class LanguageSettingsScreen extends ConsumerWidget {
                       const LanguageSectionTitle(title: '📚 NGÔN NGỮ ĐANG HỌC'),
                       LanguageCardContainer(
                         children: [
-                          for (var index = 0; index < _learningLanguages.length; index++) ...[
+                          for (var index = 0;
+                              index < _learningLanguages.length;
+                              index++) ...[
                             LanguageRowItem(
                               option: _learningLanguages[index],
-                              isSelected: _normalizeCode(_learningLanguages[index].code) == currentTarget,
+                              isSelected: _normalizeCode(
+                                      _learningLanguages[index].code) ==
+                                  currentTarget,
                               onTap: () {
-                                ref.read(userProfileProvider.notifier).updateLanguages(
-                                  targetLanguage: _learningLanguages[index].code,
-                                );
+                                ref
+                                    .read(userProfileProvider.notifier)
+                                    .updateLanguages(
+                                      targetLanguage:
+                                          _learningLanguages[index].code,
+                                    );
                               },
                             ),
                             if (index != _learningLanguages.length - 1)

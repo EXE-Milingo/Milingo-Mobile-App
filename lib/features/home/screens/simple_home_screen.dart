@@ -49,7 +49,8 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
       user?.displayName,
       user?.email,
     );
-    final targetLangBase = targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
+    final targetLangBase =
+        targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
     final normalizedTargetLang = targetLangBase == 'jp' ? 'ja' : targetLangBase;
 
     final totalWords = flashcards.decks.fold<int>(0, (sum, deck) {
@@ -57,7 +58,8 @@ class _SimpleHomeScreenState extends ConsumerState<SimpleHomeScreen> {
         return sum + deck.total;
       }
       final matchCount = deck.cards.where((card) {
-        final cardLang = card.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
+        final cardLang =
+            card.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
         final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
         return normalizedCardLang == normalizedTargetLang;
       }).length;
@@ -1283,12 +1285,14 @@ List<_RecentVocabularyItem> _recentVocabulary(
     FlashcardState state, String targetLang) {
   final items = <_RecentVocabularyItem>[];
   var index = 0;
-  final targetLangBase = targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
+  final targetLangBase =
+      targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
   final normalizedTargetLang = targetLangBase == 'jp' ? 'ja' : targetLangBase;
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
-      final cardLang = entry.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
+      final cardLang =
+          entry.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
       final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
       if (normalizedCardLang != normalizedTargetLang) {
         continue;
@@ -1317,12 +1321,14 @@ List<_RecentVocabularyItem> _allDueVocabulary(
     FlashcardState state, String targetLang) {
   final items = <_RecentVocabularyItem>[];
   var index = 0;
-  final targetLangBase = targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
+  final targetLangBase =
+      targetLang.trim().toLowerCase().split(RegExp('[-_]')).first;
   final normalizedTargetLang = targetLangBase == 'jp' ? 'ja' : targetLangBase;
 
   for (final deck in state.decks) {
     for (final entry in deck.cards) {
-      final cardLang = entry.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
+      final cardLang =
+          entry.langCode.trim().toLowerCase().split(RegExp('[-_]')).first;
       final normalizedCardLang = cardLang == 'jp' ? 'ja' : cardLang;
       if (normalizedCardLang != normalizedTargetLang) {
         continue;
@@ -1463,7 +1469,8 @@ class _PodiumItem extends StatelessWidget {
         avatarWidget = Image.network(
           photoUrl,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _AvatarFallbackText(name: avatarName, isTop1: isTop1),
+          errorBuilder: (_, __, ___) =>
+              _AvatarFallbackText(name: avatarName, isTop1: isTop1),
         );
       }
     } else {
