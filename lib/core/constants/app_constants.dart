@@ -67,6 +67,7 @@ class AppConstants {
   static const String aboutRoute = '/profile/about';
   static const String supportRoute = '/profile/support';
   static const String premiumRoute = '/premium';
+  static const String premiumLimitRoute = '/premium/limit';
   static const String paymentMethodRoute = '/premium/payment-method';
   static const String termsOfServiceRoute = '/terms-of-service';
   static const String subscriptionRoute = '/subscription';

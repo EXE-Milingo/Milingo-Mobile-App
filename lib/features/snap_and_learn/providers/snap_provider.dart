@@ -196,6 +196,11 @@ class SnapController extends StateNotifier<SnapState> {
         ));
   final MilingoApiService _api;
   final Ref _ref;
+  bool _adGrantedScan = false;
+
+  void grantAdScan() {
+    _adGrantedScan = true;
+  }
 
   void setLanguage(String languageCode) {
     state = state.copyWith(
@@ -218,6 +223,10 @@ class SnapController extends StateNotifier<SnapState> {
   void hideVocab() => state = state.copyWith(showVocabulary: false);
 
   Future<bool> ensureCanScan() async {
+    if (_adGrantedScan) {
+      _adGrantedScan = false; // consume it
+      return true;
+    }
     try {
       final quota = await _api.getSnapQuotaStatus();
       if (quota.isLimitReached) {

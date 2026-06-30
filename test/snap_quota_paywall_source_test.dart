@@ -21,7 +21,7 @@ void main() {
     expect(providerSource, contains('paywallRequired'));
     expect(providerSource, contains('ensureCanScan'));
     expect(providerSource, contains('statusCode == 402'));
-    expect(screenSource, contains('AppConstants.premiumRoute'));
+    expect(screenSource, contains('AppConstants.premiumLimitRoute'));
     expect(screenSource, contains('clearPaywallRequired'));
   });
 }

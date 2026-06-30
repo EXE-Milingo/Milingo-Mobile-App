@@ -195,7 +195,8 @@ class _ContactDropdownTileState extends State<_ContactDropdownTile> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Container(
@@ -249,7 +250,8 @@ class _ContactDropdownTileState extends State<_ContactDropdownTile> {
                       ),
                       children: [
                         const TextSpan(
-                          text: 'Nếu bạn có nhu cầu hỗ trợ gì, xin hãy liên hệ với chúng tôi qua email sau: ',
+                          text:
+                              'Nếu bạn có nhu cầu hỗ trợ gì, xin hãy liên hệ với chúng tôi qua email sau: ',
                         ),
                         TextSpan(
                           text: 'milingo.vn@gmail.com',
@@ -289,7 +291,8 @@ class _ContactDropdownTileState extends State<_ContactDropdownTile> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Đã mở ứng dụng email và sao chép email hỗ trợ vào bộ nhớ tạm!'),
+              content: Text(
+                  'Đã mở ứng dụng email và sao chép email hỗ trợ vào bộ nhớ tạm!'),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -301,7 +304,8 @@ class _ContactDropdownTileState extends State<_ContactDropdownTile> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Đã sao chép email milingo.vn@gmail.com vào bộ nhớ tạm!'),
+            content:
+                Text('Đã sao chép email milingo.vn@gmail.com vào bộ nhớ tạm!'),
             behavior: SnackBarBehavior.floating,
           ),
         );

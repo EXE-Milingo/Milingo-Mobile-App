@@ -69,6 +69,8 @@ lib/
 |   |   |-- providers/subscription_provider.dart
 |   |   |-- screens/payment_method_screen.dart
 |   |   |-- screens/payment_result_screen.dart
+|   |   |-- screens/premium_limit_screen.dart
+|   |   |-- screens/premium_screen.dart
 |   |   |-- screens/subscription_management_screen.dart
 |   |   |-- screens/transaction_history_screen.dart
 |   |   `-- widgets/
@@ -128,6 +130,7 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 /flashcards               -> Vocabulary Decks Overview
 /flashcards/deck          -> Deck detail screen
 /flashcards/vocabulary    -> Vocabulary detail screen
+/premium/limit            -> Premium Daily Limit Screen
 /profile                  -> Profile Settings
 /profile/support          -> Help & FAQ Support Screen
 /leaderboard              -> Progress Leaderboard

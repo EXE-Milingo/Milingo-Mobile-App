@@ -279,7 +279,7 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
         _scanCtrl.stop();
         ctrl.clearPaywallRequired();
         if (mounted) {
-          context.push(AppConstants.premiumRoute);
+          context.push(AppConstants.premiumLimitRoute);
         }
       }
       // When loading starts → run scan animation

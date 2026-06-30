@@ -19,6 +19,7 @@ import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/leaderboard/screens/leaderboard_screen.dart';
 import 'package:milingo/features/premium/screens/payment_method_screen.dart';
 import 'package:milingo/features/premium/screens/payment_result_screen.dart';
+import 'package:milingo/features/premium/screens/premium_limit_screen.dart';
 import 'package:milingo/features/premium/screens/premium_screen.dart';
 import 'package:milingo/features/premium/screens/subscription_management_screen.dart';
 import 'package:milingo/features/premium/screens/terms_of_service_screen.dart';
@@ -223,6 +224,11 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.premiumRoute,
         name: 'premium',
         builder: (context, state) => const PremiumScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.premiumLimitRoute,
+        name: 'premium-limit',
+        builder: (context, state) => const PremiumLimitScreen(),
       ),
       GoRoute(
         path: AppConstants.paymentMethodRoute,
