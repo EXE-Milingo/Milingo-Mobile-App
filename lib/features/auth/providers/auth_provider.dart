@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
+import 'package:milingo/features/auth/services/google_auth_service.dart';
 
 // ─────────────────────────────────────────────────────────
 // Auth State Provider
@@ -51,4 +52,8 @@ class AuthService {
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(ref.watch(milingoApiServiceProvider));
+});
+
+final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
+  return GoogleAuthService();
 });

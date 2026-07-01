@@ -45,6 +45,7 @@ lib/
 |   |   |-- screens/forgot_password_screen.dart
 |   |   |-- screens/login_screen.dart
 |   |   |-- screens/register_screen.dart
+|   |   |-- services/google_auth_service.dart
 |   |   `-- widgets/social_buttons.dart
 |   |-- flashcards/
 |   |   |-- models/deck_arg.dart
@@ -186,6 +187,7 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 
 ## Security & Authentication
 
+- **Google Sign-In**: Google social login is implemented through `features/auth/services/google_auth_service.dart` and exposed via `googleAuthServiceProvider`. Keep OAuth/Firebase credential logic in this service/provider layer; auth screens should only manage loading, errors, and navigation. New Google users route to `/choose-language`, existing users route to `/home`.
 - **Đổi mật khẩu (Password Reset)**: The "Đổi mật khẩu" option in the account settings screen allows users to trigger a password reset email using Firebase Auth (`FirebaseAuth.instance.sendPasswordResetEmail`). It requires a confirmation dialog to verify the destination email and uses a visual loading overlay to indicate progression, ensuring no redundant/duplicate email triggers occur.
 - **Đổi tên hiển thị (Change Username/Display Name)**: The "Tên hiển thị" field in the account settings screen displays an edit icon. Tapping it opens a dialog allowing the user to update their display name. It checks validation (not empty, max 50 characters), uses a visual loading indicator while calling `userProfileProvider.notifier.updateDisplayName`, and propagates updates both locally (using Riverpod) and to the Firebase Auth and backend endpoints (`PATCH /api/v1/users/me`).
 

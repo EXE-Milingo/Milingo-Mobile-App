@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/auth/providers/auth_provider.dart';
 import 'package:milingo/features/auth/widgets/social_buttons.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -63,6 +66,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    if (_isLoading || _isGoogleLoading) return;
+
+    setState(() => _isGoogleLoading = true);
+    try {
+      final credential = await ref.read(googleAuthServiceProvider).signIn();
+      if (credential == null) return;
+
+      final isNewUser = credential.additionalUserInfo?.isNewUser ?? false;
+      if (mounted) {
+        context.go(
+          isNewUser ? AppConstants.chooseLanguageRoute : AppConstants.homeRoute,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_mapFirebaseError(e.code));
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -92,6 +118,12 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Quá nhiều lần thử. Vui lòng đợi một lát rồi thử lại.';
       case 'invalid-credential':
         return 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.';
+      case 'account-exists-with-different-credential':
+        return 'Email này đã được liên kết với phương thức đăng nhập khác.';
+      case 'network-request-failed':
+        return 'Không thể kết nối mạng. Vui lòng thử lại.';
+      case 'operation-not-allowed':
+        return 'Đăng nhập Google chưa được bật.';
       default:
         return 'Lỗi đăng nhập ($code). Vui lòng thử lại.';
     }
@@ -225,15 +257,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: isSmall ? 20 : 28),
 
                     // ── Social login buttons ──
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SocialButton(type: SocialType.apple),
-                        SizedBox(width: 16),
-                        SocialButton(type: SocialType.google),
-                        SizedBox(width: 16),
-                        SocialButton(type: SocialType.facebook),
-                      ],
+                    Center(
+                      child: SocialButton(
+                        type: SocialType.google,
+                        isLoading: _isGoogleLoading,
+                        onTap: _handleGoogleSignIn,
+                      ),
                     ),
 
                     const Spacer(),

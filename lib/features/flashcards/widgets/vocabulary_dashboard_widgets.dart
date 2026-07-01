@@ -209,8 +209,6 @@ class VocabularyCollectionSection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Color(0xFFFF6A00),
                   ),
                 ),
               ),
