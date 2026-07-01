@@ -1,671 +1,580 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:milingo/core/constants/app_constants.dart';
-import 'package:milingo/core/network/milingo_api_service.dart';
-import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/core/network/milingo_models.dart';
+import 'package:milingo/features/premium/providers/subscription_provider.dart';
+import 'package:milingo/features/profile/widgets/profile_svg_icon.dart';
 
-const _subBg = Color(0xFFFFF7F3);
-const _subSurface = Colors.white;
-const _subInk = Color(0xFF211A16);
-const _subMuted = Color(0xFF7B6D66);
-const _subLine = Color(0xFFF0DFD8);
-const _subOrange = AppTheme.primaryColor;
-const _subSoftOrange = Color(0xFFFFECE6);
-
-class SubscriptionManagementScreen extends ConsumerStatefulWidget {
+class SubscriptionManagementScreen extends ConsumerWidget {
   const SubscriptionManagementScreen({super.key});
 
   @override
-  ConsumerState<SubscriptionManagementScreen> createState() =>
-      _SubscriptionManagementScreenState();
-}
-
-class _SubscriptionManagementScreenState
-    extends ConsumerState<SubscriptionManagementScreen> {
-  SubscriptionOverviewResponse? _overview;
-  bool _isLoading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSubscription());
-  }
-
-  Future<void> _loadSubscription() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final overview =
-          await ref.read(milingoApiServiceProvider).getSubscriptionOverview();
-      if (!mounted) return;
-      setState(() => _overview = overview);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e is MilingoApiException
-            ? e.message
-            : 'Chưa thể tải trạng thái gói đăng kí.';
-      });
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final overview = _overview;
-    final active = overview?.isPremium == true;
-    final benefits =
-        overview?.benefits ?? const <SubscriptionBenefitResponse>[];
+  Widget build(BuildContext context, WidgetRef ref) {
+    final overviewAsync = ref.watch(subscriptionOverviewProvider);
 
     return Scaffold(
-      backgroundColor: _subBg,
+      backgroundColor: const Color(0xFFFDF8F6),
       body: SafeArea(
-        child: RefreshIndicator(
-          color: _subOrange,
-          onRefresh: _loadSubscription,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-            children: [
-              _SubHeader(
-                title: 'Quản lý gói đăng kí',
-                onBack: () => context.pop(),
+        bottom: false,
+        child: Stack(
+          children: [
+            const _GlowBackground(),
+            overviewAsync.when(
+              data: (overview) => _buildContent(context, ref, overview),
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: Color(0xFFFF6A00)),
               ),
-              const SizedBox(height: 18),
-              _CurrentPlanCard(
-                overview: overview,
-                isLoading: _isLoading,
-                error: _error,
-                onRetry: _loadSubscription,
-              ),
-              const SizedBox(height: 22),
-              const _SectionTitle('Đặc quyền Premium'),
-              const SizedBox(height: 12),
-              if (benefits.isEmpty)
-                const _BenefitTile(
-                  icon: Icons.workspace_premium_rounded,
-                  title: 'Chưa có dữ liệu đặc quyền',
-                  subtitle: 'Backend chưa trả quyền lợi cho gói này.',
-                )
-              else
-                for (var i = 0; i < benefits.length; i++) ...[
-                  _BenefitTile(
-                    icon: _benefitIcon(benefits[i].icon),
-                    title: benefits[i].title,
-                    subtitle: benefits[i].subtitle,
-                  ),
-                  if (i != benefits.length - 1) const SizedBox(height: 10),
-                ],
-              const SizedBox(height: 18),
-              _MemberStats(overview: overview),
-              const SizedBox(height: 22),
-              const _SectionTitle('Quản lý tài khoản'),
-              const SizedBox(height: 12),
-              _SettingsCard(
-                items: [
-                  _SettingsItem(
-                    icon: Icons.swap_horiz_rounded,
-                    title: 'Thay đổi gói cước',
-                    onTap: () => context.push(AppConstants.premiumRoute),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.receipt_long_rounded,
-                    title: 'Lịch sử thanh toán',
-                    onTap: () => context.push(AppConstants.paymentHistoryRoute),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.credit_card_rounded,
-                    title: 'Phương thức thanh toán',
-                    subtitle: _paymentMethodLabel(overview?.source),
-                    onTap: () {},
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-              TextButton(
-                onPressed: active ? _showCancelUnavailable : null,
-                child: const Text('Hủy đăng kí Milingo Premium'),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Khi hủy, các đặc quyền vẫn còn hiệu lực đến cuối kỳ thanh toán.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFFC9A9A0),
-                  fontSize: 11,
-                  height: 1.3,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+              error: (err, stack) => _buildError(context, ref, err),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _showCancelUnavailable() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Tính năng hủy tự động chưa khả dụng.'),
+  Widget _buildContent(
+    BuildContext context,
+    WidgetRef ref,
+    SubscriptionOverviewResponse overview,
+  ) {
+    final active = overview.isPremium;
+
+    return RefreshIndicator(
+      color: const Color(0xFFFF6A00),
+      onRefresh: () => ref.refresh(subscriptionOverviewProvider.future),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(context),
+            const SizedBox(height: 24),
+            _buildCurrentPlanCard(overview),
+            const SizedBox(height: 32),
+            const _SectionTitle(text: 'Đặc quyền Premium'),
+            const SizedBox(height: 12),
+            _buildBenefitsGrid(),
+            const SizedBox(height: 32),
+            const _SectionTitle(text: 'Quản lý tài khoản'),
+            const SizedBox(height: 12),
+            _buildManagementList(context, overview),
+            const SizedBox(height: 40),
+            _buildFooterActions(context, active),
+          ],
+        ),
       ),
     );
   }
-}
 
-class _SubHeader extends StatelessWidget {
-  const _SubHeader({
-    required this.title,
-    required this.onBack,
-  });
-
-  final String title;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHeader(BuildContext context) {
     return SizedBox(
-      height: 42,
+      height: 44,
       child: Row(
         children: [
-          IconButton(
-            tooltip: 'Quay lại',
-            onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded),
-            color: _subOrange,
-          ),
-          Expanded(
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _subInk,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 48),
-        ],
-      ),
-    );
-  }
-}
-
-class _CurrentPlanCard extends StatelessWidget {
-  const _CurrentPlanCard({
-    required this.overview,
-    required this.isLoading,
-    required this.error,
-    required this.onRetry,
-  });
-
-  final SubscriptionOverviewResponse? overview;
-  final bool isLoading;
-  final String? error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = overview?.isPremium == true;
-    final planName = isLoading && overview == null
-        ? 'Đang tải'
-        : overview?.planName ?? 'Gói miễn phí';
-    final statusLabel = isLoading
-        ? 'Đang tải'
-        : isActive
-            ? 'Đang hoạt động'
-            : 'Chưa kích hoạt';
-    final endDate = overview?.expiresAt == null
-        ? 'Chưa có'
-        : DateFormat('dd/MM/yyyy').format(overview!.expiresAt!.toLocal());
-    final progress = ((overview?.monthlyProgressPercent ?? 0) / 100)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final remainingDays = overview?.remainingDays;
-
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: _subSurface,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: _subOrange.withValues(alpha: 0.08),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'GÓI HIỆN TẠI',
-                      style: TextStyle(
-                        color: _subMuted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      planName,
-                      style: const TextStyle(
-                        color: _subInk,
-                        fontSize: 24,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
-                      ),
+          Material(
+            color: Colors.white,
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: () => context.pop(),
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isActive ? _subSoftOrange : const Color(0xFFF7F0ED),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  statusLabel.toUpperCase(),
-                  style: TextStyle(
-                    color: isActive ? _subOrange : _subMuted,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
+                child: const Center(
+                  child: ProfileSvgIcon(
+                    'assets/svg/new-profile/account-back.svg',
+                    size: 22,
+                    color: Color(0xFF1D1814),
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          Row(
-            children: [
-              Expanded(
-                child: _PlanMeta(
-                  label: 'Ngày hết hạn',
-                  value: isActive ? endDate : 'Chưa có',
-                ),
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: _PlanMeta(
-                  label: 'Thanh toán lần tới',
-                  value: _formatMoney(overview?.nextPaymentAmount ?? 0),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: isActive ? progress : 0,
-              minHeight: 4,
-              backgroundColor: const Color(0xFFF5E8E1),
-              valueColor: const AlwaysStoppedAnimation<Color>(_subOrange),
             ),
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              remainingDays == null
-                  ? 'Chưa có ngày hết hạn'
-                  : 'Còn lại $remainingDays ngày',
-              style: const TextStyle(
-                color: _subMuted,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
+          const SizedBox(width: 12),
+          const Text(
+            'Quản lý gói đăng kí',
+            style: TextStyle(
+              color: Color(0xFF1D1814),
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              height: 1.5,
             ),
           ),
-          if (error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              error!,
-              style: const TextStyle(
-                color: _subOrange,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Thử lại'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _subOrange,
-                side: const BorderSide(color: _subOrange),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
-}
 
-class _PlanMeta extends StatelessWidget {
-  const _PlanMeta({
-    required this.label,
-    required this.value,
-  });
+  Widget _buildCurrentPlanCard(SubscriptionOverviewResponse overview) {
+    final active = overview.isPremium;
+    final planName = overview.planName;
+    final endDate = overview.expiresAt == null
+        ? 'Vô thời hạn'
+        : DateFormat('dd/MM/yyyy').format(overview.expiresAt!.toLocal());
+    final progress =
+        ((overview.monthlyProgressPercent) / 100).clamp(0.0, 1.0).toDouble();
+    final remainingDays = overview.remainingDays;
 
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: _subMuted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: _subInk,
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text.toUpperCase(),
-      style: const TextStyle(
-        color: _subMuted,
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-      ),
-    );
-  }
-}
-
-class _BenefitTile extends StatelessWidget {
-  const _BenefitTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _subSurface,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: _subSoftOrange,
-              borderRadius: BorderRadius.circular(8),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.4),
+              width: 1.5,
             ),
-            child: Icon(icon, color: _subOrange, size: 19),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1C1B1B).withValues(alpha: 0.06),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: _subInk,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'GÓI HIỆN TẠI',
+                style: TextStyle(
+                  color: Color(0xFF9A8E84),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                planName,
+                style: const TextStyle(
+                  color: Color(0xFF1D1814),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                height: 1,
+                color: const Color(0xFFF0DFD8),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ngày hết hạn',
+                          style: TextStyle(
+                            color: Color(0xFF9A8E84),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          active ? endDate : 'Chưa có',
+                          style: const TextStyle(
+                            color: Color(0xFF1D1814),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Thanh toán lần tới',
+                          style: TextStyle(
+                            color: Color(0xFF9A8E84),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          active
+                              ? _formatMoney(overview.nextPaymentAmount)
+                              : 'Chưa có',
+                          style: const TextStyle(
+                            color: Color(0xFF1D1814),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (active) ...[
+                const SizedBox(height: 24),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: const Color(0xFFF5E8E1),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Color(0xFFFF6A00)),
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: _subMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    remainingDays == null
+                        ? 'Chưa có thông tin hết hạn'
+                        : 'Còn lại $remainingDays ngày',
+                    style: const TextStyle(
+                      color: Color(0xFF9A8E84),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
-}
 
-class _MemberStats extends StatelessWidget {
-  const _MemberStats({required this.overview});
-
-  final SubscriptionOverviewResponse? overview;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = ((overview?.monthlyProgressPercent ?? 0) / 100)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final progressText = '${overview?.monthlyProgressPercent ?? 0}%';
-
-    return Row(
-      children: [
-        Expanded(
-          child: _MiniStatCard(
-            icon: Icons.shield_outlined,
-            label: 'THÀNH VIÊN TỪ',
-            value: _formatMemberSince(overview?.memberSince),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MiniStatCard(
-            icon: Icons.flash_on_rounded,
-            label: 'TIẾN ĐỘ GÓI',
-            value: progressText,
-            progress: progress,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MiniStatCard extends StatelessWidget {
-  const _MiniStatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.progress,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final double? progress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 126),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _subSurface,
-        borderRadius: BorderRadius.circular(8),
+  Widget _buildBenefitsGrid() {
+    final list = [
+      _BenefitItem(
+        svgPath: 'assets/svg/camera-homescreen.svg',
+        title: 'Lượt quét không giới hạn',
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: _subOrange, size: 20),
-          const Spacer(),
-          Text(
-            label,
-            style: const TextStyle(
-              color: _subMuted,
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: _subInk,
-              fontSize: 18,
-              height: 1.05,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          if (progress != null) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 3,
-                backgroundColor: const Color(0xFFF5E8E1),
-                valueColor: const AlwaysStoppedAnimation<Color>(_subOrange),
+      _BenefitItem(
+        svgPath: 'assets/svg/new-ai-tutor.svg',
+        title: 'Trò chuyện cùng AI không giới hạn',
+      ),
+      _BenefitItem(
+        svgPath: 'assets/svg/streak.svg',
+        title: 'Trải nghiệm không quảng cáo',
+      ),
+    ];
+
+    return Column(
+      children: list.map((item) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          height: 80,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            ),
-          ],
-        ],
-      ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF1ED),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    item.svgPath,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFFFF4B00),
+                      BlendMode.srcIn,
+                    ),
+                    width: 22,
+                    height: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
-}
 
-class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({required this.items});
-
-  final List<_SettingsItem> items;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildManagementList(
+    BuildContext context,
+    SubscriptionOverviewResponse overview,
+  ) {
     return Container(
       decoration: BoxDecoration(
-        color: _subSurface,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          for (var i = 0; i < items.length; i++) ...[
-            _SettingsRow(item: items[i]),
-            if (i != items.length - 1)
-              const Divider(
-                height: 1,
-                indent: 18,
-                endIndent: 18,
-                color: _subLine,
-              ),
-          ],
+          _buildManagementRow(
+            icon: Icons.swap_horiz_rounded,
+            title: 'Thay đổi gói cước',
+            onTap: () => context.push(AppConstants.premiumRoute),
+          ),
+          const Divider(
+              height: 1, color: Color(0xFFF0DFD8), indent: 20, endIndent: 20),
+          _buildManagementRow(
+            icon: Icons.receipt_long_rounded,
+            title: 'Lịch sử thanh toán',
+            onTap: () => context.push(AppConstants.paymentHistoryRoute),
+          ),
+          const Divider(
+              height: 1, color: Color(0xFFF0DFD8), indent: 20, endIndent: 20),
+          _buildManagementRow(
+            icon: Icons.credit_card_rounded,
+            title: 'Phương thức thanh toán',
+            subtitle: _paymentMethodLabel(overview.source),
+            onTap: () {},
+          ),
         ],
       ),
     );
   }
-}
 
-class _SettingsItem {
-  const _SettingsItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final VoidCallback onTap;
-}
-
-class _SettingsRow extends StatelessWidget {
-  const _SettingsRow({required this.item});
-
-  final _SettingsItem item;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildManagementRow({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
-      onTap: item.onTap,
-      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
-            Icon(item.icon, color: _subInk, size: 20),
-            const SizedBox(width: 13),
+            Icon(icon, color: const Color(0xFF1D1814), size: 22),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.title,
+                    title,
                     style: const TextStyle(
-                      color: _subInk,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1D1814),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (item.subtitle != null) ...[
-                    const SizedBox(height: 3),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      item.subtitle!,
+                      subtitle,
                       style: const TextStyle(
-                        color: _subMuted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF9A8E84),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: _subMuted),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFFB8A8A0),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooterActions(BuildContext context, bool active) {
+    if (active) {
+      return Center(
+        child: Column(
+          children: [
+            TextButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tính năng hủy tự động chưa khả dụng.'),
+                  ),
+                );
+              },
+              child: const Text(
+                'Hủy đăng ký Milingo Premium',
+                style: TextStyle(
+                  color: Color(0xFFAC2D03),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Khi hủy, các đặc quyền của bạn vẫn sẽ duy trì cho đến hết kỳ hạn thanh toán hiện tại.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF9A8E84),
+                  fontSize: 10,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          height: 52,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF8A1F), Color(0xFFFF4D1A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF4D1A).withValues(alpha: 0.24),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push(AppConstants.premiumRoute),
+              borderRadius: BorderRadius.circular(16),
+              child: const Center(
+                child: Text(
+                  'Nâng cấp Premium',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Mở khóa tất cả các tính năng cao cấp ngay hôm nay.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF9A8E84),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildError(BuildContext context, WidgetRef ref, Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Color(0xFFFF4D1A),
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Chưa thể tải trạng thái gói đăng kí.',
+              style: TextStyle(
+                color: Color(0xFF1D1814),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF9A8E84),
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => ref.refresh(subscriptionOverviewProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Thử lại'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6A00),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -673,24 +582,92 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
-IconData _benefitIcon(String icon) {
-  return switch (icon) {
-    'scan' => Icons.all_inclusive_rounded,
-    'ai' => Icons.psychology_rounded,
-    'ads' => Icons.block_rounded,
-    _ => Icons.workspace_premium_rounded,
-  };
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          color: Color(0xFF9A8E84),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+        ),
+      ),
+    );
+  }
+}
+
+class _BenefitItem {
+  _BenefitItem({
+    required this.svgPath,
+    required this.title,
+  });
+
+  final String svgPath;
+  final String title;
+}
+
+class _GlowBackground extends StatelessWidget {
+  const _GlowBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(
+      children: [
+        Positioned(
+          top: -64,
+          right: -80,
+          child: _Glow(size: 288, color: Color(0x2EFF8A1F)),
+        ),
+        Positioned(
+          top: 320,
+          left: -96,
+          child: _Glow(size: 256, color: Color(0x1AFF4D1A)),
+        ),
+      ],
+    );
+  }
+}
+
+class _Glow extends StatelessWidget {
+  const _Glow({
+    required this.size,
+    required this.color,
+  });
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: 64,
+            spreadRadius: 24,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 String _formatMoney(int amount) {
   if (amount <= 0) return 'Chưa có';
   return '${NumberFormat.decimalPattern('vi_VN').format(amount)}đ';
-}
-
-String _formatMemberSince(DateTime? date) {
-  if (date == null) return 'Chưa có';
-  final local = date.toLocal();
-  return 'Tháng ${local.month},\n${local.year}';
 }
 
 String _paymentMethodLabel(String? source) {
