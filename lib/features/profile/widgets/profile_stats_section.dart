@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:milingo/features/leaderboard/providers/leaderboard_provider.dart';
 import 'package:milingo/features/profile/widgets/profile_svg_icon.dart';
 import 'package:milingo/features/profile/widgets/profile_view_data.dart';
 
@@ -98,22 +100,20 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      height: 116,
-      padding: const EdgeInsets.all(17),
+      height: 98,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: colors,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0xFF1D1814).withValues(alpha: 0.14),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-            spreadRadius: -12,
+            color: Color(0x0A000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -123,22 +123,24 @@ class _MetricCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: iconBackground,
-                  borderRadius: BorderRadius.circular(14),
+                  shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: ProfileSvgIcon(
-                    assetPath,
-                    size: 20,
-                    color: iconColor,
-                  ),
+                alignment: Alignment.center,
+                child: ProfileSvgIcon(
+                  assetPath,
+                  size: 14,
+                  color: iconColor,
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(emoji, style: const TextStyle(fontSize: 16, height: 1)),
+              const Spacer(),
+              Text(
+                emoji,
+                style: const TextStyle(fontSize: 16),
+              ),
             ],
           ),
           const Spacer(),
@@ -148,7 +150,7 @@ class _MetricCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: _StatsColors.text,
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
               height: 1,
             ),
@@ -171,11 +173,44 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _RankCard extends StatelessWidget {
+class _RankCard extends ConsumerWidget {
   const _RankCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final leaderboardAsync = ref.watch(leaderboardNotifierProvider);
+
+    return leaderboardAsync.when(
+      loading: () =>
+          _buildCard(rank: '#', subtitle: 'Đang tải...', progress: 0.0),
+      error: (err, stack) =>
+          _buildCard(rank: '#', subtitle: 'Lỗi tải xếp hạng', progress: 0.0),
+      data: (state) {
+        final currentUser = state.currentUser;
+        if (currentUser == null) {
+          return _buildCard(
+              rank: '#', subtitle: 'Chưa có xếp hạng', progress: 0.0);
+        }
+        final points = currentUser.totalPoints;
+        final progress = (points % 1000) / 1000.0;
+        final nextMilestone = ((points / 1000).floor() + 1) * 1000;
+        final xpNeeded = nextMilestone - points;
+
+        return _buildCard(
+          rank: '#${currentUser.rank}',
+          subtitle:
+              '${_formatCompact(points)} XP · Còn ${_formatCompact(xpNeeded)} XP để thăng cấp',
+          progress: progress,
+        );
+      },
+    );
+  }
+
+  Widget _buildCard({
+    required String rank,
+    required String subtitle,
+    required double progress,
+  }) {
     return Container(
       width: double.infinity,
       height: 122,
@@ -209,24 +244,24 @@ class _RankCard extends StatelessWidget {
               ),
             ),
           ),
-          const Row(
+          Row(
             children: [
               Text(
-                '#',
-                style: TextStyle(
+                rank,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   height: 1,
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Bảng xếp hạng',
+                    const Text(
+                      'BẢNG XẾP HẠNG',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -237,12 +272,12 @@ class _RankCard extends StatelessWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    const SizedBox(height: 3),
                     Text(
-                      '',
+                      subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -261,10 +296,10 @@ class _RankCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
-                value: 0,
+                value: progress,
                 minHeight: 10,
                 backgroundColor: Colors.black.withValues(alpha: 0.20),
-                color: Colors.white,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             ),
           ),

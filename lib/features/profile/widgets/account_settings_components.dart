@@ -224,10 +224,12 @@ class AccountSectionTitle extends StatelessWidget {
 class AccountInfoCard extends StatelessWidget {
   const AccountInfoCard({
     required this.profile,
+    required this.onTapEditDisplayName,
     super.key,
   });
 
   final AccountSettingsProfile profile;
+  final VoidCallback onTapEditDisplayName;
 
   @override
   Widget build(BuildContext context) {
@@ -241,6 +243,18 @@ class AccountInfoCard extends StatelessWidget {
           ),
           label: 'Tên hiển thị',
           value: profile.displayName,
+          trailing: InkWell(
+            onTap: onTapEditDisplayName,
+            borderRadius: BorderRadius.circular(999),
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.edit,
+                size: 18,
+                color: _AccountColors.orange,
+              ),
+            ),
+          ),
         ),
         _InfoRow(
           icon: const ProfileSvgIcon(
@@ -250,15 +264,6 @@ class AccountInfoCard extends StatelessWidget {
           ),
           label: 'Email',
           value: profile.email,
-        ),
-        _InfoRow(
-          icon: const ProfileSvgIcon(
-            'assets/svg/new-profile/phone.svg',
-            size: 16,
-            color: _AccountColors.orange,
-          ),
-          label: 'Số điện thoại',
-          value: profile.phoneNumber,
         ),
       ],
     );
@@ -284,17 +289,23 @@ class AccountLinkedAccountsCard extends StatelessWidget {
 }
 
 class AccountSecurityCard extends StatelessWidget {
-  const AccountSecurityCard({super.key});
+  const AccountSecurityCard({
+    required this.onTapChangePassword,
+    super.key,
+  });
+
+  final VoidCallback onTapChangePassword;
 
   @override
   Widget build(BuildContext context) {
-    return const _AccountCard(
+    return _AccountCard(
       children: [
         _ActionRow(
           assetPath: 'assets/svg/new-profile/change-pass.svg',
           label: 'Đổi mật khẩu',
+          onTap: onTapChangePassword,
         ),
-        _ActionRow(
+        const _ActionRow(
           assetPath: 'assets/svg/new-profile/privacy.svg',
           label: 'Cài đặt quyền riêng tư',
         ),
@@ -401,11 +412,13 @@ class _InfoRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.trailing,
   });
 
   final Widget icon;
   final String label;
   final String value;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -447,6 +460,10 @@ class _InfoRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 12),
+              trailing!,
+            ],
           ],
         ),
       ),
@@ -531,46 +548,54 @@ class _ActionRow extends StatelessWidget {
   const _ActionRow({
     required this.assetPath,
     required this.label,
+    this.onTap,
   });
 
   final String assetPath;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 65.5,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            _IconBubble(
-              child: ProfileSvgIcon(
-                assetPath,
-                size: 16,
-                color: _AccountColors.orange,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _AccountColors.text,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  height: 1.5,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 65.5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                _IconBubble(
+                  child: ProfileSvgIcon(
+                    assetPath,
+                    size: 16,
+                    color: _AccountColors.orange,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _AccountColors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                const ProfileSvgIcon(
+                  'assets/svg/new-profile/account-chevron-right.svg',
+                  size: 18,
+                  color: Color(0xFFB8A8A0),
+                ),
+              ],
             ),
-            const ProfileSvgIcon(
-              'assets/svg/new-profile/account-chevron-right.svg',
-              size: 18,
-              color: Color(0xFFB8A8A0),
-            ),
-          ],
+          ),
         ),
       ),
     );

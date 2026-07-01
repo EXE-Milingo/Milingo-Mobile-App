@@ -85,37 +85,16 @@ class AboutHero extends StatelessWidget {
 
     return SizedBox(
       width: double.infinity,
-      height: 171,
       child: Column(
         children: [
           const SizedBox(height: 8),
-          Container(
-            width: 96,
-            height: 96,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFF8A1F), Color(0xFFFF4D1A)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _AboutColors.orange.withValues(alpha: 0.50),
-                  blurRadius: 32,
-                  offset: const Offset(0, 16),
-                ),
-              ],
-            ),
-            child: SvgPicture.asset(
-              'assets/images/milingo-logo.svg',
-              width: 64,
-              height: 64,
-              fit: BoxFit.contain,
-            ),
+          Image.asset(
+            'assets/svg/milingo-logo.png',
+            width: 128,
+            height: 128,
+            fit: BoxFit.contain,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 3),
           const Text(
             'Milingo',
             style: TextStyle(
@@ -146,7 +125,7 @@ class AboutMissionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Padding(
-      padding: EdgeInsets.only(top: 20),
+      padding: EdgeInsets.only(top: 10),
       child: _AboutSurface(
         padding: EdgeInsets.all(21),
         child: Column(

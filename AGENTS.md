@@ -144,6 +144,7 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 
 - Use Riverpod. Keep backend state mutations out of UI files.
 - Prefer `AsyncNotifier` or `FutureProvider` for fetching/updating remote data (e.g., subscription details, decks, user stats).
+- **Leaderboard Integration in Profile**: The leaderboard ranking on the profile screen (inside `ProfileStatsSection`'s `_RankCard`) dynamically watches `leaderboardNotifierProvider` to retrieve the current user's actual rank and points, calculating the progress towards the next level milestone using the points modulo 1000, consistent with the main leaderboard page.
 - Use code generation (`build_runner`) when modifying files that use `@riverpod` annotations:
   ```powershell
   dart run build_runner build --delete-conflicting-outputs
@@ -182,6 +183,11 @@ Use `context.go(...)` for main tab navigation, and `context.push(...)` for drill
 - **Session-Only History**: Chat history is kept in memory only (`Option A`). The state provider (`chatProvider`) uses `.autoDispose` to ensure that when the user leaves the screen, the history is deleted completely, and resources are freed.
 - **Backend Routing**: For security and API key protection, the mobile application does not invoke OpenAI directly. It must call the backend `Milingo` endpoints (`/api/v1/ai-tutor/chat` and `/api/v1/ai-tutor/quota`).
 - **Quota Exceeded (HTTP 402)**: When the 20 daily free message limit is exceeded, the backend returns a `402 Payment Required` status code. The frontend handles this by disabling the text field and send button, displaying a message in the input bar, and showing a Premium Upgrade dialog directing the user to `/premium`.
+
+## Security & Authentication
+
+- **Đổi mật khẩu (Password Reset)**: The "Đổi mật khẩu" option in the account settings screen allows users to trigger a password reset email using Firebase Auth (`FirebaseAuth.instance.sendPasswordResetEmail`). It requires a confirmation dialog to verify the destination email and uses a visual loading overlay to indicate progression, ensuring no redundant/duplicate email triggers occur.
+- **Đổi tên hiển thị (Change Username/Display Name)**: The "Tên hiển thị" field in the account settings screen displays an edit icon. Tapping it opens a dialog allowing the user to update their display name. It checks validation (not empty, max 50 characters), uses a visual loading indicator while calling `userProfileProvider.notifier.updateDisplayName`, and propagates updates both locally (using Riverpod) and to the Firebase Auth and backend endpoints (`PATCH /api/v1/users/me`).
 
 ## Verification
 

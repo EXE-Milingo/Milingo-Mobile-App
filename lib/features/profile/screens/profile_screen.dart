@@ -109,10 +109,6 @@ class ProfileScreen extends ConsumerWidget {
         assetPath: 'assets/svg/new-profile/premium.svg',
         onTap: () => context.push(AppConstants.subscriptionRoute),
       ),
-      const ProfileSettingsItemData(
-        label: 'Thông báo',
-        assetPath: 'assets/svg/new-profile/notify.svg',
-      ),
       ProfileSettingsItemData(
         label: 'Ngôn ngữ',
         assetPath: 'assets/svg/new-profile/language.svg',
