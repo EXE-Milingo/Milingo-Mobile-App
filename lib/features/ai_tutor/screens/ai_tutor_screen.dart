@@ -10,6 +10,8 @@ import 'package:milingo/features/ai_tutor/widgets/chat_input_bar.dart';
 import 'package:milingo/features/ai_tutor/widgets/suggestion_chips.dart';
 import 'package:milingo/features/profile/providers/profile_provider.dart';
 
+const _kAiAvatarAsset = 'assets/images/limabo-tounge.png';
+
 // ─────────────────────────────────────────────────────────
 //  AI Tutor Screen
 // ─────────────────────────────────────────────────────────
@@ -75,7 +77,7 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
         ),
         content: const Text(
           'Bạn đã dùng hết 20 tin nhắn miễn phí hôm nay. '
-          'Hãy nâng cấp lên Premium để nhắn tin không giới hạn với AI Tutor!',
+          'Hãy nâng cấp lên Premium để nhắn tin không giới hạn với Milingo AI!',
           style:
               TextStyle(fontSize: 14.5, height: 1.5, color: Color(0xFF4A3728)),
         ),
@@ -251,29 +253,12 @@ class _AiTutorHeader extends ConsumerWidget {
               const SizedBox(width: 12),
 
               // AI avatar + title
-              Container(
+              SizedBox(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFF8A1F), Color(0xFFFF6A00)],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFF6A00).withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text(
-                    '✦',
-                    style: TextStyle(color: Colors.white, fontSize: 17),
-                  ),
+                child: Image.asset(
+                  _kAiAvatarAsset,
+                  fit: BoxFit.contain,
                 ),
               ),
 
@@ -284,7 +269,7 @@ class _AiTutorHeader extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'AI Tutor',
+                      'Milingo AI',
                       style: TextStyle(
                         color: Color(0xFF1D1814),
                         fontSize: 16,
@@ -495,7 +480,7 @@ class _AiTutorInfoSheet extends StatelessWidget {
           const SizedBox(height: 20),
 
           const Text(
-            'AI Tutor',
+            'Milingo AI',
             style: TextStyle(
               color: Color(0xFF1D1814),
               fontSize: 18,
@@ -528,7 +513,7 @@ class _AiTutorInfoSheet extends StatelessWidget {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'AI Tutor chỉ hỗ trợ các chủ đề học ngôn ngữ. Câu hỏi ngoài phạm vi sẽ được từ chối lịch sự.',
+                    'Milingo AI chỉ hỗ trợ các chủ đề học ngôn ngữ. Câu hỏi ngoài phạm vi sẽ được từ chối lịch sự.',
                     style: TextStyle(
                       color: Color(0xFF92400E),
                       fontSize: 12.5,

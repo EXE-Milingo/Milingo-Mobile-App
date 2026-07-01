@@ -58,7 +58,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       messages: [
         ChatMessageModel(
           role: ChatRole.assistant,
-          content: 'Xin chào! Tôi là AI Tutor của MiLingo 👋\n\n'
+          content: 'Xin chào! Tôi là Milingo AI của MiLingo 👋\n\n'
               'Tôi có thể giúp bạn về ngữ pháp, từ vựng, phát âm và các mẹo học $langName. '
               'Hỏi tôi bất cứ điều gì về $langName nhé!',
           timestamp: DateTime.now(),

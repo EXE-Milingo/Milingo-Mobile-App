@@ -457,7 +457,6 @@ class SubscriptionManagementScreen extends ConsumerWidget {
                   color: Color(0xFFAC2D03),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  decoration: TextDecoration.underline,
                 ),
               ),
             ),

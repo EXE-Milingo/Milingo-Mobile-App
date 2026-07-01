@@ -11,6 +11,7 @@ const _kAiBubbleBg = Colors.white;
 const _kUserText = Colors.white;
 const _kAiText = Color(0xFF1D1814);
 const _kTimestampText = Color(0xFFB0A090);
+const _kAiAvatarAsset = 'assets/images/limabo-tounge.png';
 
 class ChatBubble extends StatelessWidget {
   const ChatBubble({
@@ -25,6 +26,25 @@ class ChatBubble extends StatelessWidget {
     return message.isUser
         ? _UserBubble(message: message)
         : _AiBubble(message: message);
+  }
+}
+
+class _AiAvatar extends StatelessWidget {
+  const _AiAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8, bottom: 4),
+      child: SizedBox(
+        width: 30,
+        height: 30,
+        child: Image.asset(
+          _kAiAvatarAsset,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
   }
 }
 
@@ -106,31 +126,7 @@ class _AiBubble extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // AI avatar dot
-          Container(
-            width: 30,
-            height: 30,
-            margin: const EdgeInsets.only(right: 8, bottom: 4),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFF8A1F), Color(0xFFFF6A00)],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF6A00).withValues(alpha: 0.30),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Text('✦',
-                  style: TextStyle(color: Colors.white, fontSize: 13)),
-            ),
-          ),
+          const _AiAvatar(),
           // Bubble
           ConstrainedBox(
             constraints: BoxConstraints(
@@ -227,22 +223,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // AI avatar
-          Container(
-            width: 30,
-            height: 30,
-            margin: const EdgeInsets.only(right: 8, bottom: 4),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFF8A1F), Color(0xFFFF6A00)],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text('✦',
-                  style: TextStyle(color: Colors.white, fontSize: 13)),
-            ),
-          ),
+          const _AiAvatar(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
