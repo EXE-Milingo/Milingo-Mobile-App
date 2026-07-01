@@ -1,4 +1,4 @@
-package com.example.milingo
+package vn.milingo.app
 
 import io.flutter.embedding.android.FlutterActivity
 
