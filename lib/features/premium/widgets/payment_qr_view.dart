@@ -90,6 +90,8 @@ class PaymentQrView extends StatelessWidget {
                   RepaintBoundary(
                     key: qrBoundaryKey,
                     child: Container(
+                      key: const Key('payment-qr-boundary'),
+                      alignment: Alignment.center,
                       color: Colors.white,
                       padding: const EdgeInsets.all(20),
                       child: QrImageView(
@@ -99,6 +101,16 @@ class PaymentQrView extends StatelessWidget {
                         size: 250,
                         backgroundColor: Colors.white,
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'VietQR • Chuyển nhanh NAPAS 247',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF0B7A75),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -112,6 +124,12 @@ class PaymentQrView extends StatelessWidget {
                     label: 'Số tiền',
                     value: _amountLabel,
                     onCopy: () => onCopy(order.amount.toString()),
+                  ),
+                  _TransferDetail(
+                    label: 'Ngân hàng',
+                    value: order.bankName.trim().isNotEmpty
+                        ? order.bankName
+                        : 'Ngân hàng (BIN: ${order.bin})',
                   ),
                   _TransferDetail(
                     label: 'Tên tài khoản',

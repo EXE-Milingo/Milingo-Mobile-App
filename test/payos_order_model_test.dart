@@ -5,6 +5,7 @@ void main() {
   test('parses native PayOS order details returned by backend', () {
     final order = CreatePayOSOrderResponse.fromJson({
       'bin': '970422',
+      'bankName': 'Ngân hàng Thương mại Cổ phần Quân đội (MB)',
       'accountNumber': '113366668888',
       'accountName': 'MERCHANT NAME',
       'amount': 139000,
@@ -18,6 +19,10 @@ void main() {
     });
 
     expect(order.bin, '970422');
+    expect(
+      order.bankName,
+      'Ngân hàng Thương mại Cổ phần Quân đội (MB)',
+    );
     expect(order.accountNumber, '113366668888');
     expect(order.accountName, 'MERCHANT NAME');
     expect(order.amount, 139000);

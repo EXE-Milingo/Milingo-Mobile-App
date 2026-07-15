@@ -25,6 +25,19 @@ void main() {
     );
 
     expect(find.byKey(const Key('payos-qr-code')), findsOneWidget);
+    expect(
+      find.text('Ngân hàng Thương mại Cổ phần Quân đội (MB)'),
+      findsOneWidget,
+    );
+    expect(find.text('VietQR • Chuyển nhanh NAPAS 247'), findsOneWidget);
+
+    final boundaryCenter = tester.getCenter(
+      find.byKey(const Key('payment-qr-boundary')),
+    );
+    final qrCenter = tester.getCenter(
+      find.byKey(const Key('payos-qr-code')),
+    );
+    expect(qrCenter.dx, closeTo(boundaryCenter.dx, 0.1));
     expect(find.text('139.000 ₫'), findsOneWidget);
     expect(find.text('MERCHANT NAME'), findsOneWidget);
     expect(find.text('113366668888'), findsOneWidget);
@@ -73,6 +86,7 @@ void main() {
 
 CreatePayOSOrderResponse _order() => CreatePayOSOrderResponse(
       bin: '970422',
+      bankName: 'Ngân hàng Thương mại Cổ phần Quân đội (MB)',
       accountNumber: '113366668888',
       accountName: 'MERCHANT NAME',
       amount: 139000,

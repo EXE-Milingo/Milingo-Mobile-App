@@ -149,6 +149,7 @@ class _FakePaymentGateway implements PaymentGateway {
 
 CreatePayOSOrderResponse _order() => CreatePayOSOrderResponse(
       bin: '970422',
+      bankName: 'Ngân hàng Thương mại Cổ phần Quân đội (MB)',
       accountNumber: '113366668888',
       accountName: 'MERCHANT NAME',
       amount: 139000,

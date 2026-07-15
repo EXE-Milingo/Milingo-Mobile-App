@@ -763,6 +763,7 @@ class UserStatsResponse {
 class CreatePayOSOrderResponse {
   const CreatePayOSOrderResponse({
     required this.bin,
+    required this.bankName,
     required this.accountNumber,
     required this.accountName,
     required this.amount,
@@ -778,6 +779,7 @@ class CreatePayOSOrderResponse {
   factory CreatePayOSOrderResponse.fromJson(Map<String, dynamic> json) {
     return CreatePayOSOrderResponse(
       bin: (json['bin'] ?? '').toString(),
+      bankName: (json['bankName'] ?? '').toString(),
       accountNumber: (json['accountNumber'] ?? '').toString(),
       accountName: (json['accountName'] ?? '').toString(),
       amount: (json['amount'] as num?)?.toInt() ?? 0,
@@ -792,6 +794,7 @@ class CreatePayOSOrderResponse {
   }
 
   final String bin;
+  final String bankName;
   final String accountNumber;
   final String accountName;
   final int amount;
