@@ -6,7 +6,6 @@ import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/premium/widgets/payment_method_view.dart';
 import 'package:milingo/features/premium/widgets/premium_upgrade_view.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class PaymentMethodScreen extends ConsumerStatefulWidget {
   const PaymentMethodScreen({
@@ -37,26 +36,25 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen> {
 
   Future<void> _confirmPayment(String methodId) async {
     setState(() => _isConfirming = true);
+    var createNewOrder = false;
 
     try {
       final order = await ref.read(milingoApiServiceProvider).createPayOSOrder(
             planId: _selectedPlan.id,
-            returnUrl: AppConstants.paymentReturnUrl,
-            cancelUrl: AppConstants.paymentCancelUrl,
           );
-
-      final checkoutUri = Uri.tryParse(order.checkoutUrl);
-      if (checkoutUri == null || !checkoutUri.hasScheme) {
-        throw const MilingoApiException('Link thanh toán không hợp lệ.');
+      if (!mounted) return;
+      if (order.isPaid) {
+        context.go(
+          '${AppConstants.paymentSuccessRoute}?orderCode=${order.orderCode}',
+        );
+        return;
       }
-
-      final launched = await launchUrl(
-        checkoutUri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched) {
-        throw const MilingoApiException('Không mở được PayOS checkout.');
+      if (order.qrCode.isEmpty || order.accountNumber.isEmpty) {
+        throw const MilingoApiException('Không nhận được mã QR thanh toán.');
       }
+      createNewOrder =
+          await context.push<bool>(AppConstants.paymentQrRoute, extra: order) ==
+              true;
     } catch (error) {
       if (!mounted) return;
       _showSnackBar(_errorMessage(error), isError: true);
@@ -64,6 +62,9 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen> {
       if (mounted) {
         setState(() => _isConfirming = false);
       }
+    }
+    if (createNewOrder && mounted) {
+      await _confirmPayment(methodId);
     }
   }
 
@@ -90,7 +91,7 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen> {
     return PaymentMethodView(
       plan: PaymentMethodPlanSummary.fromPremiumPlan(_selectedPlan),
       isConfirming: _isConfirming,
-      initialMethodId: 'card',
+      initialMethodId: 'bank_qr',
       onClose: () => context.pop(),
       onChangePlan: () => context.pop(),
       onConfirmPayment: _confirmPayment,

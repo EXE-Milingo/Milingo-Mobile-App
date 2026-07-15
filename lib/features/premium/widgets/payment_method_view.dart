@@ -41,22 +41,6 @@ class PaymentMethodOption {
 
 const _paymentMethods = [
   PaymentMethodOption(
-    id: 'apple_pay',
-    title: 'Apple Pay',
-    icon: Icons.phone_iphone_rounded,
-  ),
-  PaymentMethodOption(
-    id: 'card',
-    title: 'Thẻ Visa/Mastercard',
-    subtitle: '**** **** **** 4242',
-    icon: Icons.credit_card_rounded,
-  ),
-  PaymentMethodOption(
-    id: 'momo',
-    title: 'Ví MoMo',
-    icon: Icons.account_balance_wallet_outlined,
-  ),
-  PaymentMethodOption(
     id: 'bank_qr',
     title: 'QR Ngân hàng',
     icon: Icons.qr_code_2_rounded,
@@ -91,7 +75,7 @@ class _PaymentMethodViewState extends State<PaymentMethodView> {
   @override
   void initState() {
     super.initState();
-    _selectedMethodId = widget.initialMethodId ?? _paymentMethods[1].id;
+    _selectedMethodId = widget.initialMethodId ?? _paymentMethods.first.id;
   }
 
   @override
@@ -144,8 +128,6 @@ class _PaymentMethodViewState extends State<PaymentMethodView> {
                         if (method != _paymentMethods.last)
                           const SizedBox(height: 12),
                       ],
-                      const SizedBox(height: 16),
-                      const _AddPaymentMethodButton(),
                       const SizedBox(height: 64),
                       const _SecurityBadge(),
                     ],
@@ -481,32 +463,6 @@ class _PaymentMethodTile extends StatelessWidget {
   }
 }
 
-class _AddPaymentMethodButton extends StatelessWidget {
-  const _AddPaymentMethodButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: TextButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add_rounded, size: 18),
-        label: const Text('Thêm phương thức mới'),
-        style: TextButton.styleFrom(
-          foregroundColor: _PaymentColors.orange,
-          padding: const EdgeInsets.all(8),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            height: 20 / 14,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _SecurityBadge extends StatelessWidget {
   const _SecurityBadge();
 
@@ -593,7 +549,7 @@ class _ConfirmPaymentButton extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  isConfirming ? 'Đang mở PayOS' : 'Xác nhận thanh toán',
+                  isConfirming ? 'Đang tạo mã QR' : 'Xác nhận thanh toán',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

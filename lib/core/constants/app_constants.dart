@@ -17,17 +17,6 @@ class AppConstants {
 
   // PayOS Configuration
   static const String milingoWebBaseUrl = 'https://milingo.vn';
-  static const String payOSBaseUrl = 'https://api-merchant.payos.vn';
-  static String get payOSClientId =>
-      dotenv.env['PAYOS_CLIENT_ID'] ?? 'YOUR_PAYOS_CLIENT_ID';
-  static String get payOSApiKey =>
-      dotenv.env['PAYOS_API_KEY'] ?? 'YOUR_PAYOS_API_KEY';
-  static String get paymentReturnUrl =>
-      dotenv.env['PAYMENT_RETURN_URL'] ??
-      '$milingoBaseUrl/api/v1/payments/payos/redirect?status=success';
-  static String get paymentCancelUrl =>
-      dotenv.env['PAYMENT_CANCEL_URL'] ??
-      '$milingoBaseUrl/api/v1/payments/payos/redirect?status=cancel';
 
   // Supported Languages
   static const List<String> supportedLanguages = [
@@ -69,6 +58,7 @@ class AppConstants {
   static const String premiumRoute = '/premium';
   static const String premiumLimitRoute = '/premium/limit';
   static const String paymentMethodRoute = '/premium/payment-method';
+  static const String paymentQrRoute = '/premium/payment-qr';
   static const String termsOfServiceRoute = '/terms-of-service';
   static const String subscriptionRoute = '/subscription';
   static const String paymentHistoryRoute = '/payments/history';

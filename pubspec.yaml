@@ -52,6 +52,8 @@ dependencies:
   image: ^4.8.0
   firebase_app_check: ^0.3.2+10
   app_links: ^7.0.0
+  qr_flutter: 4.1.0
+  gal: 2.3.2
 
 dev_dependencies:
   flutter_test:

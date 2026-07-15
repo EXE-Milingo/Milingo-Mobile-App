@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/routing/app_router.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/premium/providers/payment_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'firebase_options.dart';
@@ -53,13 +54,15 @@ class MiLingoApp extends ConsumerStatefulWidget {
   ConsumerState<MiLingoApp> createState() => _MiLingoAppState();
 }
 
-class _MiLingoAppState extends ConsumerState<MiLingoApp> {
+class _MiLingoAppState extends ConsumerState<MiLingoApp>
+    with WidgetsBindingObserver {
   StreamSubscription<Uri>? _linkSubscription;
   Uri? _lastHandledLink;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _listenForPaymentReturnLinks();
   }
 
@@ -77,7 +80,7 @@ class _MiLingoAppState extends ConsumerState<MiLingoApp> {
     if (_lastHandledLink == uri) return;
     _lastHandledLink = uri;
 
-    final route = _paymentRouteFor(uri);
+    final route = paymentRouteFor(uri);
     if (route == null) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -86,29 +89,18 @@ class _MiLingoAppState extends ConsumerState<MiLingoApp> {
     });
   }
 
-  String? _paymentRouteFor(Uri uri) {
-    if (uri.scheme == 'https' &&
-        uri.host == Uri.parse(AppConstants.milingoWebBaseUrl).host) {
-      return _knownPaymentRoute(uri.path);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(
+        ref.read(paymentReconciliationProvider.notifier).handleAppResumed(),
+      );
     }
-
-    if (uri.scheme == 'milingo' && uri.host == 'payment') {
-      return _knownPaymentRoute('/payment${uri.path}');
-    }
-
-    return null;
-  }
-
-  String? _knownPaymentRoute(String path) {
-    return switch (path) {
-      AppConstants.paymentSuccessRoute => AppConstants.paymentSuccessRoute,
-      AppConstants.paymentCancelRoute => AppConstants.paymentCancelRoute,
-      _ => null,
-    };
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSubscription?.cancel();
     super.dispose();
   }
@@ -117,6 +109,7 @@ class _MiLingoAppState extends ConsumerState<MiLingoApp> {
   Widget build(BuildContext context) {
     // Get the router configuration from Riverpod
     final router = ref.watch(appRouterProvider);
+    ref.watch(paymentReconciliationProvider);
 
     return MaterialApp.router(
       // App Configuration
@@ -143,4 +136,22 @@ class _MiLingoAppState extends ConsumerState<MiLingoApp> {
       // ],
     );
   }
+}
+
+String? paymentRouteFor(Uri uri) {
+  String? path;
+  if (uri.scheme == 'https' &&
+      uri.host == Uri.parse(AppConstants.milingoWebBaseUrl).host) {
+    path = uri.path;
+  } else if (uri.scheme == 'milingo' && uri.host == 'payment') {
+    path = uri.path.startsWith('/payment/') ? uri.path : '/payment${uri.path}';
+  }
+
+  final knownRoute = switch (path) {
+    AppConstants.paymentSuccessRoute => AppConstants.paymentSuccessRoute,
+    AppConstants.paymentCancelRoute => AppConstants.paymentCancelRoute,
+    _ => null,
+  };
+  if (knownRoute == null || uri.query.isEmpty) return knownRoute;
+  return '$knownRoute?${uri.query}';
 }

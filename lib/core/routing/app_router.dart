@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
+import 'package:milingo/core/network/milingo_models.dart';
 import 'package:milingo/features/auth/screens/choose_language_screen.dart';
 import 'package:milingo/features/auth/screens/forgot_password_screen.dart';
 import 'package:milingo/features/auth/screens/login_screen.dart';
@@ -18,6 +19,7 @@ import 'package:milingo/features/ai_tutor/screens/ai_tutor_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
 import 'package:milingo/features/leaderboard/screens/leaderboard_screen.dart';
 import 'package:milingo/features/premium/screens/payment_method_screen.dart';
+import 'package:milingo/features/premium/screens/payment_qr_screen.dart';
 import 'package:milingo/features/premium/screens/payment_result_screen.dart';
 import 'package:milingo/features/premium/screens/premium_limit_screen.dart';
 import 'package:milingo/features/premium/screens/premium_screen.dart';
@@ -239,6 +241,17 @@ GoRouter appRouter(AppRouterRef ref) {
             selectedPlan: extra is PremiumPlan ? extra : null,
             selectedPlanId: extra is String ? extra : null,
           );
+        },
+      ),
+      GoRoute(
+        path: AppConstants.paymentQrRoute,
+        name: 'payment-qr',
+        builder: (context, state) {
+          final order = state.extra;
+          if (order is CreatePayOSOrderResponse) {
+            return PaymentQrScreen(order: order);
+          }
+          return const PremiumScreen();
         },
       ),
       GoRoute(

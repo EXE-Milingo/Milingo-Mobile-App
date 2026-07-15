@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/premium/providers/payment_provider.dart';
 
 const _resultInk = Color(0xFF17201B);
 const _resultMuted = Color(0xFF66736C);
@@ -59,6 +60,9 @@ class _PaymentResultScreenState extends ConsumerState<PaymentResultScreen> {
       }
 
       final status = await api.getPremiumStatus();
+      if (status.isPremium) {
+        await ref.read(paymentEntitlementRefreshProvider)();
+      }
       if (!mounted) return;
       setState(() => _status = status);
     } catch (e) {

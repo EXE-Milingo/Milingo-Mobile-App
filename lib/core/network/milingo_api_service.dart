@@ -313,16 +313,12 @@ class MilingoApiService {
 
   Future<CreatePayOSOrderResponse> createPayOSOrder({
     required String planId,
-    required String returnUrl,
-    required String cancelUrl,
   }) async {
     try {
       final response = await _dio.post(
         '/api/v1/payments/payos/create-order',
         data: {
           'planId': planId,
-          'returnUrl': returnUrl,
-          'cancelUrl': cancelUrl,
         },
       );
       return _unwrap(
@@ -330,6 +326,18 @@ class MilingoApiService {
         (data) =>
             CreatePayOSOrderResponse.fromJson(data as Map<String, dynamic>),
       );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<CreatePayOSOrderResponse?> getPendingPayOSOrder() async {
+    try {
+      final response = await _dio.get('/api/v1/payments/payos/pending-order');
+      return _unwrap(response, (data) {
+        if (data == null) return null;
+        return CreatePayOSOrderResponse.fromJson(data as Map<String, dynamic>);
+      });
     } on DioException catch (e) {
       throw MilingoApiException(_userFriendlyError(e));
     }
@@ -347,14 +355,25 @@ class MilingoApiService {
     }
   }
 
-  Future<bool> verifyPayOSOrder(int orderCode) async {
+  Future<PayOSOrderStatusResponse> verifyPayOSOrder(int orderCode) async {
     try {
       final response =
           await _dio.post('/api/v1/payments/payos/verify-order/$orderCode');
       return _unwrap(
         response,
-        (_) => true,
+        (data) =>
+            PayOSOrderStatusResponse.fromJson(data as Map<String, dynamic>),
       );
+    } on DioException catch (e) {
+      throw MilingoApiException(_userFriendlyError(e));
+    }
+  }
+
+  Future<bool> cancelPayOSOrder(int orderCode) async {
+    try {
+      final response =
+          await _dio.post('/api/v1/payments/payos/cancel-order/$orderCode');
+      return _unwrap(response, (data) => data as bool? ?? false);
     } on DioException catch (e) {
       throw MilingoApiException(_userFriendlyError(e));
     }

@@ -762,22 +762,76 @@ class UserStatsResponse {
 
 class CreatePayOSOrderResponse {
   const CreatePayOSOrderResponse({
+    required this.bin,
+    required this.accountNumber,
+    required this.accountName,
+    required this.amount,
+    required this.description,
     required this.checkoutUrl,
     required this.orderCode,
     required this.paymentLinkId,
+    required this.qrCode,
+    required this.status,
+    required this.expiresAt,
   });
 
   factory CreatePayOSOrderResponse.fromJson(Map<String, dynamic> json) {
     return CreatePayOSOrderResponse(
+      bin: (json['bin'] ?? '').toString(),
+      accountNumber: (json['accountNumber'] ?? '').toString(),
+      accountName: (json['accountName'] ?? '').toString(),
+      amount: (json['amount'] as num?)?.toInt() ?? 0,
+      description: (json['description'] ?? '').toString(),
       checkoutUrl: (json['checkoutUrl'] ?? '').toString(),
       orderCode: (json['orderCode'] as num?)?.toInt() ?? 0,
       paymentLinkId: (json['paymentLinkId'] ?? '').toString(),
+      qrCode: (json['qrCode'] ?? '').toString(),
+      status: (json['status'] ?? 'PENDING').toString().toUpperCase(),
+      expiresAt: DateTime.tryParse((json['expiresAt'] ?? '').toString()),
     );
   }
 
+  final String bin;
+  final String accountNumber;
+  final String accountName;
+  final int amount;
+  final String description;
   final String checkoutUrl;
   final int orderCode;
   final String paymentLinkId;
+  final String qrCode;
+  final String status;
+  final DateTime? expiresAt;
+
+  bool get isPaid =>
+      status == 'PAID' || status == 'SUCCESS' || status == 'COMPLETED';
+
+  bool get isTerminal => isPaid || status == 'CANCELLED' || status == 'EXPIRED';
+}
+
+class PayOSOrderStatusResponse {
+  const PayOSOrderStatusResponse({
+    required this.orderCode,
+    required this.status,
+    required this.isPaid,
+    this.expiresAt,
+  });
+
+  factory PayOSOrderStatusResponse.fromJson(Map<String, dynamic> json) {
+    return PayOSOrderStatusResponse(
+      orderCode: (json['orderCode'] as num?)?.toInt() ?? 0,
+      status: (json['status'] ?? 'PENDING').toString().toUpperCase(),
+      isPaid: json['isPaid'] as bool? ?? false,
+      expiresAt: DateTime.tryParse((json['expiresAt'] ?? '').toString()),
+    );
+  }
+
+  final int orderCode;
+  final String status;
+  final bool isPaid;
+  final DateTime? expiresAt;
+
+  bool get isTerminal => isPaid || status == 'CANCELLED' || status == 'EXPIRED';
 }
 
 class SubscriptionPlanResponse {
