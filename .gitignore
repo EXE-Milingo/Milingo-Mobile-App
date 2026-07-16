@@ -60,3 +60,4 @@ firebase_options.dart
 # API Keys (extra safety)
 **/app_constants.dart.local
 secrets.dart
+.tmp/
