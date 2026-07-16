@@ -41,8 +41,6 @@ class SubscriptionManagementScreen extends ConsumerWidget {
     WidgetRef ref,
     SubscriptionOverviewResponse overview,
   ) {
-    final active = overview.isPremium;
-
     return RefreshIndicator(
       color: const Color(0xFFFF6A00),
       onRefresh: () => ref.refresh(subscriptionOverviewProvider.future),
