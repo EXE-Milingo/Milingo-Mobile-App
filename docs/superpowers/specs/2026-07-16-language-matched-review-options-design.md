@@ -26,7 +26,7 @@ The backend will build one reusable, same-language candidate pool for the entire
 4. Query every eligible deck at most once for the session, in parallel, retrieving at most 10 matching cards per deck. Merge terms case-insensitively, shuffle them, and retain at most 50 supplemental candidates; do not download an unbounded vocabulary library.
 5. For each question, exclude only the current correct card and its duplicate term, then select three unique distractors from the shared pool.
 6. Use the existing AI generator only for questions that still have fewer than three distractors after the authenticated user's matching-language pool is exhausted.
-7. When multiple questions require AI, issue only the small necessary set concurrently. Because AI is needed only when the user has fewer than four unique matching-language cards, this is naturally bounded to at most three questions.
+7. When multiple questions require AI, process them concurrently with a maximum of three in-flight OpenAI requests.
 
 No global or cross-user vocabulary source will be queried. Cards in other languages remain ineligible even when they belong to the authenticated user.
 
