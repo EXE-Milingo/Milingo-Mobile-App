@@ -43,5 +43,6 @@ void main() {
     expect(plans.map((plan) => plan.priceText),
         ['59.000đ', '139.000đ', '510.000đ']);
     expect(plans.map((plan) => plan.unit), ['/ Tuần', '/ tháng', '/ Năm']);
+    expect(plans.map((plan) => plan.durationDays), [7, 30, 365]);
   });
 }

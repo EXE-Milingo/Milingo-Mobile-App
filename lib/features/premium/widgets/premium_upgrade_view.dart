@@ -9,6 +9,7 @@ class PremiumPlan {
     required this.name,
     required this.priceText,
     required this.unit,
+    required this.durationDays,
     required this.features,
     this.badge,
     this.showStar = false,
@@ -31,6 +32,7 @@ class PremiumPlan {
       name: plan.planName,
       priceText: '$formattedPriceđ',
       unit: unit,
+      durationDays: plan.durationDays,
       features: _premiumFeatures,
       badge: switch (plan.planId) {
         'pro' => 'PHỔ BIẾN NHẤT',
@@ -48,6 +50,7 @@ class PremiumPlan {
   final String name;
   final String priceText;
   final String unit;
+  final int durationDays;
   final List<String> features;
   final String? badge;
   final bool showStar;
@@ -60,6 +63,7 @@ const premiumPlans = [
     name: 'Gói Plus',
     priceText: '59.000đ',
     unit: '/ Tuần',
+    durationDays: 7,
     features: _premiumFeatures,
   ),
   PremiumPlan(
@@ -67,6 +71,7 @@ const premiumPlans = [
     name: 'Gói Pro',
     priceText: '139.000đ',
     unit: '/ tháng',
+    durationDays: 30,
     badge: 'PHỔ BIẾN NHẤT',
     features: _premiumFeatures,
   ),
@@ -75,6 +80,7 @@ const premiumPlans = [
     name: 'Gói Ultra',
     priceText: '510.000đ',
     unit: '/ Năm',
+    durationDays: 365,
     badge: 'PHỔ BIẾN',
     showStar: true,
     accentColor: _PremiumColors.lightOrange,
