@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
+import 'package:milingo/features/premium/models/premium_renewal_info.dart';
+import 'package:milingo/features/premium/providers/subscription_provider.dart';
 import 'package:milingo/features/premium/widgets/premium_upgrade_view.dart';
 
 class PremiumScreen extends ConsumerStatefulWidget {
@@ -15,6 +17,7 @@ class PremiumScreen extends ConsumerStatefulWidget {
 class _PremiumScreenState extends ConsumerState<PremiumScreen> {
   List<PremiumPlan> _plans = premiumPlans;
   String _selectedPlanId = premiumPlans[1].id;
+  PremiumRenewalInfo _renewalInfo = const PremiumRenewalInfo.free();
 
   PremiumPlan get _selectedPlan {
     return _plans.firstWhere(
@@ -27,6 +30,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen> {
   void initState() {
     super.initState();
     _loadPlans();
+    _loadSubscription();
   }
 
   Future<void> _loadPlans() async {
@@ -38,12 +42,34 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen> {
 
       setState(() {
         _plans = plans;
-        if (!_plans.any((plan) => plan.id == _selectedPlanId)) {
-          _selectedPlanId = _plans.first.id;
-        }
+        final fallbackId = _plans.any((plan) => plan.id == _selectedPlanId)
+            ? _selectedPlanId
+            : _plans.first.id;
+        _selectedPlanId = _renewalInfo.preferredPlanId(
+          _plans.map((plan) => plan.id).toSet(),
+          fallbackId,
+        );
       });
     } catch (_) {
       // Keep local catalog available when backend cannot be reached.
+    }
+  }
+
+  Future<void> _loadSubscription() async {
+    try {
+      final overview = await ref.read(subscriptionOverviewProvider.future);
+      if (!mounted) return;
+
+      final renewalInfo = PremiumRenewalInfo.fromOverview(overview);
+      setState(() {
+        _renewalInfo = renewalInfo;
+        _selectedPlanId = renewalInfo.preferredPlanId(
+          _plans.map((plan) => plan.id).toSet(),
+          _selectedPlanId,
+        );
+      });
+    } catch (_) {
+      // Checkout remains available; backend entitlement is authoritative.
     }
   }
 
@@ -60,6 +86,12 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen> {
     return PremiumUpgradeView(
       plans: _plans,
       selectedPlanId: _selectedPlanId,
+      latestPurchasedPlanId:
+          _renewalInfo.isPremium ? _renewalInfo.latestPlanId : null,
+      actionLabel: _renewalInfo.actionLabel(
+        planId: _selectedPlan.id,
+        durationDays: _selectedPlan.durationDays,
+      ),
       isStartingPayment: false,
       onClose: _close,
       onPlanSelected: (plan) => setState(() => _selectedPlanId = plan.id),

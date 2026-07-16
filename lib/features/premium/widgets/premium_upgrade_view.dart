@@ -101,6 +101,8 @@ class PremiumUpgradeView extends StatelessWidget {
   const PremiumUpgradeView({
     required this.plans,
     required this.selectedPlanId,
+    required this.latestPurchasedPlanId,
+    required this.actionLabel,
     required this.isStartingPayment,
     required this.onClose,
     required this.onPlanSelected,
@@ -112,6 +114,8 @@ class PremiumUpgradeView extends StatelessWidget {
 
   final List<PremiumPlan> plans;
   final String selectedPlanId;
+  final String? latestPurchasedPlanId;
+  final String actionLabel;
   final bool isStartingPayment;
   final VoidCallback onClose;
   final ValueChanged<PremiumPlan> onPlanSelected;
@@ -146,10 +150,12 @@ class PremiumUpgradeView extends StatelessWidget {
                       _PremiumPlanList(
                         plans: plans,
                         selectedPlanId: selectedPlanId,
+                        latestPurchasedPlanId: latestPurchasedPlanId,
                         onPlanSelected: onPlanSelected,
                       ),
                       const SizedBox(height: 48),
                       _PremiumActionArea(
+                        actionLabel: actionLabel,
                         isStartingPayment: isStartingPayment,
                         onStartPayment: onStartPayment,
                         onRestorePurchases: onRestorePurchases,
@@ -315,11 +321,13 @@ class _PremiumPlanList extends StatelessWidget {
   const _PremiumPlanList({
     required this.plans,
     required this.selectedPlanId,
+    required this.latestPurchasedPlanId,
     required this.onPlanSelected,
   });
 
   final List<PremiumPlan> plans;
   final String selectedPlanId;
+  final String? latestPurchasedPlanId;
   final ValueChanged<PremiumPlan> onPlanSelected;
 
   @override
@@ -330,6 +338,7 @@ class _PremiumPlanList extends StatelessWidget {
           _PremiumPlanCard(
             plan: plan,
             selected: plan.id == selectedPlanId,
+            isLatestPurchase: plan.id == latestPurchasedPlanId,
             onTap: () => onPlanSelected(plan),
           ),
           if (plan != plans.last) const SizedBox(height: 24),
@@ -343,11 +352,13 @@ class _PremiumPlanCard extends StatelessWidget {
   const _PremiumPlanCard({
     required this.plan,
     required this.selected,
+    required this.isLatestPurchase,
     required this.onTap,
   });
 
   final PremiumPlan plan;
   final bool selected;
+  final bool isLatestPurchase;
   final VoidCallback onTap;
 
   @override
@@ -391,6 +402,18 @@ class _PremiumPlanCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _PlanHeading(plan: plan, accent: accent),
+                  if (isLatestPurchase) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'GÓI MUA GẦN NHẤT',
+                      style: TextStyle(
+                        color: _PremiumColors.orange,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   _PlanPrice(plan: plan),
                   const SizedBox(height: 24),
@@ -578,12 +601,14 @@ class _PlanBadge extends StatelessWidget {
 
 class _PremiumActionArea extends StatelessWidget {
   const _PremiumActionArea({
+    required this.actionLabel,
     required this.isStartingPayment,
     required this.onStartPayment,
     required this.onRestorePurchases,
     required this.onTermsPressed,
   });
 
+  final String actionLabel;
   final bool isStartingPayment;
   final VoidCallback onStartPayment;
   final VoidCallback onRestorePurchases;
@@ -623,7 +648,7 @@ class _PremiumActionArea extends StatelessWidget {
                       ),
                     )
                   : const Icon(Icons.arrow_forward_rounded, size: 18),
-              label: Text(isStartingPayment ? 'Đang mở PayOS' : 'Bắt đầu ngay'),
+              label: Text(isStartingPayment ? 'Đang mở PayOS' : actionLabel),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 disabledBackgroundColor: Colors.transparent,
