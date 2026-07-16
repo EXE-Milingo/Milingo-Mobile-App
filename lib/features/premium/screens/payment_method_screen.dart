@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/premium/models/premium_renewal_info.dart';
+import 'package:milingo/features/premium/providers/subscription_provider.dart';
 import 'package:milingo/features/premium/widgets/payment_method_view.dart';
 import 'package:milingo/features/premium/widgets/premium_upgrade_view.dart';
 
@@ -88,8 +90,16 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final overview = ref.watch(subscriptionOverviewProvider).valueOrNull;
+    final renewalInfo = PremiumRenewalInfo.fromOverview(overview);
+    final renewalNotice = renewalInfo.checkoutNotice(
+      durationDays: _selectedPlan.durationDays,
+      now: DateTime.now(),
+    );
+
     return PaymentMethodView(
       plan: PaymentMethodPlanSummary.fromPremiumPlan(_selectedPlan),
+      renewalNotice: renewalNotice,
       isConfirming: _isConfirming,
       initialMethodId: 'bank_qr',
       onClose: () => context.pop(),

@@ -50,6 +50,7 @@ const _paymentMethods = [
 class PaymentMethodView extends StatefulWidget {
   const PaymentMethodView({
     required this.plan,
+    required this.renewalNotice,
     required this.isConfirming,
     required this.onClose,
     required this.onChangePlan,
@@ -59,6 +60,7 @@ class PaymentMethodView extends StatefulWidget {
   });
 
   final PaymentMethodPlanSummary plan;
+  final String renewalNotice;
   final bool isConfirming;
   final VoidCallback onClose;
   final VoidCallback onChangePlan;
@@ -102,6 +104,28 @@ class _PaymentMethodViewState extends State<PaymentMethodView> {
                       _SelectedPlanCard(
                         plan: widget.plan,
                         onChangePlan: widget.onChangePlan,
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF1EC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                _PaymentColors.orange.withValues(alpha: 0.16),
+                          ),
+                        ),
+                        child: Text(
+                          widget.renewalNotice,
+                          style: const TextStyle(
+                            color: _PaymentColors.muted,
+                            fontSize: 13,
+                            height: 1.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 32),
                       const Padding(

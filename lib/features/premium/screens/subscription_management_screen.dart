@@ -64,7 +64,7 @@ class SubscriptionManagementScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _buildManagementList(context, overview),
             const SizedBox(height: 40),
-            _buildFooterActions(context, active),
+            _buildFooterActions(context, overview),
           ],
         ),
       ),
@@ -155,9 +155,11 @@ class SubscriptionManagementScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'GÓI HIỆN TẠI',
-                style: TextStyle(
+              Text(
+                overview.source == 'payos'
+                    ? 'Gói mua gần nhất'.toUpperCase()
+                    : 'GÓI HIỆN TẠI',
+                style: const TextStyle(
                   color: Color(0xFF9A8E84),
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -213,9 +215,11 @@ class SubscriptionManagementScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Thanh toán lần tới',
-                          style: TextStyle(
+                        Text(
+                          overview.source == 'payos'
+                              ? 'Gói mua gần nhất'
+                              : 'Thanh toán lần tới',
+                          style: const TextStyle(
                             color: Color(0xFF9A8E84),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -224,7 +228,11 @@ class SubscriptionManagementScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           active
-                              ? _formatMoney(overview.nextPaymentAmount)
+                              ? _formatMoney(
+                                  overview.source == 'payos'
+                                      ? overview.lastPaymentAmount
+                                      : overview.nextPaymentAmount,
+                                )
                               : 'Chưa có',
                           style: const TextStyle(
                             color: Color(0xFF1D1814),
@@ -438,8 +446,28 @@ class SubscriptionManagementScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFooterActions(BuildContext context, bool active) {
-    if (active) {
+  Widget _buildFooterActions(
+    BuildContext context,
+    SubscriptionOverviewResponse overview,
+  ) {
+    if (overview.isPremium && overview.source == 'payos') {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          'PayOS là giao dịch một lần và không tự động gia hạn. '
+          'Bạn có thể mua thêm thời gian bất cứ lúc nào.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF9A8E84),
+            fontSize: 11,
+            height: 1.5,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
+    if (overview.isPremium) {
       return Center(
         child: Column(
           children: [
