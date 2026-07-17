@@ -14,6 +14,8 @@ import 'package:milingo/features/flashcards/screens/deck_screen.dart';
 import 'package:milingo/features/flashcards/screens/exam_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcard_study_screen.dart';
 import 'package:milingo/features/flashcards/screens/flashcards_screen.dart';
+import 'package:milingo/features/flashcards/screens/scan_history_detail_screen.dart';
+import 'package:milingo/features/flashcards/screens/scan_history_screen.dart';
 import 'package:milingo/features/flashcards/screens/vocab_detail_screen.dart';
 import 'package:milingo/features/ai_tutor/screens/ai_tutor_screen.dart';
 import 'package:milingo/features/home/screens/simple_home_screen.dart';
@@ -91,6 +93,22 @@ GoRouter appRouter(AppRouterRef ref) {
         path: AppConstants.flashcardsRoute,
         name: 'flashcards',
         builder: (context, state) => const FlashcardsScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.scanHistoryRoute,
+        name: 'scan-history',
+        builder: (context, state) => const ScanHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.scanHistoryDetailRoute,
+        name: 'scan-history-detail',
+        builder: (context, state) {
+          final item = state.extra;
+          if (item is SnapHistoryItemResponse) {
+            return ScanHistoryDetailScreen(item: item);
+          }
+          return const ScanHistoryScreen();
+        },
       ),
       GoRoute(
         path: AppConstants.allCategoriesRoute,

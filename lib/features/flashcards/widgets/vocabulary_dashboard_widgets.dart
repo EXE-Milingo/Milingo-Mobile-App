@@ -79,9 +79,14 @@ class VocabularyDashboardHeader extends StatelessWidget {
 }
 
 class VocabularyHeroCard extends StatelessWidget {
-  const VocabularyHeroCard({required this.totalWords, super.key});
+  const VocabularyHeroCard({
+    required this.totalWords,
+    required this.onScanHistoryTap,
+    super.key,
+  });
 
   final int totalWords;
+  final VoidCallback onScanHistoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +158,7 @@ class VocabularyHeroCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              const _ScanHistoryButton(),
+              _ScanHistoryButton(onTap: onScanHistoryTap),
             ],
           ),
         ],
@@ -608,45 +613,57 @@ class _DeckCollectionCard extends StatelessWidget {
 }
 
 class _ScanHistoryButton extends StatelessWidget {
-  const _ScanHistoryButton();
+  const _ScanHistoryButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            VocabularyDashboardColors.accent,
-            VocabularyDashboardColors.accentDeep,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              VocabularyDashboardColors.accent,
+              VocabularyDashboardColors.accentDeep,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: VocabularyDashboardColors.accent.withValues(alpha: 0.42),
+              blurRadius: 14,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: VocabularyDashboardColors.accent.withValues(alpha: 0.42),
-            blurRadius: 14,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.history_rounded, color: Colors.white, size: 18),
-          SizedBox(width: 8),
-          Text(
-            'LỊCH SỬ QUÉT',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.35,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.history_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'LỊCH SỬ QUÉT',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.35,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

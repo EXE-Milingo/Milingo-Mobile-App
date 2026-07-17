@@ -48,6 +48,9 @@ class AppConstants {
   static const String homeRoute = '/home';
   static const String snapAndLearnRoute = '/snap-and-learn';
   static const String flashcardsRoute = '/flashcards';
+  static const String scanHistoryRoute = '/flashcards/scan-history';
+  static const String scanHistoryDetailRoute =
+      '/flashcards/scan-history/detail';
   static const String deckRoute = '/flashcards/deck';
   static const String vocabDetailRoute = '/flashcards/vocabulary';
   static const String flashcardStudyRoute = '/flashcards/study';

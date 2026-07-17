@@ -66,7 +66,11 @@ class _FlashcardsScreenState extends ConsumerState<FlashcardsScreen> {
                                 title: 'Từ vựng',
                               ),
                               const SizedBox(height: 16),
-                              VocabularyHeroCard(totalWords: totalWords),
+                              VocabularyHeroCard(
+                                totalWords: totalWords,
+                                onScanHistoryTap: () =>
+                                    context.push(AppConstants.scanHistoryRoute),
+                              ),
                               const SizedBox(height: 28),
                               VocabularyCollectionSection(
                                 decks: visibleDecks,
