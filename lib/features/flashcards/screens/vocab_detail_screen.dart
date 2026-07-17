@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 import 'package:milingo/features/flashcards/models/deck_arg.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
+import 'package:milingo/shared/utils/tts_locale.dart';
 
 const _kBg = Color(0xFFFFF8F4);
 const _kSurface = Colors.white;
@@ -17,17 +20,46 @@ const _kSoft = Color(0xFFFFEDE7);
 const _kWarm = Color(0xFFFFF1EA);
 const _kStar = Color(0xFFFFC84B);
 
-class VocabDetailScreen extends ConsumerWidget {
+class VocabDetailScreen extends ConsumerStatefulWidget {
   const VocabDetailScreen({required this.arg, super.key});
 
   final VocabDetailArg arg;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VocabDetailScreen> createState() => _VocabDetailScreenState();
+}
+
+class _VocabDetailScreenState extends ConsumerState<VocabDetailScreen> {
+  late final FlutterTts _tts;
+
+  @override
+  void initState() {
+    super.initState();
+    _tts = FlutterTts();
+    unawaited(_initializeTts());
+  }
+
+  Future<void> _initializeTts() async {
+    try {
+      await _tts.setSpeechRate(0.45);
+      await _tts.setVolume(1.0);
+    } catch (_) {
+      // Optional TTS setup must not prevent vocabulary details from loading.
+    }
+  }
+
+  @override
+  void dispose() {
+    _tts.stop();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final flashcardState = ref.watch(flashcardProvider).valueOrNull;
-    final deck = _findDeck(flashcardState, arg.deckId);
-    final entry = _findEntry(deck, arg.entry);
-    final deckName = deck?.name ?? arg.deckName;
+    final deck = _findDeck(flashcardState, widget.arg.deckId);
+    final entry = _findEntry(deck, widget.arg.entry);
+    final deckName = deck?.name ?? widget.arg.deckName;
     final deckFavorite = deck?.isFavorite ?? false;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -44,10 +76,10 @@ class VocabDetailScreen extends ConsumerWidget {
                     deckName: deckName,
                     entry: entry,
                     onBack: () => Navigator.of(context).pop(),
-                    onFavoriteWord: arg.deckId.isEmpty
+                    onFavoriteWord: widget.arg.deckId.isEmpty
                         ? null
                         : () => _toggleCardFavorite(context, ref, entry),
-                    onDeleteFromDeck: arg.deckId.isEmpty
+                    onDeleteFromDeck: widget.arg.deckId.isEmpty
                         ? null
                         : () => _confirmDeleteFromDeck(context, ref, entry),
                     onDeleteEverywhere: () =>
@@ -64,7 +96,8 @@ class VocabDetailScreen extends ConsumerWidget {
                     _WordPanel(
                       entry: entry,
                       deckFavorite: deckFavorite,
-                      onWordFavorite: arg.deckId.isEmpty
+                      onSpeak: () => _speak(entry),
+                      onWordFavorite: widget.arg.deckId.isEmpty
                           ? null
                           : () => _toggleCardFavorite(context, ref, entry),
                       onDeckFavorite: deck == null
@@ -101,6 +134,24 @@ class VocabDetailScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _speak(FlashcardEntry entry) async {
+    final term = entry.english.trim();
+    if (term.isEmpty) return;
+
+    try {
+      await _tts.setLanguage(ttsLocaleForLanguageCode(entry.langCode));
+      await _tts.stop();
+      await _tts.speak(term);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không thể phát âm từ này. Vui lòng thử lại.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _toggleCardFavorite(
     BuildContext context,
     WidgetRef ref,
@@ -109,7 +160,7 @@ class VocabDetailScreen extends ConsumerWidget {
     try {
       await ref
           .read(flashcardProvider.notifier)
-          .setCardFavorite(arg.deckId, entry.id, !entry.isFavorite);
+          .setCardFavorite(widget.arg.deckId, entry.id, !entry.isFavorite);
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -150,7 +201,7 @@ class VocabDetailScreen extends ConsumerWidget {
     try {
       await ref
           .read(flashcardProvider.notifier)
-          .deleteCard(arg.deckId, entry.id);
+          .deleteCard(widget.arg.deckId, entry.id);
       if (!context.mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       Navigator.of(context).pop();
@@ -375,12 +426,14 @@ class _WordPanel extends StatelessWidget {
   const _WordPanel({
     required this.entry,
     required this.deckFavorite,
+    required this.onSpeak,
     required this.onWordFavorite,
     required this.onDeckFavorite,
   });
 
   final FlashcardEntry entry;
   final bool deckFavorite;
+  final VoidCallback onSpeak;
   final VoidCallback? onWordFavorite;
   final VoidCallback? onDeckFavorite;
 
@@ -407,18 +460,49 @@ class _WordPanel extends StatelessWidget {
               height: 1.04,
             ),
           ),
-          if (entry.pronunciation.trim().isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              entry.pronunciation,
-              softWrap: true,
-              style: const TextStyle(
-                color: _kMuted,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+          const SizedBox(height: 10),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (entry.pronunciation.trim().isNotEmpty) ...[
+                Flexible(
+                  child: Text(
+                    entry.pronunciation,
+                    softWrap: true,
+                    style: const TextStyle(
+                      color: _kMuted,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Tooltip(
+                message: 'Phát âm',
+                child: Semantics(
+                  button: true,
+                  label: 'Phát âm',
+                  child: Material(
+                    color: _kSoft,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      onTap: onSpeak,
+                      borderRadius: BorderRadius.circular(10),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.volume_up_rounded,
+                          color: _kAccent,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
