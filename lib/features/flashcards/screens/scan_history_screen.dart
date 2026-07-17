@@ -122,6 +122,7 @@ class _HistoryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
+      width: double.infinity,
       height: 108,
       child: Stack(
         alignment: Alignment.center,
