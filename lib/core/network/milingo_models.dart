@@ -487,6 +487,87 @@ class SnapRelatedWord {
   final String pronunciation;
 }
 
+class SnapHistoryItemResponse {
+  const SnapHistoryItemResponse({
+    required this.id,
+    required this.keyword,
+    required this.translation,
+    required this.pronunciation,
+    required this.exampleSentence,
+    required this.createdAt,
+    this.snapGroupId,
+    this.relatedWords = const [],
+  });
+
+  factory SnapHistoryItemResponse.fromJson(Map<String, dynamic> json) {
+    final rawRelatedWords = json['related_words'];
+    final parsedDate = DateTime.tryParse(
+      (json['created_at'] ?? '').toString(),
+    );
+
+    return SnapHistoryItemResponse(
+      id: (json['id'] ?? '').toString(),
+      snapGroupId: json['snap_group_id']?.toString(),
+      keyword: (json['keyword'] ?? '').toString(),
+      translation: (json['translation'] ?? '').toString(),
+      pronunciation: (json['pronunciation'] ?? '').toString(),
+      exampleSentence: (json['example_sentence'] ?? '').toString(),
+      relatedWords: rawRelatedWords is List
+          ? List.unmodifiable(
+              rawRelatedWords
+                  .whereType<Map>()
+                  .map(
+                    (word) => SnapRelatedWord.fromJson(
+                      Map<String, dynamic>.from(word),
+                    ),
+                  )
+                  .where((word) => word.keyword.trim().isNotEmpty),
+            )
+          : const [],
+      createdAt: parsedDate?.toUtc() ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+    );
+  }
+
+  final String id;
+  final String? snapGroupId;
+  final String keyword;
+  final String translation;
+  final String pronunciation;
+  final String exampleSentence;
+  final List<SnapRelatedWord> relatedWords;
+  final DateTime createdAt;
+}
+
+class SnapHistoryPageResponse {
+  const SnapHistoryPageResponse({
+    required this.items,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  factory SnapHistoryPageResponse.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    return SnapHistoryPageResponse(
+      items: rawItems is List
+          ? List.unmodifiable(
+              rawItems.whereType<Map>().map(
+                    (item) => SnapHistoryItemResponse.fromJson(
+                      Map<String, dynamic>.from(item),
+                    ),
+                  ),
+            )
+          : const [],
+      nextCursor: json['next_cursor']?.toString(),
+      hasMore: json['has_more'] as bool? ?? false,
+    );
+  }
+
+  final List<SnapHistoryItemResponse> items;
+  final String? nextCursor;
+  final bool hasMore;
+}
+
 class SnapDetectedObject {
   const SnapDetectedObject({
     required this.label,

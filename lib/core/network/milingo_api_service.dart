@@ -513,6 +513,29 @@ class MilingoApiService {
   // Decks
   // ═══════════════════════════════════════════════════════
 
+  Future<SnapHistoryPageResponse> getSnapHistory({
+    int limit = 5,
+    String? cursor,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/snap/history',
+        queryParameters: {
+          'limit': limit,
+          if (cursor != null) 'cursor': cursor,
+        },
+      );
+      return _unwrap(
+        response,
+        (data) => SnapHistoryPageResponse.fromJson(
+          data as Map<String, dynamic>,
+        ),
+      );
+    } on DioException catch (e) {
+      throw _apiExceptionFromDio(e);
+    }
+  }
+
   Future<List<DeckResponse>> getDecks() async {
     try {
       final response = await _dio.get('/api/v1/decks');
