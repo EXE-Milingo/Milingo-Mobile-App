@@ -127,6 +127,12 @@ class _ResultSnapController extends SnapController {
     partOfSpeech: 'Noun',
     sentence: 'Die Katze schläft.',
     sentenceTranslation: 'Con mèo đang ngủ.',
+    boundingBox: const ObjectBoundingBox(
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 300,
+    ),
     relatedWords: const [
       RelatedWord(
         english: 'der Hund',

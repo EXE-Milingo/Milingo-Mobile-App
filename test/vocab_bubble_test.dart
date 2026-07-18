@@ -21,7 +21,7 @@ void main() {
       ),
     );
 
-    expect(tester.getSize(find.byType(VocabBubble)), const Size(112, 96));
+    expect(tester.getSize(find.byType(VocabBubble)), const Size(104, 88));
   });
 
   testWidgets('related word controls dispatch independent actions', (

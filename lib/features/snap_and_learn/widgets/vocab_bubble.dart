@@ -19,12 +19,12 @@ class VocabBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 112,
-      height: 96,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      width: 104,
+      height: 88,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.90),
-        borderRadius: BorderRadius.circular(36),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
             color: AppTheme.primaryColor.withValues(alpha: 0.08),
@@ -60,7 +60,7 @@ class VocabBubble extends StatelessWidget {
               height: 1.08,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -68,13 +68,13 @@ class VocabBubble extends StatelessWidget {
                 tooltip: 'Phát âm',
                 onPressed: onSpeak,
                 constraints: const BoxConstraints.tightFor(
-                  width: 40,
-                  height: 40,
+                  width: 34,
+                  height: 34,
                 ),
                 padding: EdgeInsets.zero,
                 style: IconButton.styleFrom(
-                  minimumSize: const Size.square(40),
-                  maximumSize: const Size.square(40),
+                  minimumSize: const Size.square(34),
+                  maximumSize: const Size.square(34),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   backgroundColor: AppTheme.primaryColor.withValues(
                     alpha: 0.10,
@@ -83,21 +83,21 @@ class VocabBubble extends StatelessWidget {
                 icon: const Icon(
                   Icons.volume_up_rounded,
                   color: AppTheme.primaryColor,
-                  size: 18,
+                  size: 16,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               IconButton(
                 tooltip: 'Lưu vào bộ thẻ',
                 onPressed: onSave,
                 constraints: const BoxConstraints.tightFor(
-                  width: 40,
-                  height: 40,
+                  width: 34,
+                  height: 34,
                 ),
                 padding: EdgeInsets.zero,
                 style: IconButton.styleFrom(
-                  minimumSize: const Size.square(40),
-                  maximumSize: const Size.square(40),
+                  minimumSize: const Size.square(34),
+                  maximumSize: const Size.square(34),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   backgroundColor: AppTheme.primaryColor.withValues(
                     alpha: 0.10,
@@ -106,7 +106,7 @@ class VocabBubble extends StatelessWidget {
                 icon: const Icon(
                   Icons.bookmark_add_rounded,
                   color: AppTheme.primaryColor,
-                  size: 18,
+                  size: 16,
                 ),
               ),
             ],
