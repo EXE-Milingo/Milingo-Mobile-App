@@ -34,8 +34,8 @@ void main() {
     await _pumpResultScreen(tester);
     ttsCalls.clear();
 
-    expect(find.byType(VocabBubble), findsOneWidget);
-    await tester.tap(find.byTooltip('Phát âm'));
+    expect(find.byType(VocabBubble), findsNWidgets(3));
+    await tester.tap(find.byTooltip('Phát âm').first);
     await tester.pump();
 
     expect(
@@ -59,7 +59,7 @@ void main() {
   ) async {
     await _pumpResultScreen(tester);
 
-    await tester.tap(find.byTooltip('Lưu vào bộ thẻ'));
+    await tester.tap(find.byTooltip('Lưu vào bộ thẻ').first);
     await tester.pumpAndSettle();
 
     final sheet = tester.widget<SaveFlashcardSheet>(
@@ -70,10 +70,32 @@ void main() {
     expect(sheet.entry.pronunciation, 'hʊnt');
     expect(sheet.entry.langCode, 'de');
   });
+
+  testWidgets('three related words fit on one row at compact width', (
+    tester,
+  ) async {
+    await _pumpResultScreen(tester);
+
+    final bubbles = find.byType(VocabBubble);
+    expect(bubbles, findsNWidgets(3));
+    final rects = [
+      for (final element in bubbles.evaluate())
+        tester.getRect(find.byWidget(element.widget)),
+    ];
+
+    expect(
+      rects.every((rect) => (rect.top - rects.first.top).abs() < 0.1),
+      isTrue,
+    );
+    expect(rects.first.left, greaterThanOrEqualTo(0));
+    expect(rects.last.right, lessThanOrEqualTo(390));
+    expect(rects[0].right, lessThanOrEqualTo(rects[1].left));
+    expect(rects[1].right, lessThanOrEqualTo(rects[2].left));
+  });
 }
 
 Future<void> _pumpResultScreen(WidgetTester tester) async {
-  await tester.binding.setSurfaceSize(const Size(430, 900));
+  await tester.binding.setSurfaceSize(const Size(390, 900));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
   await tester.pumpWidget(
@@ -110,6 +132,16 @@ class _ResultSnapController extends SnapController {
         english: 'der Hund',
         translation: 'con chó',
         pronunciation: 'hʊnt',
+      ),
+      RelatedWord(
+        english: 'die Leine',
+        translation: 'dây dắt chó',
+        pronunciation: 'laɪnə',
+      ),
+      RelatedWord(
+        english: 'die Pfote',
+        translation: 'bàn chân',
+        pronunciation: 'pfoːtə',
       ),
     ],
   );

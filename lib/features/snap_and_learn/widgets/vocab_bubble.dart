@@ -19,12 +19,12 @@ class VocabBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 120,
-      height: 104,
+      width: 112,
+      height: 96,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.90),
-        borderRadius: BorderRadius.circular(40),
+        borderRadius: BorderRadius.circular(36),
         boxShadow: [
           BoxShadow(
             color: AppTheme.primaryColor.withValues(alpha: 0.08),
@@ -73,6 +73,9 @@ class VocabBubble extends StatelessWidget {
                 ),
                 padding: EdgeInsets.zero,
                 style: IconButton.styleFrom(
+                  minimumSize: const Size.square(40),
+                  maximumSize: const Size.square(40),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   backgroundColor: AppTheme.primaryColor.withValues(
                     alpha: 0.10,
                   ),
@@ -93,6 +96,9 @@ class VocabBubble extends StatelessWidget {
                 ),
                 padding: EdgeInsets.zero,
                 style: IconButton.styleFrom(
+                  minimumSize: const Size.square(40),
+                  maximumSize: const Size.square(40),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   backgroundColor: AppTheme.primaryColor.withValues(
                     alpha: 0.10,
                   ),

@@ -26,8 +26,8 @@ import 'package:milingo/shared/utils/tts_locale.dart';
 
 const _kAccent = Color(0xFFF25F36);
 const _kAccentLight = Color(0xFFFFF0EB);
-const _kHaloBubbleWidth = 120.0;
-const _kHaloBubbleHeight = 104.0;
+const _kHaloBubbleWidth = 112.0;
+const _kHaloBubbleHeight = 96.0;
 
 class _Lang {
   const _Lang(this.code, this.flag, this.name);
@@ -443,8 +443,6 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                           width: double.infinity,
                           child: Stack(
                             children: [
-                              ..._buildObjectHaloBubbles(
-                                  snap, result, objectHeight),
                               Positioned(
                                 bottom: 16,
                                 left: 0,
@@ -456,6 +454,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                                   objectBytes: objectBytes,
                                 ),
                               ),
+                              ..._buildObjectHaloBubbles(
+                                  snap, result, objectHeight),
                             ],
                           ),
                         ),
@@ -940,12 +940,12 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
 
     for (final candidate in <Offset>[
       Offset(left, above),
+      Offset(centerX, above),
       Offset(right, above),
       Offset(left, middle),
       Offset(right, middle),
       Offset(left, below),
       Offset(right, below),
-      Offset(centerX, above),
       Offset(centerX, below),
     ]) {
       if (addCandidate(candidate.dx, candidate.dy)) break;
