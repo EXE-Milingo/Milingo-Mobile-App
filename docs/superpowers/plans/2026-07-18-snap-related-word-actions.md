@@ -59,7 +59,8 @@ void main() {
 
     expect(tester.getSize(find.byType(VocabBubble)), const Size(120, 104));
 
-    await tester.tap(find.text('der Hund'));
+    final bubbleRect = tester.getRect(find.byType(VocabBubble));
+    await tester.tapAt(bubbleRect.topCenter + const Offset(0, 18));
     await tester.pump();
     expect(speakCount, 0);
     expect(saveCount, 0);

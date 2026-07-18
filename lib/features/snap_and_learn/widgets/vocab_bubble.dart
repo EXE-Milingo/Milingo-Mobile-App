@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:milingo/core/theme/app_theme.dart';
 
-/// Floating vocabulary bubble displayed over the captured image.
-/// Tapping the card opens the save-to-flashcard sheet.
-/// The speaker icon plays the pronunciation.
+/// Interactive vocabulary bubble displayed around a detected object.
 class VocabBubble extends StatelessWidget {
   const VocabBubble({
     required this.english,
@@ -20,70 +18,94 @@ class VocabBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onSave,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+    return Container(
+      width: 120,
+      height: 104,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.90),
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            english.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppTheme.primaryColor,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  english,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryColor,
-                    letterSpacing: 0.5,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            translation,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF605851),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              height: 1.08,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: 'Phát âm',
+                onPressed: onSpeak,
+                constraints: const BoxConstraints.tightFor(
+                  width: 40,
+                  height: 40,
+                ),
+                padding: EdgeInsets.zero,
+                style: IconButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor.withValues(
+                    alpha: 0.10,
                   ),
                 ),
-                const SizedBox(width: 4),
-                const Icon(
+                icon: const Icon(
+                  Icons.volume_up_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Lưu vào bộ thẻ',
+                onPressed: onSave,
+                constraints: const BoxConstraints.tightFor(
+                  width: 40,
+                  height: 40,
+                ),
+                padding: EdgeInsets.zero,
+                style: IconButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor.withValues(
+                    alpha: 0.10,
+                  ),
+                ),
+                icon: const Icon(
                   Icons.bookmark_add_rounded,
                   color: AppTheme.primaryColor,
-                  size: 11,
+                  size: 18,
                 ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  translation,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF222222),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: onSpeak,
-                  behavior: HitTestBehavior.opaque,
-                  child: const Icon(
-                    Icons.volume_up_rounded,
-                    color: AppTheme.primaryColor,
-                    size: 13,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
