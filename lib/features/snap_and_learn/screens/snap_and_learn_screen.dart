@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:milingo/core/constants/app_constants.dart';
 import 'package:milingo/core/theme/app_theme.dart';
+import 'package:milingo/features/snap_and_learn/models/related_word_flashcard_mapper.dart';
 import 'package:milingo/features/snap_and_learn/providers/snap_provider.dart';
 import 'package:milingo/features/snap_and_learn/widgets/vocab_bubble.dart';
 import 'package:milingo/features/snap_and_learn/widgets/bottom_capture_bar.dart';
@@ -25,8 +26,8 @@ import 'package:milingo/shared/utils/tts_locale.dart';
 
 const _kAccent = Color(0xFFF25F36);
 const _kAccentLight = Color(0xFFFFF0EB);
-const _kHaloBubbleWidth = 92.0;
-const _kHaloBubbleHeight = 70.0;
+const _kHaloBubbleWidth = 120.0;
+const _kHaloBubbleHeight = 104.0;
 
 class _Lang {
   const _Lang(this.code, this.flag, this.name);
@@ -782,20 +783,23 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
     MilingoResult result,
     double objectHeight,
   ) {
-    final haloItems = <({String label, String translation})>[
-      for (final word in result.relatedWords.take(4))
-        (label: word.english, translation: word.translation),
-    ];
+    final haloWords = <RelatedWord>[...result.relatedWords.take(4)];
 
-    if (haloItems.isEmpty) {
+    if (haloWords.isEmpty) {
       for (final item in snap.allVocabItems) {
         if (item.keyword == result.keyword) continue;
-        haloItems.add((label: item.keyword, translation: item.translation));
-        if (haloItems.length == 4) break;
+        haloWords.add(
+          RelatedWord(
+            english: item.keyword,
+            translation: item.translation,
+            pronunciation: item.pronunciation,
+          ),
+        );
+        if (haloWords.length == 4) break;
       }
     }
 
-    if (haloItems.isEmpty) return const [];
+    if (haloWords.isEmpty) return const [];
 
     return [
       Positioned.fill(
@@ -825,18 +829,32 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
             final offsets = _haloOffsetsForObject(
               size: areaSize,
               objectRect: objectRect,
-              count: haloItems.length,
+              count: haloWords.length,
             );
 
             return Stack(
               children: [
-                for (var i = 0; i < haloItems.length && i < offsets.length; i++)
+                for (var i = 0; i < haloWords.length && i < offsets.length; i++)
                   Positioned(
                     left: offsets[i].dx,
                     top: offsets[i].dy,
-                    child: _HaloWordBubble(
-                      label: haloItems[i].label,
-                      translation: haloItems[i].translation,
+                    child: VocabBubble(
+                      english: haloWords[i].english,
+                      translation: haloWords[i].translation,
+                      onSpeak: () => _speak(
+                        _speechTextForRelatedWord(
+                          haloWords[i],
+                          snap.selectedLanguage,
+                        ),
+                        snap.selectedLanguage,
+                      ),
+                      onSave: () => _showSaveToFlashcard(
+                        context,
+                        flashcardEntryForRelatedWord(
+                          word: haloWords[i],
+                          langCode: snap.selectedLanguage,
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -1655,11 +1673,8 @@ class _SnapAndLearnScreenState extends ConsumerState<SnapAndLearnScreen>
                 _speak(_speechTextForRelatedWord(word, langCode), langCode),
             onSave: () => _showSaveToFlashcard(
               context,
-              FlashcardEntry(
-                id: '${word.english}_$langCode',
-                english: word.english,
-                translation: word.translation,
-                pronunciation: word.pronunciation,
+              flashcardEntryForRelatedWord(
+                word: word,
                 langCode: langCode,
               ),
             ),
@@ -2308,74 +2323,6 @@ class _MiniActionButton extends StatelessWidget {
           ),
           child: Icon(icon, color: _kAccent, size: 17),
         ),
-      ),
-    );
-  }
-}
-
-class _HaloWordBubble extends StatelessWidget {
-  const _HaloWordBubble({
-    required this.label,
-    required this.translation,
-  });
-
-  final String label;
-  final String translation;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: _kHaloBubbleWidth,
-      height: _kHaloBubbleHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(35),
-        boxShadow: [
-          BoxShadow(
-            color: _kAccent.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  label.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: _kAccent,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 3),
-              const Icon(Icons.volume_up_rounded, color: _kAccent, size: 10),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text(
-            translation,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF605851),
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              height: 1.08,
-            ),
-          ),
-        ],
       ),
     );
   }
