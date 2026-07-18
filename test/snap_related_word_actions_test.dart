@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:milingo/core/network/milingo_api_service.dart';
 import 'package:milingo/features/flashcards/providers/flashcard_provider.dart';
-import 'package:milingo/features/snap_and_learn/models/milingo_result.dart';
 import 'package:milingo/features/snap_and_learn/providers/snap_provider.dart';
 import 'package:milingo/features/snap_and_learn/screens/snap_and_learn_screen.dart';
 import 'package:milingo/features/snap_and_learn/widgets/save_flashcard_sheet.dart';
@@ -19,9 +18,9 @@ void main() {
     ttsCalls = [];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(ttsChannel, (call) async {
-          ttsCalls.add(call);
-          return 1;
-        });
+      ttsCalls.add(call);
+      return 1;
+    });
   });
 
   tearDown(() {
